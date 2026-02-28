@@ -458,12 +458,12 @@ function parse(tokens) {
       const upper = t.value.toUpperCase();
       const KEYWORDS = new Set([
         'PRINT', 'PRINTAT', 'CLEARSCREEN',
-        'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'ENDIF',
-        'FOR', 'GOESFROM', 'TO', 'WITHSTEP', 'ENDFOR',
-        'WHILE', 'ENDWHILE', 'SETCOLOR', 'BEEP', 'PLAY',
+        'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'END',
+        'FOR', 'GOESFROM', 'TO', 'WITHSTEP',
+        'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',
         'AND', 'OR', 'NOT',
-        'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL', 'GLOBAL',
-        'STRUCT', 'ENDSTRUCT',
+        'FUNCTION', 'RETURN', 'OPTIONAL', 'GLOBAL',
+        'STRUCT',
         'SLEEP', 'SIZE',
         'CLOSE', 'WRITEFILELINE', 'WRITEFILECHARACTER',
         'READ', 'WRITE', 'APPEND',
@@ -586,7 +586,7 @@ function parse(tokens) {
     let foundEnd = false;
     while (!atEnd()) {
       skipNewlines();
-      if (peek().type === 'KEYWORD' && peek().value === 'ENDIF') {
+      if (peek().type === 'KEYWORD' && peek().value === 'END_IF') {
         advance();
         foundEnd = true;
         break;
@@ -606,7 +606,7 @@ function parse(tokens) {
         elseBody = [];
         while (!atEnd()) {
           skipNewlines();
-          if (peek().type === 'KEYWORD' && peek().value === 'ENDIF') {
+          if (peek().type === 'KEYWORD' && peek().value === 'END_IF') {
             advance();
             foundEnd = true;
             break;
@@ -614,13 +614,13 @@ function parse(tokens) {
           elseBody.push(parseStatement());
           skipNewlines();
         }
-        if (!foundEnd) throw new SyntaxError(`Missing ENDIF for IF at line ${t.line}`);
+        if (!foundEnd) throw new SyntaxError(`Missing END IF for IF at line ${t.line}`);
         break;
       }
       thenBody.push(parseStatement());
       skipNewlines();
     }
-    if (!foundEnd) throw new SyntaxError(`Missing ENDIF for IF at line ${t.line}`);
+    if (!foundEnd) throw new SyntaxError(`Missing END IF for IF at line ${t.line}`);
 
     return { type: 'if', condition, thenBody, elseBody, line: t.line };
   }
@@ -646,7 +646,7 @@ function parse(tokens) {
     let foundEnd = false;
     while (!atEnd()) {
       skipNewlines();
-      if (peek().type === 'KEYWORD' && peek().value === 'ENDFOR') {
+      if (peek().type === 'KEYWORD' && peek().value === 'END_FOR') {
         advance();
         foundEnd = true;
         break;
@@ -654,7 +654,7 @@ function parse(tokens) {
       body.push(parseStatement());
       skipNewlines();
     }
-    if (!foundEnd) throw new SyntaxError(`Missing ENDFOR for FOR at line ${t.line}`);
+    if (!foundEnd) throw new SyntaxError(`Missing END FOR for FOR at line ${t.line}`);
 
     return { type: 'for', varName, lower, upper, step, body, line: t.line };
   }
@@ -668,7 +668,7 @@ function parse(tokens) {
     let foundEnd = false;
     while (!atEnd()) {
       skipNewlines();
-      if (peek().type === 'KEYWORD' && peek().value === 'ENDWHILE') {
+      if (peek().type === 'KEYWORD' && peek().value === 'END_WHILE') {
         advance();
         foundEnd = true;
         break;
@@ -676,7 +676,7 @@ function parse(tokens) {
       body.push(parseStatement());
       skipNewlines();
     }
-    if (!foundEnd) throw new SyntaxError(`Missing ENDWHILE for WHILE at line ${t.line}`);
+    if (!foundEnd) throw new SyntaxError(`Missing END WHILE for WHILE at line ${t.line}`);
 
     return { type: 'while', condition, body, line: t.line };
   }
@@ -689,7 +689,7 @@ function parse(tokens) {
     let foundEnd = false;
     while (!atEnd()) {
       skipNewlines();
-      if (peek().type === 'KEYWORD' && peek().value === 'ENDSTRUCT') {
+      if (peek().type === 'KEYWORD' && peek().value === 'END_STRUCT') {
         advance();
         foundEnd = true;
         break;
@@ -704,7 +704,7 @@ function parse(tokens) {
       members.push({ name: memToken.value, suffix, value });
       skipNewlines();
     }
-    if (!foundEnd) throw new SyntaxError(`Missing ENDSTRUCT for STRUCT at line ${t.line}`);
+    if (!foundEnd) throw new SyntaxError(`Missing END STRUCT for STRUCT at line ${t.line}`);
     return { type: 'assign_struct', name: varToken.value, members, line: t.line };
   }
 
@@ -756,7 +756,7 @@ function parse(tokens) {
     let foundEnd = false;
     while (!atEnd()) {
       skipNewlines();
-      if (peek().type === 'KEYWORD' && peek().value === 'ENDFUNCTION') {
+      if (peek().type === 'KEYWORD' && peek().value === 'END_FUNCTION') {
         advance();
         foundEnd = true;
         break;
@@ -765,7 +765,7 @@ function parse(tokens) {
       skipNewlines();
     }
     insideFunction = false;
-    if (!foundEnd) throw new SyntaxError(`Missing ENDFUNCTION for FUNCTION at line ${t.line}`);
+    if (!foundEnd) throw new SyntaxError(`Missing END FUNCTION for FUNCTION at line ${t.line}`);
 
     // Post-pass: collect labels from body into localLabels
     const localLabels = {};

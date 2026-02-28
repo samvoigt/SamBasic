@@ -1,16 +1,16 @@
 const KEYWORDS = new Set([
   'PRINT', 'PRINTAT', 'CLEARSCREEN',
-  'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'ENDIF',
-  'FOR', 'GOESFROM', 'TO', 'WITHSTEP', 'ENDFOR',
-  'WHILE', 'ENDWHILE', 'SETCOLOR', 'BEEP', 'PLAY',
+  'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'END',
+  'FOR', 'GOESFROM', 'TO', 'WITHSTEP',
+  'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',
   'AND', 'OR', 'NOT',
   'SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE',
   'PLAYPOLY',
   'PAUSEPLAY', 'RESUMEPLAY', 'STOPPLAY', 'CLOSE',
   'WRITEFILELINE', 'WRITEFILECHARACTER',
   'YES', 'NO',
-  'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL', 'GLOBAL',
-  'STRUCT', 'ENDSTRUCT',
+  'FUNCTION', 'RETURN', 'OPTIONAL', 'GLOBAL',
+  'STRUCT',
   'SLEEP', 'SIZE',
   'READ', 'WRITE', 'APPEND',
 ]);
@@ -166,6 +166,22 @@ function tokenize(source) {
     tokens.push({ type: 'NEWLINE', value: '\n', line: lineNum + 1, col: i });
   }
 
-  tokens.push({ type: 'EOF', value: null, line: lines.length, col: 0 });
-  return tokens;
+  // Merge END + block keyword pairs into single tokens
+  const END_BLOCKS = new Set(['IF', 'FOR', 'WHILE', 'STRUCT', 'FUNCTION']);
+  const merged = [];
+  for (let j = 0; j < tokens.length; j++) {
+    const tok = tokens[j];
+    if (tok.type === 'KEYWORD' && tok.value === 'END') {
+      const next = tokens[j + 1];
+      if (next && next.type === 'KEYWORD' && END_BLOCKS.has(next.value)) {
+        merged.push({ type: 'KEYWORD', value: 'END_' + next.value, line: tok.line, col: tok.col });
+        j++;
+        continue;
+      }
+    }
+    merged.push(tok);
+  }
+
+  merged.push({ type: 'EOF', value: null, line: lines.length, col: 0 });
+  return merged;
 }

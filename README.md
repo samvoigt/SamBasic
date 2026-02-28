@@ -118,14 +118,14 @@ ELSE IF x# > 5 THEN
   PRINT "medium"
 ELSE
   PRINT "small"
-ENDIF
+END IF
 ```
 
 **For Loop:**
 ```
 FOR i# GOESFROM 1 TO 10 WITHSTEP 2
   PRINT i#
-ENDFOR
+END FOR
 ```
 The loop variable and `WITHSTEP` are optional (step defaults to 1).
 
@@ -133,7 +133,7 @@ The loop variable and `WITHSTEP` are optional (step defaults to 1).
 ```
 WHILE x# < 100
   x# = x# * 2
-ENDWHILE
+END WHILE
 ```
 
 **Labels and Goto:**
@@ -145,12 +145,12 @@ GOTO start
 
 ### Functions
 
-Define reusable functions with `FUNCTION`/`ENDFUNCTION`. Function names can have a return type suffix:
+Define reusable functions with `FUNCTION` / `END FUNCTION`. Function names can have a return type suffix:
 
 ```
 FUNCTION add# X a# Y b#
   RETURN a# + b#
-ENDFUNCTION
+END FUNCTION
 
 result# = add# 3, 4
 PRINT result#
@@ -175,7 +175,7 @@ x# = mul# 6, 7
 ```
 FUNCTION greet name$
   PRINT "Hello, " + name$
-ENDFUNCTION
+END FUNCTION
 greet "World"
 ```
 
@@ -184,11 +184,11 @@ greet "World"
 FUNCTION repeat TEXT msg$ OPTIONAL TIMES count#
   IF count# = 0 THEN
     count# = 1
-  ENDIF
+  END IF
   FOR i# GOESFROM 1 TO count#
     PRINT msg$
-  ENDFOR
-ENDFUNCTION
+  END FOR
+END FUNCTION
 repeat "hi", 3
 repeat "once"
 ```
@@ -199,7 +199,7 @@ PRINT (add# 3, 4)
 x# = (add# 1, 2) + (mul# 3, 4)
 IF (add# 1, 1) = 2 THEN
   PRINT "math works"
-ENDIF
+END IF
 ```
 
 **Recursion** is supported (max depth 256):
@@ -207,10 +207,10 @@ ENDIF
 FUNCTION fact# n#
   IF n# <= 1 THEN
     RETURN 1
-  ENDIF
+  END IF
   prev# = fact# n# - 1
   RETURN n# * prev#
-ENDFUNCTION
+END FUNCTION
 x# = fact# 5
 PRINT x#          ' 120
 ```
@@ -228,7 +228,7 @@ FUNCTION addScore points#
   score# = score# + points#
   name$ = UPPERCASE$ name$
   items@[1] = 99
-ENDFUNCTION
+END FUNCTION
 
 addScore 10
 PRINT score#        ' 10
@@ -262,7 +262,7 @@ Arrays are untyped — they can hold both numbers and strings.
 STRUCT person&
   .height# = 72
   .name$ = "Sam"
-ENDSTRUCT
+END STRUCT
 
 PRINT person&.name$              ' Access a member
 PRINT person&.height#
@@ -364,7 +364,7 @@ in# = OPEN# FILE "source.txt"
 WHILE NOT (ENDOFFILE! in#)
   line$ = READFILELINE$ FILE in#
   WRITEFILELINE FILE out# LINE line$
-ENDWHILE
+END WHILE
 CLOSE in#
 CLOSE out#
 ```
