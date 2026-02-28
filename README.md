@@ -292,15 +292,6 @@ STOPPLAY                          ' Stop background audio
 
 **PLAY string syntax:** Notes `A`-`G`, sharps `#`/`+`, flats `-`, octave `O4`, length `L8`, tempo `T120`, rest `R4`, percussion `P4` (white noise hit), dotted notes `.`, octave up/down `>`/`<`.
 
-### Data
-
-```
-DATA 10, 20, 30, "hello"
-x# = READ                        ' Reads 10 into x#
-y# = READ                        ' Reads 20 into y#
-msg$ = READ                      ' Reads "hello" into msg$
-```
-
 ### Other
 
 ```

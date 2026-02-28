@@ -1,7 +1,6 @@
 function parse(tokens) {
   let pos = 0;
   const ast = [];
-  const dataPool = [];
   const labels = {};
   const functions = {};
   let insideFunction = false;
@@ -347,9 +346,6 @@ function parse(tokens) {
       advance();
       return { type: 'stopplay', line: t.line };
     }
-    if (t.type === 'KEYWORD' && t.value === 'DATA') {
-      return parseData();
-    }
 
     if (t.type === 'KEYWORD' && t.value === 'STRUCT') {
       return parseStructBlock();
@@ -404,7 +400,7 @@ function parse(tokens) {
         'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'ENDIF',
         'FOR', 'GOESFROM', 'TO', 'WITHSTEP', 'ENDFOR',
         'WHILE', 'ENDWHILE', 'SETCOLOR', 'BEEP', 'PLAY',
-        'DATA', 'READ', 'AND', 'OR', 'NOT',
+        'AND', 'OR', 'NOT',
         'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL',
         'STRUCT', 'ENDSTRUCT',
         'LENGTH', 'SUBSTRING', 'UPPERCASE', 'LOWERCASE', 'CONTAINS',
@@ -601,22 +597,6 @@ function parse(tokens) {
     return { type: 'while', condition, body, line: t.line };
   }
 
-  function parseData() {
-    const t = advance(); // DATA
-    while (!atLineEnd()) {
-      const expr = parseExpr();
-      if (expr.type === 'number') {
-        dataPool.push(expr.value);
-      } else if (expr.type === 'string') {
-        dataPool.push(expr.value);
-      } else {
-        dataPool.push(expr);
-      }
-      if (!match('COMMA')) break;
-    }
-    return { type: 'data', line: t.line };
-  }
-
   function parseStructBlock() {
     const t = advance(); // STRUCT
     const varToken = expect('STRUCT_VAR');
@@ -760,7 +740,6 @@ function parse(tokens) {
     INPUT: [{ name: 'TEXT', required: false }],
     GETKEY: [],
     RANDOM: [{ name: 'MAX', required: true }],
-    READ: [],
     LENGTH: [{ name: 'VALUE', required: true }],
     SUBSTRING: [{ name: 'TEXT', required: true }, { name: 'START', required: true }, { name: 'LENGTH', required: true }],
     UPPERCASE: [{ name: 'TEXT', required: true }],
@@ -937,5 +916,5 @@ function parse(tokens) {
     skipNewlines();
   }
 
-  return { ast, dataPool, labels, functions };
+  return { ast, labels, functions };
 }

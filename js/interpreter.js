@@ -27,8 +27,6 @@ class Interpreter {
   reset() {
     this.ast = [];
     this.labels = {};
-    this.dataPool = [];
-    this.dataPointer = 0;
     this.numVars = {};
     this.strVars = {};
     this.arrVars = {};
@@ -83,10 +81,9 @@ class Interpreter {
     return '#' + r.toString(16).padStart(2, '0') + g.toString(16).padStart(2, '0') + b.toString(16).padStart(2, '0');
   }
 
-  load(ast, dataPool, labels, functions) {
+  load(ast, labels, functions) {
     this.reset();
     this.ast = ast;
-    this.dataPool = dataPool;
     this.labels = labels;
     this.functions = functions || {};
   }
@@ -313,16 +310,6 @@ class Interpreter {
             result = Math.floor(Math.random() * (max + 1));
             break;
           }
-          case 'READ': {
-            if (this.dataPointer >= this.dataPool.length) {
-              throw new Error(`READ: no more DATA at line ${stmt.line}`);
-            }
-            result = this.dataPool[this.dataPointer++];
-            if (result && typeof result === 'object' && result.type) {
-              result = await this.evalExpr(result);
-            }
-            break;
-          }
           case 'LENGTH': {
             const val = await this.evalExpr(stmt.params.VALUE);
             if (Array.isArray(val)) {
@@ -544,10 +531,6 @@ class Interpreter {
       }
       case 'stopplay': {
         if (this.audio) this.audio.stopBackground();
-        break;
-      }
-      case 'data': {
-        // no-op at runtime; data is collected at parse time
         break;
       }
       case 'assign_num': {
