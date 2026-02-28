@@ -10,6 +10,9 @@ class ReturnSignal {
   }
 }
 
+class BreakSignal {}
+class ContinueSignal {}
+
 class Interpreter {
   constructor(screen, audio) {
     this.screen = screen;
@@ -118,6 +121,12 @@ class Interpreter {
             }
             this.pc = target;
             continue;
+          }
+          if (e instanceof BreakSignal) {
+            throw new Error(`BREAK used outside of a loop at line ${stmt.line}`);
+          }
+          if (e instanceof ContinueSignal) {
+            throw new Error(`CONTINUE used outside of a loop at line ${stmt.line}`);
           }
           throw e;
         }
@@ -493,14 +502,6 @@ class Interpreter {
             fh.pos++;
             break;
           }
-          case 'ENDOFFILE': {
-            const handle = await this.evalExpr(stmt.params.FILE);
-            const fh = this.fileHandles[handle];
-            if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
-            if (fh.mode !== 'read') throw new Error(`ENDOFFILE can only be used on files opened for reading at line ${stmt.line}`);
-            result = fh.pos >= fh.content.length ? 1 : 0;
-            break;
-          }
           case 'TONUMBER': {
             const val = await this.evalExpr(stmt.params.VALUE);
             const num = parseFloat(val);
@@ -520,6 +521,17 @@ class Interpreter {
             const find = String(await this.evalExpr(stmt.params.FIND));
             const idx = text.indexOf(find);
             result = idx === -1 ? 0 : idx + 1;
+            break;
+          }
+          case 'TRIM': {
+            const text = String(await this.evalExpr(stmt.params.TEXT));
+            if (stmt.mode === 'LEFT') {
+              result = text.trimStart();
+            } else if (stmt.mode === 'RIGHT') {
+              result = text.trimEnd();
+            } else {
+              result = text.trim();
+            }
             break;
           }
           default:
@@ -551,6 +563,12 @@ class Interpreter {
       case 'goto': {
         throw new GotoSignal(stmt.label);
       }
+      case 'break': {
+        throw new BreakSignal();
+      }
+      case 'continue': {
+        throw new ContinueSignal();
+      }
       case 'if': {
         const cond = await this.evalExpr(stmt.condition);
         if (cond) {
@@ -569,7 +587,18 @@ class Interpreter {
         for (let i = lower; step > 0 ? i <= upper : i >= upper; i += step) {
           if (!this.running) break;
           if (stmt.varName) this.numVars[stmt.varName] = i;
-          await this.execBlock(stmt.body);
+          try {
+            await this.execBlock(stmt.body);
+          } catch (e) {
+            if (e instanceof BreakSignal) break;
+            if (e instanceof ContinueSignal) {
+              // skip to next iteration
+              this._stmtCount++;
+              if (this._stmtCount % 100 === 0) await this.yieldToEventLoop();
+              continue;
+            }
+            throw e;
+          }
 
           this._stmtCount++;
           if (this._stmtCount % 100 === 0) {
@@ -584,7 +613,18 @@ class Interpreter {
       }
       case 'while': {
         while (this.running && await this.evalExpr(stmt.condition)) {
-          await this.execBlock(stmt.body);
+          try {
+            await this.execBlock(stmt.body);
+          } catch (e) {
+            if (e instanceof BreakSignal) break;
+            if (e instanceof ContinueSignal) {
+              // skip to condition re-check
+              this._stmtCount++;
+              if (this._stmtCount % 100 === 0) await this.yieldToEventLoop();
+              continue;
+            }
+            throw e;
+          }
 
           this._stmtCount++;
           if (this._stmtCount % 100 === 0) {
@@ -782,17 +822,6 @@ class Interpreter {
         arr.sort(cmp);
         break;
       }
-      case 'trim': {
-        const text = String(this.strVars[stmt.name] || '');
-        if (stmt.mode === 'LEFT') {
-          this.strVars[stmt.name] = text.trimStart();
-        } else if (stmt.mode === 'RIGHT') {
-          this.strVars[stmt.name] = text.trimEnd();
-        } else {
-          this.strVars[stmt.name] = text.trim();
-        }
-        break;
-      }
       case 'funcdef': {
         // no-op at runtime; function definitions are collected at parse time
         break;
@@ -868,7 +897,9 @@ class Interpreter {
       try {
         await this.execStmt(stmts[i]);
       } catch (e) {
-        if (e instanceof GotoSignal) throw e; // propagate to main loop
+        if (e instanceof GotoSignal) throw e;
+        if (e instanceof BreakSignal) throw e;
+        if (e instanceof ContinueSignal) throw e;
         throw e;
       }
 
@@ -1131,6 +1162,8 @@ class Interpreter {
           continue;
         }
         if (e instanceof ReturnSignal) throw e;
+        if (e instanceof BreakSignal) throw e;
+        if (e instanceof ContinueSignal) throw e;
         throw e;
       }
 

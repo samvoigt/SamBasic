@@ -397,6 +397,14 @@ function parse(tokens) {
       }
       return { type: 'return', value, line: t.line };
     }
+    if (t.type === 'KEYWORD' && t.value === 'BREAK') {
+      advance();
+      return { type: 'break', line: t.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'CONTINUE') {
+      advance();
+      return { type: 'continue', line: t.line };
+    }
     if (t.type === 'KEYWORD' && t.value === 'SLEEP') {
       advance();
       const duration = parseExpr();
@@ -450,17 +458,6 @@ function parse(tokens) {
       const index = parseExpr();
       return { type: 'arr_remove', name: arrToken.value, index, line: t.line };
     }
-    // TRIM [LEFT|RIGHT] str$
-    if (t.type === 'KEYWORD' && t.value === 'TRIM') {
-      advance();
-      let mode = null;
-      if (peek().type === 'IDENT' &&
-          (peek().value.toUpperCase() === 'LEFT' || peek().value.toUpperCase() === 'RIGHT')) {
-        mode = advance().value.toUpperCase();
-      }
-      const strToken = expect('STR_VAR');
-      return { type: 'trim', name: strToken.value, mode, line: t.line };
-    }
     // SORT [ASCENDING|DESCENDING] items@
     if (t.type === 'KEYWORD' && t.value === 'SORT') {
       advance();
@@ -508,13 +505,12 @@ function parse(tokens) {
         'FOR', 'FROM', 'TO', 'STEP',
         'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',
         'AND', 'OR', 'NOT',
-        'FUNCTION', 'RETURN', 'OPTIONAL', 'REFERENCE', 'GLOBAL',
+        'FUNCTION', 'RETURN', 'BREAK', 'CONTINUE', 'OPTIONAL', 'REFERENCE', 'GLOBAL',
         'STRUCT',
         'SLEEP', 'SIZE',
         'CLOSE', 'WRITEFILELINE', 'WRITEFILECHARACTER',
         'READ', 'WRITE', 'APPEND',
         'SORT', 'INSERT', 'REMOVE',
-        'TRIM',
       ]);
       if (KEYWORDS.has(upper)) {
         throw new SyntaxError(`Did you mean '${upper}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -525,7 +521,7 @@ function parse(tokens) {
         ABS: '#', SQRT: '#', ROUND: '#', FLOOR: '#', CEIL: '#',
         MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
         OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?',
-        TONUMBER: '#', TOSTRING: '$', INDEXOF: '#',
+        TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$',
       };
       if (TYPED_KW_SUFFIXES[upper]) {
         throw new SyntaxError(`Did you mean '${upper}${TYPED_KW_SUFFIXES[upper]}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -929,16 +925,23 @@ function parse(tokens) {
     OPEN: [{ name: 'FILE', required: true }, { name: 'MODE', required: false }],
     READFILELINE: [{ name: 'FILE', required: true }],
     READFILECHARACTER: [{ name: 'FILE', required: true }],
-    ENDOFFILE: [{ name: 'FILE', required: true }],
     TONUMBER: [{ name: 'VALUE', required: true }],
     TOSTRING: [{ name: 'VALUE', required: true }],
     INDEXOF: [{ name: 'TEXT', required: true }, { name: 'FIND', required: true }],
+    TRIM: [{ name: 'TEXT', required: true }],
   };
 
   function parseAssignBuiltinKeyword(varToken, line) {
     const kw = advance(); // consume the keyword
     const keyword = kw.value;
     const paramDefs = BUILTIN_KEYWORD_PARAMS[keyword];
+
+    // TRIM supports optional LEFT/RIGHT mode modifier
+    let mode = null;
+    if (keyword === 'TRIM' && peek().type === 'IDENT' &&
+        (peek().value.toUpperCase() === 'LEFT' || peek().value.toUpperCase() === 'RIGHT')) {
+      mode = advance().value.toUpperCase();
+    }
 
     const args = parseKeywordArgs();
     const resolved = resolveBuiltinArgs(args, paramDefs, line);
@@ -950,6 +953,7 @@ function parse(tokens) {
       varType: varTypeMap[varToken.type],
       keyword,
       params: resolved,
+      mode,
       line,
     };
   }

@@ -9,12 +9,11 @@ const KEYWORDS = new Set([
   'PAUSEPLAY', 'RESUMEPLAY', 'STOPPLAY', 'CLOSE',
   'WRITEFILELINE', 'WRITEFILECHARACTER',
   'YES', 'NO',
-  'FUNCTION', 'RETURN', 'OPTIONAL', 'REFERENCE', 'GLOBAL',
+  'FUNCTION', 'RETURN', 'BREAK', 'CONTINUE', 'OPTIONAL', 'REFERENCE', 'GLOBAL',
   'STRUCT',
   'SLEEP', 'SIZE',
   'READ', 'WRITE', 'APPEND',
   'SORT', 'INSERT', 'REMOVE',
-  'TRIM',
 ]);
 
 const TYPED_KEYWORDS = {
@@ -23,7 +22,7 @@ const TYPED_KEYWORDS = {
   ABS: '#', SQRT: '#', ROUND: '#', FLOOR: '#', CEIL: '#',
   MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
   OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?',
-  TONUMBER: '#', TOSTRING: '$', INDEXOF: '#',
+  TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$',
 };
 
 

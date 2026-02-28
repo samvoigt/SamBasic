@@ -90,12 +90,11 @@ s$ = LOWERCASE$ "HELLO"                          ' "hello"
 found? = CONTAINS? "hello world", "world"        ' YES (1)
 ```
 
-**Trimming whitespace (mutates in place):**
+**Trimming whitespace:**
 ```
-s$ = "  hello  "
-TRIM s$                             ' s$ is now "hello"
-TRIM LEFT s$                        ' trims leading whitespace only
-TRIM RIGHT s$                       ' trims trailing whitespace only
+s$ = TRIM$ "  hello  "             ' "hello"
+s$ = TRIM$ LEFT "  hello  "        ' "hello  " (trims leading only)
+s$ = TRIM$ RIGHT "  hello  "       ' "  hello" (trims trailing only)
 ```
 
 All string indices are **1-based**. `SUBSTRING$` throws an error if the index is out of range. Use `SUBSTRING$ text, index, 1` to get a single character. `LENGTH#` also works on arrays, returning the number of elements.
@@ -166,6 +165,24 @@ WHILE x# < 100
   x# = x# * 2
 END WHILE
 ```
+
+**Break and Continue:**
+```
+FOR i# FROM 1 TO 100
+  IF i# = 5 THEN
+    BREAK                            ' Exit the loop early
+  END IF
+  PRINT i#
+END FOR
+
+FOR i# FROM 1 TO 10
+  IF i# % 2 = 0 THEN
+    CONTINUE                         ' Skip to next iteration
+  END IF
+  PRINT i#                           ' Prints odd numbers only
+END FOR
+```
+`BREAK` exits the innermost loop. `CONTINUE` skips to the next iteration (or condition re-check for `WHILE`). Using either outside a loop is a runtime error.
 
 **Labels and Goto:**
 ```
