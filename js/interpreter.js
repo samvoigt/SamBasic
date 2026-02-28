@@ -322,6 +322,43 @@ class Interpreter {
             }
             break;
           }
+          case 'LENGTH': {
+            result = String(this.evalExpr(stmt.params.TEXT)).length;
+            break;
+          }
+          case 'SUBSTRING': {
+            const str = String(this.evalExpr(stmt.params.TEXT));
+            const start = Math.floor(this.evalExpr(stmt.params.START));
+            const len = Math.floor(this.evalExpr(stmt.params.LENGTH));
+            if (start < 1 || start > str.length) {
+              throw new Error(`SUBSTRING: START index ${start} out of range (1-${str.length}) at line ${stmt.line}`);
+            }
+            result = str.substring(start - 1, start - 1 + len);
+            break;
+          }
+          case 'UPPERCASE': {
+            result = String(this.evalExpr(stmt.params.TEXT)).toUpperCase();
+            break;
+          }
+          case 'LOWERCASE': {
+            result = String(this.evalExpr(stmt.params.TEXT)).toLowerCase();
+            break;
+          }
+          case 'CONTAINS': {
+            const text = String(this.evalExpr(stmt.params.TEXT));
+            const find = String(this.evalExpr(stmt.params.FIND));
+            result = text.includes(find) ? 1 : 0;
+            break;
+          }
+          case 'CHARACTERAT': {
+            const str = String(this.evalExpr(stmt.params.TEXT));
+            const index = Math.floor(this.evalExpr(stmt.params.INDEX));
+            if (index < 1 || index > str.length) {
+              throw new Error(`CHARACTERAT: INDEX ${index} out of range (1-${str.length}) at line ${stmt.line}`);
+            }
+            result = str[index - 1];
+            break;
+          }
           default:
             throw new Error(`Unknown builtin keyword '${stmt.keyword}' at line ${stmt.line}`);
         }

@@ -630,6 +630,12 @@ function parse(tokens) {
     GETKEY: [],
     RANDOM: [{ name: 'MAX', required: true }],
     READ: [],
+    LENGTH: [{ name: 'TEXT', required: true }],
+    SUBSTRING: [{ name: 'TEXT', required: true }, { name: 'START', required: true }, { name: 'LENGTH', required: true }],
+    UPPERCASE: [{ name: 'TEXT', required: true }],
+    LOWERCASE: [{ name: 'TEXT', required: true }],
+    CONTAINS: [{ name: 'TEXT', required: true }, { name: 'FIND', required: true }],
+    CHARACTERAT: [{ name: 'TEXT', required: true }, { name: 'INDEX', required: true }],
   };
 
   function parseAssignBuiltinKeyword(varToken, line) {

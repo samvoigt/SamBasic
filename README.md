@@ -59,6 +59,20 @@ x# = INPUT                          ' Input with no prompt
 k$ = GETKEY                          ' Read currently pressed key (non-blocking)
 ```
 
+### String Functions
+
+```
+x# = LENGTH "hello"                           ' 5
+s$ = SUBSTRING "hello world", 2, 4            ' "ello"
+s$ = SUBSTRING TEXT "abcdef", START 3, LENGTH 2  ' "cd"
+s$ = UPPERCASE "hello"                         ' "HELLO"
+s$ = LOWERCASE "HELLO"                         ' "hello"
+found! = CONTAINS "hello world", "world"       ' YES (1)
+c$ = CHARACTERAT "hello", 1                    ' "h"
+```
+
+All string indices are **1-based**. `SUBSTRING` and `CHARACTERAT` throw an error if the index is out of range.
+
 ### Control Flow
 
 **If / Else:**
