@@ -45,6 +45,8 @@ class Interpreter {
     this.functions = {};
     this.callStack = [];
     this.MAX_RECURSION_DEPTH = 256;
+    this.fileHandles = {};
+    this.nextFileHandle = 1;
   }
 
   _initBuiltinColors() {
@@ -133,6 +135,7 @@ class Interpreter {
       this.screen.showError(`ERROR: ${e.message}`);
     }
 
+    this._closeAllFiles();
     this.running = false;
   }
 
@@ -154,6 +157,7 @@ class Interpreter {
   }
 
   stop() {
+    this._closeAllFiles();
     this.running = false;
     this.paused = false;
     if (this.audio) this.audio.stopAll();
@@ -169,6 +173,16 @@ class Interpreter {
       this._inputResolve(null);
       this._inputResolve = null;
     }
+  }
+
+  _closeAllFiles() {
+    for (const handle of Object.keys(this.fileHandles)) {
+      const fh = this.fileHandles[handle];
+      if (fh.mode === 'write' || fh.mode === 'append') {
+        localStorage.setItem('sambasic_file:' + fh.name, fh.content);
+      }
+    }
+    this.fileHandles = {};
   }
 
   yieldToEventLoop() {
@@ -211,6 +225,13 @@ class Interpreter {
       case 'binop': return await this.evalBinop(node);
       case 'unaryop': return await this.evalUnary(node);
       case 'funccall': return await this.execFunctionCall(node, node.line);
+      case 'endoffile': {
+        const handle = await this.evalExpr(node.file);
+        const fh = this.fileHandles[handle];
+        if (!fh) throw new Error(`Invalid file handle at line ${node.line}`);
+        if (fh.mode !== 'read') throw new Error(`ENDOFFILE can only be used on files opened for reading at line ${node.line}`);
+        return fh.pos >= fh.content.length ? 1 : 0;
+      }
       default:
         throw new Error(`Unknown expression type: ${node.type}`);
     }
@@ -389,6 +410,60 @@ class Interpreter {
           }
           case 'SIGN': {
             result = Math.sign(await this.evalExpr(stmt.params.VALUE));
+            break;
+          }
+          case 'OPEN': {
+            const fileName = String(await this.evalExpr(stmt.params.FILE));
+            const mode = stmt.params.MODE ? String(await this.evalExpr(stmt.params.MODE)).toLowerCase() : 'read';
+            if (mode !== 'read' && mode !== 'write' && mode !== 'append') {
+              throw new Error(`Invalid file mode '${mode}' — expected 'read', 'write', or 'append' at line ${stmt.line}`);
+            }
+            let content = '';
+            if (mode === 'read') {
+              const stored = localStorage.getItem('sambasic_file:' + fileName);
+              if (stored === null) throw new Error(`File '${fileName}' not found at line ${stmt.line}`);
+              content = stored;
+            } else if (mode === 'append') {
+              const stored = localStorage.getItem('sambasic_file:' + fileName);
+              if (stored !== null) content = stored;
+            }
+            const handle = this.nextFileHandle++;
+            this.fileHandles[handle] = { name: fileName, content, pos: 0, mode };
+            result = handle;
+            break;
+          }
+          case 'READFILELINE': {
+            const handle = await this.evalExpr(stmt.params.FILE);
+            const fh = this.fileHandles[handle];
+            if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
+            if (fh.mode !== 'read') throw new Error(`Cannot read from file opened for writing at line ${stmt.line}`);
+            if (fh.pos >= fh.content.length) throw new Error(`End of file reached at line ${stmt.line}`);
+            const nlIdx = fh.content.indexOf('\n', fh.pos);
+            if (nlIdx === -1) {
+              result = fh.content.substring(fh.pos);
+              fh.pos = fh.content.length;
+            } else {
+              result = fh.content.substring(fh.pos, nlIdx);
+              fh.pos = nlIdx + 1;
+            }
+            break;
+          }
+          case 'READFILECHARACTER': {
+            const handle = await this.evalExpr(stmt.params.FILE);
+            const fh = this.fileHandles[handle];
+            if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
+            if (fh.mode !== 'read') throw new Error(`Cannot read from file opened for writing at line ${stmt.line}`);
+            if (fh.pos >= fh.content.length) throw new Error(`End of file reached at line ${stmt.line}`);
+            result = fh.content[fh.pos];
+            fh.pos++;
+            break;
+          }
+          case 'ENDOFFILE': {
+            const handle = await this.evalExpr(stmt.params.FILE);
+            const fh = this.fileHandles[handle];
+            if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
+            if (fh.mode !== 'read') throw new Error(`ENDOFFILE can only be used on files opened for reading at line ${stmt.line}`);
+            result = fh.pos >= fh.content.length ? 1 : 0;
             break;
           }
           default:
@@ -622,6 +697,34 @@ class Interpreter {
       case 'return': {
         const val = stmt.value ? await this.evalExpr(stmt.value) : null;
         throw new ReturnSignal(val);
+      }
+      case 'close': {
+        const handle = await this.evalExpr(stmt.file);
+        const fh = this.fileHandles[handle];
+        if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
+        if (fh.mode === 'write' || fh.mode === 'append') {
+          localStorage.setItem('sambasic_file:' + fh.name, fh.content);
+        }
+        delete this.fileHandles[handle];
+        break;
+      }
+      case 'writefileline': {
+        const handle = await this.evalExpr(stmt.file);
+        const fh = this.fileHandles[handle];
+        if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
+        if (fh.mode === 'read') throw new Error(`Cannot write to file opened for reading at line ${stmt.line}`);
+        const text = String(await this.evalExpr(stmt.content));
+        fh.content += text + '\n';
+        break;
+      }
+      case 'writefilecharacter': {
+        const handle = await this.evalExpr(stmt.file);
+        const fh = this.fileHandles[handle];
+        if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
+        if (fh.mode === 'read') throw new Error(`Cannot write to file opened for reading at line ${stmt.line}`);
+        const ch = String(await this.evalExpr(stmt.character));
+        if (ch.length > 0) fh.content += ch[0];
+        break;
       }
       case 'void_funccall': {
         await this.execFunctionCall(stmt.call, stmt.line);

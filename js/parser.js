@@ -204,6 +204,15 @@ function parse(tokens) {
       return { type: 'boolean', value: t.value === 'YES' ? 1 : 0 };
     }
 
+    if (t.type === 'KEYWORD' && t.value === 'ENDOFFILE') {
+      advance();
+      if (peek().type === 'IDENT' && peek().value.toUpperCase() === 'FILE') {
+        advance(); // consume optional FILE label
+      }
+      const fileExpr = parseAtom();
+      return { type: 'endoffile', file: fileExpr, line: t.line };
+    }
+
     // Wave type keywords as expression constants
     if (t.type === 'KEYWORD' && ['SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE'].includes(t.value)) {
       advance();
@@ -347,6 +356,30 @@ function parse(tokens) {
       return { type: 'stopplay', line: t.line };
     }
 
+    if (t.type === 'KEYWORD' && t.value === 'CLOSE') {
+      advance();
+      const file = parseExpr();
+      return { type: 'close', file, line: t.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'WRITEFILELINE') {
+      const wt = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'FILE', required: true },
+        { name: 'LINE', required: true },
+      ], wt.line);
+      return { type: 'writefileline', file: resolved.FILE, content: resolved.LINE, line: wt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'WRITEFILECHARACTER') {
+      const wt = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'FILE', required: true },
+        { name: 'CHARACTER', required: true },
+      ], wt.line);
+      return { type: 'writefilecharacter', file: resolved.FILE, character: resolved.CHARACTER, line: wt.line };
+    }
+
     if (t.type === 'KEYWORD' && t.value === 'STRUCT') {
       return parseStructBlock();
     }
@@ -429,6 +462,7 @@ function parse(tokens) {
         'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL', 'GLOBAL',
         'STRUCT', 'ENDSTRUCT',
         'SLEEP', 'SIZE',
+        'CLOSE', 'WRITEFILELINE', 'WRITEFILECHARACTER',
       ]);
       if (KEYWORDS.has(upper)) {
         throw new SyntaxError(`Did you mean '${upper}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -438,6 +472,7 @@ function parse(tokens) {
         LENGTH: '#', SUBSTRING: '$', UPPERCASE: '$', LOWERCASE: '$', CONTAINS: '!',
         ABS: '#', SQRT: '#', ROUND: '#', FLOOR: '#', CEIL: '#',
         MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
+        OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '!',
       };
       if (TYPED_KW_SUFFIXES[upper]) {
         throw new SyntaxError(`Did you mean '${upper}${TYPED_KW_SUFFIXES[upper]}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -811,6 +846,10 @@ function parse(tokens) {
     COS: [{ name: 'VALUE', required: true }],
     LOG: [{ name: 'VALUE', required: true }],
     SIGN: [{ name: 'VALUE', required: true }],
+    OPEN: [{ name: 'FILE', required: true }, { name: 'MODE', required: false }],
+    READFILELINE: [{ name: 'FILE', required: true }],
+    READFILECHARACTER: [{ name: 'FILE', required: true }],
+    ENDOFFILE: [{ name: 'FILE', required: true }],
   };
 
   function parseAssignBuiltinKeyword(varToken, line) {

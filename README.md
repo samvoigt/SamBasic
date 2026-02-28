@@ -325,6 +325,50 @@ SLEEP 2                            ' Pause execution for 2 seconds
 SLEEP 0.5                          ' Pause for 500ms (fractional seconds)
 ```
 
+### File I/O
+
+Files are stored in `localStorage` and persist across sessions.
+
+**Open a file:**
+```
+f# = OPEN# FILE "data.txt" MODE "read"     ' Open for reading (file must exist)
+f# = OPEN# FILE "out.txt" MODE "write"     ' Open for writing (truncates/creates)
+f# = OPEN# FILE "log.txt" MODE "append"    ' Open for appending (creates or preserves)
+f# = OPEN# FILE "data.txt"                 ' MODE defaults to "read"
+```
+
+**Read from a file:**
+```
+line$ = READFILELINE$ FILE f#               ' Read one line (without trailing newline)
+ch$ = READFILECHARACTER$ FILE f#            ' Read one character
+eof! = ENDOFFILE! FILE f#                   ' Check for end of file (YES/NO)
+```
+
+**Write to a file:**
+```
+WRITEFILELINE FILE f# LINE "Hello"          ' Write text + newline
+WRITEFILECHARACTER FILE f# CHARACTER "X"    ' Write a single character
+```
+
+**Close a file:**
+```
+CLOSE f#                                    ' Saves write/append files to localStorage
+```
+
+Files are automatically closed (and saved) when the program ends or is stopped.
+
+**Complete example — copy a file:**
+```
+out# = OPEN# FILE "copy.txt" MODE "write"
+in# = OPEN# FILE "source.txt"
+WHILE NOT (ENDOFFILE! in#)
+  line$ = READFILELINE$ FILE in#
+  WRITEFILELINE FILE out# LINE line$
+ENDWHILE
+CLOSE in#
+CLOSE out#
+```
+
 ### Comments
 
 ```
