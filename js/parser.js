@@ -462,7 +462,7 @@ function parse(tokens) {
         'FOR', 'FROM', 'TO', 'STEP',
         'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',
         'AND', 'OR', 'NOT',
-        'FUNCTION', 'RETURN', 'OPTIONAL', 'GLOBAL',
+        'FUNCTION', 'RETURN', 'OPTIONAL', 'REFERENCE', 'GLOBAL',
         'STRUCT',
         'SLEEP', 'SIZE',
         'CLOSE', 'WRITEFILELINE', 'WRITEFILECHARACTER',
@@ -729,6 +729,10 @@ function parse(tokens) {
         optionalStarted = true;
         continue;
       }
+      let isReference = false;
+      if (match('KEYWORD', 'REFERENCE')) {
+        isReference = true;
+      }
       // Parameter: LABEL typedVar
       // IDENT is the label, then a typed var token follows
       const p = peek();
@@ -742,11 +746,15 @@ function parse(tokens) {
       if (!paramSuffix) {
         throw new SyntaxError(`Expected typed variable for parameter at line ${varToken.line}`);
       }
+      if (isReference && paramSuffix !== '@' && paramSuffix !== '$' && paramSuffix !== '&') {
+        throw new SyntaxError(`REFERENCE can only be used with @, $, or & parameters at line ${varToken.line}`);
+      }
       params.push({
         label: label || null,
         varName: varToken.value,
         varSuffix: paramSuffix,
         optional: optionalStarted,
+        reference: isReference,
       });
     }
     skipNewlines();

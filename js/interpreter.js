@@ -901,6 +901,8 @@ class Interpreter {
       if (e instanceof ReturnSignal) {
         returnValue = e.value;
       } else {
+        // Write back reference params before restoring scope
+        this._writebackRefArgs(resolvedArgs);
         // Restore scope before re-throwing
         const saved = this.callStack.pop();
         this.numVars = saved.numVars;
@@ -911,6 +913,9 @@ class Interpreter {
         throw e;
       }
     }
+
+    // Write back reference params before restoring scope
+    this._writebackRefArgs(resolvedArgs);
 
     // Restore caller scope
     const saved = this.callStack.pop();
@@ -962,7 +967,10 @@ class Interpreter {
     const values = new Array(params.length).fill(undefined);
     let positionalIndex = 0;
 
-    for (const arg of args) {
+    const argNodes = new Array(params.length).fill(null);
+
+    for (let a = 0; a < args.length; a++) {
+      const arg = args[a];
       if (arg.label) {
         // Named argument — find matching param by label
         const idx = params.findIndex(p => p.label !== null && p.label === arg.label);
@@ -973,6 +981,7 @@ class Interpreter {
           throw new Error(`Parameter '${arg.label}' already provided at line ${line}`);
         }
         assigned[idx] = true;
+        argNodes[idx] = arg.value;
         values[idx] = await this.evalExpr(arg.value);
       } else {
         // Positional — find next unassigned param
@@ -983,6 +992,7 @@ class Interpreter {
           throw new Error(`Too many arguments (expected ${params.length}) at line ${line}`);
         }
         assigned[positionalIndex] = true;
+        argNodes[positionalIndex] = arg.value;
         values[positionalIndex] = await this.evalExpr(arg.value);
         positionalIndex++;
       }
@@ -991,6 +1001,9 @@ class Interpreter {
     // Validate required params and fill defaults for optional
     const resolved = [];
     for (let i = 0; i < params.length; i++) {
+      let callerVarName = null;
+      const isRef = params[i].reference;
+
       if (!assigned[i]) {
         if (!params[i].optional) {
           const paramDisplay = params[i].label || (params[i].varName + params[i].varSuffix);
@@ -999,18 +1012,49 @@ class Interpreter {
         // Default values by type
         const defaults = { '#': 0, '$': '', '@': [], '&': {}, '?': 0 };
         values[i] = defaults[params[i].varSuffix];
+      } else if (isRef) {
+        // Validate that the AST node is a simple variable
+        const node = argNodes[i];
+        const validRefTypes = { '@': 'arrvar', '$': 'strvar', '&': 'structvar' };
+        const expectedType = validRefTypes[params[i].varSuffix];
+        if (!node || node.type !== expectedType) {
+          throw new Error(`REFERENCE parameter '${params[i].varName}${params[i].varSuffix}' requires a variable, not an expression at line ${line}`);
+        }
+        callerVarName = node.name;
       }
-      // Deep-copy arrays and structs for pass-by-value
+
+      // Deep-copy arrays and structs for pass-by-value (skip for reference params)
       let val = values[i];
-      if (params[i].varSuffix === '@' && Array.isArray(val)) {
-        val = JSON.parse(JSON.stringify(val));
-      } else if (params[i].varSuffix === '&' && typeof val === 'object' && val !== null) {
-        val = JSON.parse(JSON.stringify(val));
+      if (!isRef) {
+        if (params[i].varSuffix === '@' && Array.isArray(val)) {
+          val = JSON.parse(JSON.stringify(val));
+        } else if (params[i].varSuffix === '&' && typeof val === 'object' && val !== null) {
+          val = JSON.parse(JSON.stringify(val));
+        }
       }
-      resolved.push({ varName: params[i].varName, varSuffix: params[i].varSuffix, value: val });
+      resolved.push({
+        varName: params[i].varName,
+        varSuffix: params[i].varSuffix,
+        value: val,
+        reference: isRef,
+        callerVarName,
+      });
     }
 
     return resolved;
+  }
+
+  _writebackRefArgs(resolvedArgs) {
+    const callerScope = this.callStack[this.callStack.length - 1];
+    for (const arg of resolvedArgs) {
+      if (arg.reference && arg.callerVarName) {
+        const suffixToStore = { '$': 'strVars', '@': 'arrVars', '&': 'structVars' };
+        const store = suffixToStore[arg.varSuffix];
+        if (store) {
+          callerScope[store][arg.callerVarName] = this[store][arg.varName];
+        }
+      }
+    }
   }
 
   async execFunctionBody(body, localLabels) {

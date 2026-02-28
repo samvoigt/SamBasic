@@ -216,6 +216,31 @@ repeat "hi", 3
 repeat "once"
 ```
 
+**Pass by reference** — use `REFERENCE` before a parameter to pass it by reference instead of by value. Changes inside the function are reflected in the caller's variable. Only `@`, `$`, and `&` parameters support `REFERENCE`. The caller must pass a variable (not a literal or expression):
+```
+FUNCTION sort REFERENCE items@
+  ' sorts items@ in place — caller's array is modified directly
+  ' (sorting logic here)
+END FUNCTION
+
+data@ = [3, 1, 2]
+sort data@
+' data@ is now sorted
+
+FUNCTION swap REFERENCE a$ REFERENCE b$
+  temp$ = a$
+  a$ = b$
+  b$ = temp$
+END FUNCTION
+
+x$ = "hello"
+y$ = "world"
+swap x$, y$
+' x$ = "world", y$ = "hello"
+```
+
+`REFERENCE` can be combined with `OPTIONAL`: `FUNCTION process OPTIONAL REFERENCE items@`
+
 **Function calls in expressions** — wrap a function call in parentheses to use its return value inside an expression:
 ```
 PRINT (add# 3, 4)
