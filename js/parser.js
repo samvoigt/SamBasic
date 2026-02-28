@@ -583,10 +583,12 @@ function parse(tokens) {
     const thenBody = [];
     let elseBody = null;
 
+    let foundEnd = false;
     while (!atEnd()) {
       skipNewlines();
       if (peek().type === 'KEYWORD' && peek().value === 'ENDIF') {
         advance();
+        foundEnd = true;
         break;
       }
       if (peek().type === 'KEYWORD' && peek().value === 'ELSE') {
@@ -597,6 +599,7 @@ function parse(tokens) {
           advance(); // consume IF
           const nested = parseIfChain(elseToken);
           elseBody = [nested];
+          foundEnd = true;
           break;
         }
         // Plain ELSE
@@ -605,16 +608,19 @@ function parse(tokens) {
           skipNewlines();
           if (peek().type === 'KEYWORD' && peek().value === 'ENDIF') {
             advance();
+            foundEnd = true;
             break;
           }
           elseBody.push(parseStatement());
           skipNewlines();
         }
+        if (!foundEnd) throw new SyntaxError(`Missing ENDIF for IF at line ${t.line}`);
         break;
       }
       thenBody.push(parseStatement());
       skipNewlines();
     }
+    if (!foundEnd) throw new SyntaxError(`Missing ENDIF for IF at line ${t.line}`);
 
     return { type: 'if', condition, thenBody, elseBody, line: t.line };
   }
@@ -637,15 +643,18 @@ function parse(tokens) {
     skipNewlines();
 
     const body = [];
+    let foundEnd = false;
     while (!atEnd()) {
       skipNewlines();
       if (peek().type === 'KEYWORD' && peek().value === 'ENDFOR') {
         advance();
+        foundEnd = true;
         break;
       }
       body.push(parseStatement());
       skipNewlines();
     }
+    if (!foundEnd) throw new SyntaxError(`Missing ENDFOR for FOR at line ${t.line}`);
 
     return { type: 'for', varName, lower, upper, step, body, line: t.line };
   }
@@ -656,15 +665,18 @@ function parse(tokens) {
     skipNewlines();
 
     const body = [];
+    let foundEnd = false;
     while (!atEnd()) {
       skipNewlines();
       if (peek().type === 'KEYWORD' && peek().value === 'ENDWHILE') {
         advance();
+        foundEnd = true;
         break;
       }
       body.push(parseStatement());
       skipNewlines();
     }
+    if (!foundEnd) throw new SyntaxError(`Missing ENDWHILE for WHILE at line ${t.line}`);
 
     return { type: 'while', condition, body, line: t.line };
   }
@@ -674,10 +686,12 @@ function parse(tokens) {
     const varToken = expect('STRUCT_VAR');
     skipNewlines();
     const members = [];
+    let foundEnd = false;
     while (!atEnd()) {
       skipNewlines();
       if (peek().type === 'KEYWORD' && peek().value === 'ENDSTRUCT') {
         advance();
+        foundEnd = true;
         break;
       }
       expect('DOT');
@@ -690,6 +704,7 @@ function parse(tokens) {
       members.push({ name: memToken.value, suffix, value });
       skipNewlines();
     }
+    if (!foundEnd) throw new SyntaxError(`Missing ENDSTRUCT for STRUCT at line ${t.line}`);
     return { type: 'assign_struct', name: varToken.value, members, line: t.line };
   }
 
@@ -738,16 +753,19 @@ function parse(tokens) {
     // Parse body
     insideFunction = true;
     const body = [];
+    let foundEnd = false;
     while (!atEnd()) {
       skipNewlines();
       if (peek().type === 'KEYWORD' && peek().value === 'ENDFUNCTION') {
         advance();
+        foundEnd = true;
         break;
       }
       body.push(parseStatement());
       skipNewlines();
     }
     insideFunction = false;
+    if (!foundEnd) throw new SyntaxError(`Missing ENDFUNCTION for FUNCTION at line ${t.line}`);
 
     // Post-pass: collect labels from body into localLabels
     const localLabels = {};
