@@ -215,7 +215,31 @@ x# = fact# 5
 PRINT x#          ' 120
 ```
 
-**Scoping:** Functions have their own local variables. Global variables are not visible inside a function. Built-in color constants (e.g., `RED&`) are available in every scope. Labels inside functions are local and don't conflict with global labels. Function names shadow variable names — if you define `FUNCTION add#`, then `add#` always refers to the function.
+**Scoping:** Functions have their own local variables. Global variables are not visible inside a function unless explicitly declared with `GLOBAL`. Built-in color constants (e.g., `RED&`) are available in every scope. Labels inside functions are local and don't conflict with global labels. Function names shadow variable names — if you define `FUNCTION add#`, then `add#` always refers to the function.
+
+**Global variables** — use `GLOBAL` at the top of a function body to read and write specific global variables:
+```
+score# = 0
+name$ = "Player 1"
+items@ = [10, 20, 30]
+
+FUNCTION addScore points#
+  GLOBAL score#, name$, items@
+  score# = score# + points#
+  name$ = UPPERCASE$ name$
+  items@[1] = 99
+ENDFUNCTION
+
+addScore 10
+PRINT score#        ' 10
+PRINT name$         ' PLAYER 1
+PRINT items@[1]     ' 99
+```
+
+Rules:
+- `GLOBAL` must appear before other statements in the function body
+- Listed variables must already exist in the global scope when the function is called
+- A `GLOBAL` variable cannot share a name with a parameter
 
 ### Arrays
 

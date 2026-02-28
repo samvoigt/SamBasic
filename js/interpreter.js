@@ -615,6 +615,10 @@ class Interpreter {
         // no-op at runtime; function definitions are collected at parse time
         break;
       }
+      case 'global_decl': {
+        // no-op at runtime; handled at call setup time
+        break;
+      }
       case 'return': {
         const val = stmt.value ? await this.evalExpr(stmt.value) : null;
         throw new ReturnSignal(val);
@@ -708,6 +712,26 @@ class Interpreter {
         case '@': this.arrVars[key] = arg.value; break;
         case '&': this.structVars[key] = arg.value; break;
         case '!': this.boolVars[key] = arg.value; break;
+      }
+    }
+
+    // Set up GLOBAL variable proxies
+    if (func.globals && func.globals.length > 0) {
+      const globalScope = this.callStack[0]; // outermost/main scope
+      for (const g of func.globals) {
+        const varKey = g.name;
+        const suffixToStore = { '#': 'numVars', '$': 'strVars', '@': 'arrVars', '&': 'structVars', '!': 'boolVars' };
+        const storeName = suffixToStore[g.suffix];
+        const globalStore = globalScope[storeName];
+        if (!(varKey in globalStore)) {
+          throw new Error(`GLOBAL variable '${varKey}${g.suffix}' does not exist in global scope at line ${line}`);
+        }
+        Object.defineProperty(this[storeName], varKey, {
+          get() { return globalStore[varKey]; },
+          set(val) { globalStore[varKey] = val; },
+          configurable: true,
+          enumerable: true,
+        });
       }
     }
 

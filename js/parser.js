@@ -366,6 +366,31 @@ function parse(tokens) {
       const duration = parseExpr();
       return { type: 'sleep', duration, line: t.line };
     }
+    if (t.type === 'KEYWORD' && t.value === 'GLOBAL') {
+      if (!insideFunction) {
+        throw new SyntaxError(`GLOBAL can only be used inside a function at line ${t.line}`);
+      }
+      advance(); // GLOBAL
+      const vars = [];
+      const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
+      const p = peek();
+      const suffix = suffixMap[p.type];
+      if (suffix === undefined) {
+        throw new SyntaxError(`Expected typed variable after GLOBAL at line ${p.line}`);
+      }
+      const first = advance();
+      vars.push({ name: first.value, suffix });
+      while (match('COMMA')) {
+        const next = peek();
+        const nextSuffix = suffixMap[next.type];
+        if (nextSuffix === undefined) {
+          throw new SyntaxError(`Expected typed variable after GLOBAL at line ${next.line}`);
+        }
+        const v = advance();
+        vars.push({ name: v.value, suffix: nextSuffix });
+      }
+      return { type: 'global_decl', vars, line: t.line };
+    }
     // Void function call: IDENT that is a known function
     if (t.type === 'IDENT' && isKnownFunction(t)) {
       const call = parseFunctionCall();
@@ -401,7 +426,7 @@ function parse(tokens) {
         'FOR', 'GOESFROM', 'TO', 'WITHSTEP', 'ENDFOR',
         'WHILE', 'ENDWHILE', 'SETCOLOR', 'BEEP', 'PLAY',
         'AND', 'OR', 'NOT',
-        'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL',
+        'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL', 'GLOBAL',
         'STRUCT', 'ENDSTRUCT',
         'SLEEP', 'SIZE',
       ]);
@@ -692,7 +717,30 @@ function parse(tokens) {
       }
     }
 
-    functions[name] = { params, returnType, body, localLabels };
+    // Validate GLOBAL declarations: must precede any non-global_decl statement
+    let seenNonGlobal = false;
+    const globals = [];
+    for (let i = 0; i < body.length; i++) {
+      if (body[i].type === 'global_decl') {
+        if (seenNonGlobal) {
+          throw new SyntaxError(`GLOBAL must appear before other statements in function at line ${body[i].line}`);
+        }
+        for (const v of body[i].vars) {
+          // Check no conflict with parameter names
+          const paramKey = v.name + v.suffix;
+          for (const p of params) {
+            if (p.varName + p.varSuffix === paramKey) {
+              throw new SyntaxError(`GLOBAL variable '${paramKey}' conflicts with parameter '${paramKey}' at line ${body[i].line}`);
+            }
+          }
+          globals.push(v);
+        }
+      } else {
+        seenNonGlobal = true;
+      }
+    }
+
+    functions[name] = { params, returnType, body, localLabels, globals };
     return { type: 'funcdef', name, line: t.line };
   }
 
