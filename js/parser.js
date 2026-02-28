@@ -185,6 +185,12 @@ function parse(tokens) {
       return { type: 'boolean', value: t.value === 'YES' ? 1 : 0 };
     }
 
+    // Wave type keywords as expression constants
+    if (t.type === 'KEYWORD' && ['SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE'].includes(t.value)) {
+      advance();
+      return { type: 'string', value: t.value.toLowerCase() };
+    }
+
     if (t.type === 'LPAREN') {
       advance();
       const expr = parseExpr();
@@ -195,7 +201,65 @@ function parse(tokens) {
     throw new SyntaxError(`Unexpected token ${t.type} '${t.value}' at line ${t.line}`);
   }
 
-  // Statement parsing
+  // --- Built-in keyword argument helpers ---
+
+  function parseKeywordArgs() {
+    const args = [];
+    while (!atLineEnd()) {
+      if (peek().type === 'IDENT') {
+        const label = advance().value.toUpperCase();
+        const value = parseExpr();
+        args.push({ label, value });
+      } else {
+        const value = parseExpr();
+        args.push({ label: null, value });
+      }
+      if (!match('COMMA')) break;
+    }
+    return args;
+  }
+
+  function resolveBuiltinArgs(args, paramDefs, line) {
+    const assigned = new Array(paramDefs.length).fill(false);
+    const resolved = {};
+    let positionalIndex = 0;
+
+    for (const arg of args) {
+      if (arg.label) {
+        const idx = paramDefs.findIndex(p => p.name === arg.label);
+        if (idx === -1) {
+          throw new SyntaxError(`Unknown parameter '${arg.label}' at line ${line}`);
+        }
+        if (assigned[idx]) {
+          throw new SyntaxError(`Parameter '${arg.label}' already provided at line ${line}`);
+        }
+        assigned[idx] = true;
+        resolved[paramDefs[idx].name] = arg.value;
+      } else {
+        while (positionalIndex < paramDefs.length && assigned[positionalIndex]) {
+          positionalIndex++;
+        }
+        if (positionalIndex >= paramDefs.length) {
+          throw new SyntaxError(`Too many arguments at line ${line}`);
+        }
+        assigned[positionalIndex] = true;
+        resolved[paramDefs[positionalIndex].name] = arg.value;
+        positionalIndex++;
+      }
+    }
+
+    // Check required params
+    for (let i = 0; i < paramDefs.length; i++) {
+      if (!assigned[i] && paramDefs[i].required) {
+        throw new SyntaxError(`Missing required parameter '${paramDefs[i].name}' at line ${line}`);
+      }
+    }
+
+    return resolved;
+  }
+
+  // --- Statement parsing ---
+
   function parseStatement() {
     const t = peek();
 
@@ -208,19 +272,6 @@ function parse(tokens) {
     if (t.type === 'KEYWORD' && t.value === 'CLEARSCREEN') {
       advance();
       return { type: 'clearscreen', line: t.line };
-    }
-    if (t.type === 'KEYWORD' && t.value === 'INPUT') {
-      return parseInput();
-    }
-    if (t.type === 'KEYWORD' && t.value === 'GETKEY') {
-      advance();
-      const varToken = expect('STR_VAR');
-      return { type: 'getkey', varName: varToken.value, line: t.line };
-    }
-    if (t.type === 'KEYWORD' && t.value === 'RANDOM') {
-      advance();
-      const varToken = expect('NUM_VAR');
-      return { type: 'random', varName: varToken.value, line: t.line };
     }
     if (t.type === 'KEYWORD' && t.value === 'LABEL') {
       advance();
@@ -236,7 +287,7 @@ function parse(tokens) {
       const labelToken = expect('STR_VAR');
       return { type: 'goto', label: labelToken.value, line: t.line };
     }
-if (t.type === 'KEYWORD' && t.value === 'IF') {
+    if (t.type === 'KEYWORD' && t.value === 'IF') {
       return parseIf();
     }
     if (t.type === 'KEYWORD' && t.value === 'FOR') {
@@ -246,9 +297,7 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
       return parseWhile();
     }
     if (t.type === 'KEYWORD' && t.value === 'SETCOLOR') {
-      advance();
-      const expr = parseExpr();
-      return { type: 'setcolor', expr, line: t.line };
+      return parseSetcolor();
     }
     if (t.type === 'KEYWORD' && t.value === 'BEEP') {
       advance();
@@ -274,9 +323,6 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     }
     if (t.type === 'KEYWORD' && t.value === 'DATA') {
       return parseData();
-    }
-    if (t.type === 'KEYWORD' && t.value === 'READ') {
-      return parseRead();
     }
 
     if (t.type === 'KEYWORD' && t.value === 'FUNCTION') {
@@ -305,43 +351,85 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
 
   function parsePrint() {
     const t = advance(); // PRINT
-    const expr = parseExpr();
-    let withColor = null;
-    if (match('KEYWORD', 'WITHCOLOR')) {
-      withColor = parseExpr();
-    }
-    return { type: 'print', expr, withColor, line: t.line };
+    const args = parseKeywordArgs();
+    const resolved = resolveBuiltinArgs(args, [
+      { name: 'TEXT', required: true },
+      { name: 'COLOR', required: false },
+    ], t.line);
+    return { type: 'print', expr: resolved.TEXT, withColor: resolved.COLOR || null, line: t.line };
   }
 
   function parsePrintAt() {
     const t = advance(); // PRINTAT
-    const row = parseExpr();
-    expect('COMMA');
-    const col = parseExpr();
-    expect('COMMA');
-    const expr = parseExpr();
-    let withColor = null;
-    if (match('KEYWORD', 'WITHCOLOR')) {
-      withColor = parseExpr();
-    }
-    return { type: 'printat', row, col, expr, withColor, line: t.line };
+    const args = parseKeywordArgs();
+    const resolved = resolveBuiltinArgs(args, [
+      { name: 'ROW', required: true },
+      { name: 'COL', required: true },
+      { name: 'TEXT', required: true },
+      { name: 'COLOR', required: false },
+    ], t.line);
+    return { type: 'printat', row: resolved.ROW, col: resolved.COL, expr: resolved.TEXT, withColor: resolved.COLOR || null, line: t.line };
   }
 
-  function parseInput() {
-    const t = advance(); // INPUT
-    const prompt = parseExpr();
-    expect('COMMA');
-    const varToken = advance();
-    if (varToken.type !== 'NUM_VAR' && varToken.type !== 'STR_VAR') {
-      throw new SyntaxError(`INPUT requires a number# or string$ variable at line ${t.line}`);
-    }
+  function parseSetcolor() {
+    const t = advance(); // SETCOLOR
+    const args = parseKeywordArgs();
+    const resolved = resolveBuiltinArgs(args, [
+      { name: 'COLOR', required: true },
+    ], t.line);
+    return { type: 'setcolor', expr: resolved.COLOR, line: t.line };
+  }
+
+  function parsePlay() {
+    const t = advance(); // PLAY
+    const args = parseKeywordArgs();
+    const resolved = resolveBuiltinArgs(args, [
+      { name: 'NOTES', required: true },
+      { name: 'WAVE', required: false },
+      { name: 'BACKGROUND', required: false },
+      { name: 'REPEAT', required: false },
+    ], t.line);
     return {
-      type: 'input',
-      prompt,
-      varType: varToken.type === 'NUM_VAR' ? 'number' : 'string',
-      varName: varToken.value,
+      type: 'play',
+      expr: resolved.NOTES,
+      waveExpr: resolved.WAVE || null,
+      backgroundExpr: resolved.BACKGROUND || null,
+      repeatExpr: resolved.REPEAT || null,
       line: t.line,
     };
+  }
+
+  function parsePlayPoly() {
+    const t = advance(); // PLAYPOLY
+    const voices = [];
+    while (peek().type === 'LBRACKET') {
+      advance(); // [
+      const expr = parseExpr();
+      let waveExpr = null;
+      // Check for WAVE inside bracket: IDENT "WAVE" followed by expression
+      if (peek().type === 'IDENT' && peek().value.toUpperCase() === 'WAVE') {
+        advance(); // consume WAVE ident
+        waveExpr = parseExpr();
+      }
+      expect('RBRACKET');
+      voices.push({ expr, waveExpr });
+    }
+    if (voices.length === 0) {
+      throw new SyntaxError(`PLAYPOLY requires at least one [voice] at line ${t.line}`);
+    }
+    // Parse optional trailing args for BACKGROUND and REPEAT
+    let backgroundExpr = null;
+    let repeatExpr = null;
+    if (match('COMMA')) {
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'BACKGROUND', required: false },
+        { name: 'REPEAT', required: false },
+      ], t.line);
+      backgroundExpr = resolved.BACKGROUND || null;
+      repeatExpr = resolved.REPEAT || null;
+    }
+    return { type: 'playpoly', voices, backgroundExpr, repeatExpr, line: t.line };
   }
 
   function parseIf() {
@@ -431,49 +519,6 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     return { type: 'while', condition, body, line: t.line };
   }
 
-  function parsePlay() {
-    const t = advance(); // PLAY
-    const expr = parseExpr();
-    let waveType = null;
-    if (match('KEYWORD', 'WITHWAVE')) {
-      const wt = peek();
-      if (wt.type === 'KEYWORD' && ['SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE'].includes(wt.value)) {
-        waveType = advance().value.toLowerCase();
-      } else {
-        throw new SyntaxError(`Expected wave type after WITHWAVE at line ${t.line}`);
-      }
-    }
-    const inBackground = !!match('KEYWORD', 'INBACKGROUND');
-    const onRepeat = !!match('KEYWORD', 'ONREPEAT');
-    return { type: 'play', expr, waveType, inBackground, onRepeat, line: t.line };
-  }
-
-  function parsePlayPoly() {
-    const t = advance(); // PLAYPOLY
-    const voices = [];
-    while (peek().type === 'LBRACKET') {
-      advance(); // [
-      const expr = parseExpr();
-      let waveType = null;
-      if (match('KEYWORD', 'WITHWAVE')) {
-        const wt = peek();
-        if (wt.type === 'KEYWORD' && ['SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE'].includes(wt.value)) {
-          waveType = advance().value.toLowerCase();
-        } else {
-          throw new SyntaxError(`Expected wave type after WITHWAVE at line ${t.line}`);
-        }
-      }
-      expect('RBRACKET');
-      voices.push({ expr, waveType });
-    }
-    if (voices.length === 0) {
-      throw new SyntaxError(`PLAYPOLY requires at least one [voice] at line ${t.line}`);
-    }
-    const inBackground = !!match('KEYWORD', 'INBACKGROUND');
-    const onRepeat = !!match('KEYWORD', 'ONREPEAT');
-    return { type: 'playpoly', voices, inBackground, onRepeat, line: t.line };
-  }
-
   function parseData() {
     const t = advance(); // DATA
     while (!atLineEnd()) {
@@ -488,20 +533,6 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
       if (!match('COMMA')) break;
     }
     return { type: 'data', line: t.line };
-  }
-
-  function parseRead() {
-    const t = advance(); // READ
-    const varToken = advance();
-    if (varToken.type !== 'NUM_VAR' && varToken.type !== 'STR_VAR') {
-      throw new SyntaxError(`READ requires a number# or string$ variable at line ${t.line}`);
-    }
-    return {
-      type: 'read',
-      varType: varToken.type === 'NUM_VAR' ? 'number' : 'string',
-      varName: varToken.value,
-      line: t.line,
-    };
   }
 
   function parseFunctionDef() {
@@ -593,6 +624,32 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     return { type: 'funccall', name, suffix, args, line: ref.line };
   }
 
+  // Built-in parameter definitions for return-value keywords
+  const BUILTIN_KEYWORD_PARAMS = {
+    INPUT: [{ name: 'TEXT', required: false }],
+    GETKEY: [],
+    RANDOM: [{ name: 'MAX', required: true }],
+    READ: [],
+  };
+
+  function parseAssignBuiltinKeyword(varToken, line) {
+    const kw = advance(); // consume the keyword
+    const keyword = kw.value;
+    const paramDefs = BUILTIN_KEYWORD_PARAMS[keyword];
+    const args = parseKeywordArgs();
+    const resolved = resolveBuiltinArgs(args, paramDefs, line);
+
+    const varTypeMap = { 'NUM_VAR': 'num', 'STR_VAR': 'str', 'BOOL_VAR': 'bool', 'STRUCT_VAR': 'struct', 'ARR_VAR': 'arr' };
+    return {
+      type: 'assign_builtin',
+      name: varToken.value,
+      varType: varTypeMap[varToken.type],
+      keyword,
+      params: resolved,
+      line,
+    };
+  }
+
   function parseAssignment() {
     const varToken = advance();
     const line = varToken.line;
@@ -614,6 +671,10 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
       if (peek().type === 'FUNC_REF') {
         const call = parseFunctionCall();
         return { type: 'assign_funccall', name: varToken.value, varType: 'struct', call, line };
+      }
+      // Check for builtin keyword
+      if (peek().type === 'KEYWORD' && BUILTIN_KEYWORD_PARAMS[peek().value]) {
+        return parseAssignBuiltinKeyword(varToken, line);
       }
       expect('LBRACE');
       const members = [];
@@ -663,6 +724,11 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
         return { type: 'assign_funccall', name: varToken.value, varType: 'arr', call, line };
       }
 
+      // Check for builtin keyword
+      if (peek().type === 'KEYWORD' && BUILTIN_KEYWORD_PARAMS[peek().value]) {
+        return parseAssignBuiltinKeyword(varToken, line);
+      }
+
       // Array literal: [1,2,3] or [1,2,3][4,5,6]
       if (peek().type === 'LBRACKET') {
         const dimensions = [];
@@ -697,6 +763,10 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
       const varTypeMap = { 'NUM_VAR': 'num', 'STR_VAR': 'str', 'BOOL_VAR': 'bool' };
       const call = parseFunctionCall();
       return { type: 'assign_funccall', name: varToken.value, varType: varTypeMap[varToken.type], call, line };
+    }
+    // Check for builtin keyword
+    if (peek().type === 'KEYWORD' && BUILTIN_KEYWORD_PARAMS[peek().value]) {
+      return parseAssignBuiltinKeyword(varToken, line);
     }
     const value = parseExpr();
     if (varToken.type === 'NUM_VAR') {

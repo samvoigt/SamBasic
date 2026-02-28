@@ -43,21 +43,20 @@ String concatenation uses `+`.
 ### Output
 
 ```
-PRINT expr                         ' Print with newline
-PRINTAT row, col, expr             ' Print at screen position (1-indexed)
-CLEARSCREEN                        ' Clear the screen
-```
-
-Both `PRINT` and `PRINTAT` support `WITHCOLOR`:
-```
-PRINT "alert!" WITHCOLOR RED&
+PRINT "hello"                             ' Print with newline
+PRINT TEXT "alert!", COLOR RED&           ' Print with color (named params)
+PRINT "alert!", COLOR RED&               ' Positional text + named color
+PRINTAT 1, 1, "top-left"                 ' Print at screen position (1-indexed)
+PRINTAT ROW 5, COL 10, TEXT "hi", COLOR GREEN&
+CLEARSCREEN                               ' Clear the screen
 ```
 
 ### Input
 
 ```
-INPUT "What is your name? ", name$  ' Prompt and store input
-GETKEY k$                           ' Read currently pressed key (non-blocking)
+name$ = INPUT "What is your name? "  ' Prompt and store result
+x# = INPUT                          ' Input with no prompt
+k$ = GETKEY                          ' Read currently pressed key (non-blocking)
 ```
 
 ### Control Flow
@@ -184,6 +183,7 @@ Members are prefixed with `.` and must include a type suffix (`#`, `$`, `@`, `&`
 
 ```
 SETCOLOR GREEN&                   ' Set global text color
+SETCOLOR COLOR myColor&           ' Named parameter form
 ```
 
 Colors are structs with `.red#`, `.green#`, `.blue#` members (0–255). The 16 EGA colors are built-in:
@@ -199,18 +199,17 @@ SETCOLOR myColor&
 ### Sound
 
 ```
-BEEP                              ' Short beep
-PLAY "O4 L4 C D E F G A B > C"   ' Play notes (QBASIC PLAY syntax)
-PLAY "C D E" WITHWAVE SINE       ' Wave types: SINE, SQUARE, SAWTOOTH, TRIANGLE
-PLAY "C D E" INBACKGROUND        ' Play in background (non-blocking)
-PLAY "C D E" ONREPEAT            ' Loop until program stops (blocking)
-PLAY "C D E" INBACKGROUND ONREPEAT ' Loop in background
+BEEP                                       ' Short beep
+PLAY "O4 L4 C D E F G A B > C"            ' Play notes (QBASIC PLAY syntax)
+PLAY NOTES "C D E", WAVE SINE             ' Wave types: SINE, SQUARE, SAWTOOTH, TRIANGLE
+PLAY "C D E", BACKGROUND YES              ' Play in background (non-blocking)
+PLAY "C D E", BACKGROUND YES, REPEAT YES  ' Loop in background
 ```
 
-**Polyphonic playback** — play multiple voices simultaneously with `PLAYPOLY`. Each voice is a bracketed group with its own note string and optional wave type:
+**Polyphonic playback** — play multiple voices simultaneously with `PLAYPOLY`. Each voice is a bracketed group with its own note string and optional `WAVE`:
 ```
-PLAYPOLY ["O4 L4 C E G" WITHWAVE SINE] ["O3 L2 C G" WITHWAVE TRIANGLE]
-PLAYPOLY ["C E G"] ["C G"] INBACKGROUND ONREPEAT
+PLAYPOLY ["O4 L4 C E G" WAVE SINE] ["O3 L2 C G" WAVE TRIANGLE]
+PLAYPOLY ["C E G"] ["C G"], BACKGROUND YES, REPEAT YES
 ```
 
 **Playback control** — control background audio:
@@ -226,15 +225,16 @@ STOPPLAY                          ' Stop background audio
 
 ```
 DATA 10, 20, 30, "hello"
-READ x#                          ' Reads 10 into x#
-READ y#                          ' Reads 20 into y#
-READ msg$                        ' Reads "hello" into msg$
+x# = READ                        ' Reads 10 into x#
+y# = READ                        ' Reads 20 into y#
+msg$ = READ                      ' Reads "hello" into msg$
 ```
 
 ### Other
 
 ```
-RANDOM x#                        ' Set x# to random int between 0 and current value of x#
+x# = RANDOM 100                  ' Random int between 0 and 100
+x# = RANDOM MAX 50               ' Named parameter form
 ```
 
 ### Comments

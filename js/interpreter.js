@@ -75,7 +75,7 @@ class Interpreter {
 
   _colorStructToHex(obj, line) {
     if (typeof obj !== 'object' || obj === null) {
-      throw new Error(`SETCOLOR/WITHCOLOR requires a color struct with .red#, .green#, .blue# members${line ? ' at line ' + line : ''}`);
+      throw new Error(`SETCOLOR/COLOR requires a color struct with .red#, .green#, .blue# members${line ? ' at line ' + line : ''}`);
     }
     const r = Math.max(0, Math.min(255, Math.floor(obj['red#'] || 0)));
     const g = Math.max(0, Math.min(255, Math.floor(obj['green#'] || 0)));
@@ -290,28 +290,58 @@ class Interpreter {
         this.screen.clear();
         break;
       }
-      case 'input': {
-        const promptText = this.evalExpr(stmt.prompt);
-        this.screen.printInline(promptText);
-        this.screen.render();
-        const result = await this.waitForInput();
-        if (result === null) return; // stopped
-        if (stmt.varType === 'number') {
-          const num = parseFloat(result);
-          if (isNaN(num)) throw new Error(`INPUT: expected a number, got '${result}' at line ${stmt.line}`);
-          this.numVars[stmt.varName] = num;
-        } else {
-          this.strVars[stmt.varName] = result;
+      case 'assign_builtin': {
+        let result;
+        switch (stmt.keyword) {
+          case 'INPUT': {
+            if (stmt.params.TEXT) {
+              const promptText = this.evalExpr(stmt.params.TEXT);
+              this.screen.printInline(promptText);
+              this.screen.render();
+            }
+            result = await this.waitForInput();
+            if (result === null) return; // stopped
+            break;
+          }
+          case 'GETKEY': {
+            result = this.currentKey;
+            break;
+          }
+          case 'RANDOM': {
+            const max = Math.floor(this.evalExpr(stmt.params.MAX));
+            result = Math.floor(Math.random() * (max + 1));
+            break;
+          }
+          case 'READ': {
+            if (this.dataPointer >= this.dataPool.length) {
+              throw new Error(`READ: no more DATA at line ${stmt.line}`);
+            }
+            result = this.dataPool[this.dataPointer++];
+            if (result && typeof result === 'object' && result.type) {
+              result = this.evalExpr(result);
+            }
+            break;
+          }
+          default:
+            throw new Error(`Unknown builtin keyword '${stmt.keyword}' at line ${stmt.line}`);
         }
-        break;
-      }
-      case 'getkey': {
-        this.strVars[stmt.varName] = this.currentKey;
-        break;
-      }
-      case 'random': {
-        const n = this.numVars[stmt.varName] ?? 0;
-        this.numVars[stmt.varName] = Math.floor(Math.random() * (Math.floor(n) + 1));
+        // Type coercion based on varType
+        switch (stmt.varType) {
+          case 'num': {
+            const num = parseFloat(result);
+            if (isNaN(num)) throw new Error(`${stmt.keyword}: expected a number, got '${result}' at line ${stmt.line}`);
+            this.numVars[stmt.name] = num;
+            break;
+          }
+          case 'str':
+            this.strVars[stmt.name] = String(result);
+            break;
+          case 'bool':
+            this.boolVars[stmt.name] = result ? 1 : 0;
+            break;
+          default:
+            throw new Error(`Cannot assign ${stmt.keyword} result to ${stmt.varType} variable at line ${stmt.line}`);
+        }
         break;
       }
       case 'label': {
@@ -379,10 +409,12 @@ case 'if': {
       case 'play': {
         if (this.audio) {
           const musicStr = String(this.evalExpr(stmt.expr));
-          const waveType = stmt.waveType || 'square';
-          if (stmt.inBackground) {
-            this.audio.playSequenceBg(musicStr, waveType, stmt.onRepeat);
-          } else if (stmt.onRepeat) {
+          const waveType = stmt.waveExpr ? String(this.evalExpr(stmt.waveExpr)) : 'square';
+          const inBackground = stmt.backgroundExpr ? !!this.evalExpr(stmt.backgroundExpr) : false;
+          const onRepeat = stmt.repeatExpr ? !!this.evalExpr(stmt.repeatExpr) : false;
+          if (inBackground) {
+            this.audio.playSequenceBg(musicStr, waveType, onRepeat);
+          } else if (onRepeat) {
             while (this.running) {
               await this.audio.playSequence(musicStr, waveType);
             }
@@ -396,11 +428,13 @@ case 'if': {
         if (this.audio) {
           const voices = stmt.voices.map(v => ({
             musicStr: String(this.evalExpr(v.expr)),
-            waveType: v.waveType,
+            waveType: v.waveExpr ? String(this.evalExpr(v.waveExpr)) : null,
           }));
-          if (stmt.inBackground) {
-            this.audio.playPolyBg(voices, stmt.onRepeat);
-          } else if (stmt.onRepeat) {
+          const inBackground = stmt.backgroundExpr ? !!this.evalExpr(stmt.backgroundExpr) : false;
+          const onRepeat = stmt.repeatExpr ? !!this.evalExpr(stmt.repeatExpr) : false;
+          if (inBackground) {
+            this.audio.playPolyBg(voices, onRepeat);
+          } else if (onRepeat) {
             while (this.running) {
               await this.audio.playPoly(voices);
             }
@@ -424,22 +458,6 @@ case 'if': {
       }
       case 'data': {
         // no-op at runtime; data is collected at parse time
-        break;
-      }
-      case 'read': {
-        if (this.dataPointer >= this.dataPool.length) {
-          throw new Error(`READ: no more DATA at line ${stmt.line}`);
-        }
-        let val = this.dataPool[this.dataPointer++];
-        // If val is an AST node (expression), evaluate it
-        if (val && typeof val === 'object' && val.type) {
-          val = this.evalExpr(val);
-        }
-        if (stmt.varType === 'number') {
-          this.numVars[stmt.varName] = typeof val === 'number' ? val : parseFloat(val);
-        } else {
-          this.strVars[stmt.varName] = String(val);
-        }
         break;
       }
       case 'assign_num': {
