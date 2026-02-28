@@ -248,7 +248,10 @@ function parse(tokens) {
         const value = parseExpr();
         args.push({ label: null, value });
       }
-      if (!match('COMMA')) break;
+      if (!match('COMMA')) {
+        if (!atLineEnd() && peek().type === 'IDENT' && !isKnownFunction(peek())) continue;
+        break;
+      }
     }
     return args;
   }
@@ -554,7 +557,8 @@ function parse(tokens) {
     // Parse optional trailing args for BACKGROUND and REPEAT
     let backgroundExpr = null;
     let repeatExpr = null;
-    if (match('COMMA')) {
+    match('COMMA');
+    if (!atLineEnd()) {
       const args = parseKeywordArgs();
       const resolved = resolveBuiltinArgs(args, [
         { name: 'BACKGROUND', required: false },
