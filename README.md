@@ -123,11 +123,11 @@ END IF
 
 **For Loop:**
 ```
-FOR i# FROM 1 TO 10 WITHSTEP 2
+FOR i# FROM 1 TO 10 STEP 2
   PRINT i#
 END FOR
 ```
-The loop variable and `WITHSTEP` are optional (step defaults to 1).
+The loop variable and `STEP` are optional (step defaults to 1).
 
 **While Loop:**
 ```

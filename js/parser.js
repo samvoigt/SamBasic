@@ -459,7 +459,7 @@ function parse(tokens) {
       const KEYWORDS = new Set([
         'PRINT', 'PRINTAT', 'CLEARSCREEN',
         'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'END',
-        'FOR', 'FROM', 'TO', 'WITHSTEP',
+        'FOR', 'FROM', 'TO', 'STEP',
         'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',
         'AND', 'OR', 'NOT',
         'FUNCTION', 'RETURN', 'OPTIONAL', 'GLOBAL',
@@ -637,7 +637,7 @@ function parse(tokens) {
     expect('KEYWORD', 'TO');
     const upper = parseExpr();
     let step = null;
-    if (match('KEYWORD', 'WITHSTEP')) {
+    if (match('KEYWORD', 'STEP')) {
       step = parseExpr();
     }
     skipNewlines();
