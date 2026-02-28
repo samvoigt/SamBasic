@@ -144,8 +144,7 @@ RANDOM #x                        ' Set #x to random int between 0 and current va
 ### Comments
 
 ```
-REM This is a comment
-' This is also a comment
+' This is a comment
 ```
 
 ### Screen

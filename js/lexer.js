@@ -28,12 +28,8 @@ function tokenize(source) {
         continue;
       }
 
-      // comment (REM or ')
+      // comment
       if (line[i] === "'") break;
-      if (line.substring(i, i + 3).toUpperCase() === 'REM' &&
-          (i + 3 >= line.length || /\s/.test(line[i + 3]))) {
-        break;
-      }
 
       const startCol = i;
 

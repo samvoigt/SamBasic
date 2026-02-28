@@ -8,47 +8,44 @@
 </head>
 <body>
   <div class="app">
-    <div class="editor-pane">
-      <div class="toolbar">
-        <div class="toolbar-group">
-          <button id="btn-run" class="toolbar-btn run-btn">Run</button>
-          <button id="btn-pause" class="toolbar-btn" disabled>Pause</button>
-          <button id="btn-step" class="toolbar-btn" disabled>Step</button>
-          <button id="btn-stop" class="toolbar-btn" disabled>Stop</button>
+    <div class="main-area">
+      <div class="editor-pane">
+        <div class="editor-container">
+          <div class="line-numbers" id="line-numbers"></div>
+          <textarea id="code-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+            placeholder="Enter SamBasic code here..."></textarea>
         </div>
-        <div class="toolbar-group">
-          <button id="btn-save" class="toolbar-btn">Save</button>
-          <button id="btn-load" class="toolbar-btn">Load</button>
-          <select id="example-select" class="toolbar-btn">
-            <option value="">Examples...</option>
-            <option value="hello">Hello World</option>
-            <option value="fizzbuzz">FizzBuzz</option>
-          </select>
-        </div>
+        <input type="file" id="file-input" accept=".sam" hidden>
       </div>
-      <div class="editor-container">
-        <div class="line-numbers" id="line-numbers"></div>
-        <textarea id="code-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
-          placeholder="Enter SamBasic code here..."></textarea>
-      </div>
-      <input type="file" id="file-input" accept=".sam" hidden>
-    </div>
 
-    <div class="monitor-pane">
-      <div class="monitor">
-        <div class="monitor-bezel">
-          <div class="monitor-label">Voigtlectrics 9000</div>
-          <div class="monitor-screen-frame">
-            <div class="monitor-screen" id="monitor-screen">
-              <div class="scanlines"></div>
-              <pre id="screen-output" class="screen-content"></pre>
+      <div class="monitor-pane">
+        <div class="monitor">
+          <div class="monitor-bezel">
+            <div class="monitor-screen-frame">
+              <div class="monitor-screen" id="monitor-screen">
+                <div class="scanlines"></div>
+                <pre id="screen-output" class="screen-content"></pre>
+              </div>
+            </div>
+            <div class="monitor-bottom">
+              <div class="monitor-badge">Voigtlectrics 9000</div>
+              <button id="btn-power" class="power-btn" title="Power">&#9679;</button>
             </div>
           </div>
         </div>
-        <div class="monitor-stand">
-          <div class="monitor-stand-neck"></div>
-          <div class="monitor-stand-base"></div>
-        </div>
+      </div>
+    </div>
+
+    <div class="bottom-toolbar">
+      <div class="toolbar-group">
+        <button id="btn-run" class="toolbar-btn run-btn"><span class="btn-icon">&#9654;</span> Run</button>
+        <button id="btn-pause" class="toolbar-btn" disabled><span class="btn-icon">&#9646;&#9646;</span> Pause</button>
+        <button id="btn-step" class="toolbar-btn" disabled><span class="btn-icon">&#9654;&#9474;</span> Step</button>
+        <button id="btn-stop" class="toolbar-btn stop-btn" disabled><span class="btn-icon">&#9632;</span> Stop</button>
+      </div>
+      <div class="toolbar-group">
+        <button id="btn-save" class="toolbar-btn"><span class="btn-icon">&#128190;</span> Save</button>
+        <button id="btn-load" class="toolbar-btn"><span class="btn-icon">&#128194;</span> Load</button>
       </div>
     </div>
   </div>
