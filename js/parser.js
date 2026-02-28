@@ -231,10 +231,10 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     if (t.type === 'KEYWORD' && t.value === 'WHILE') {
       return parseWhile();
     }
-    if (t.type === 'KEYWORD' && t.value === 'COLOR') {
+    if (t.type === 'KEYWORD' && t.value === 'SETCOLOR') {
       advance();
-      const colorToken = expect('COLOR_NAME');
-      return { type: 'color', color: colorToken.value, line: t.line };
+      const expr = parseExpr();
+      return { type: 'setcolor', expr, line: t.line };
     }
     if (t.type === 'KEYWORD' && t.value === 'BEEP') {
       advance();
@@ -278,8 +278,7 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     const expr = parseExpr();
     let withColor = null;
     if (match('KEYWORD', 'WITHCOLOR')) {
-      const colorToken = expect('COLOR_NAME');
-      withColor = colorToken.value;
+      withColor = parseExpr();
     }
     return { type: 'print', expr, withColor, line: t.line };
   }
@@ -293,8 +292,7 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     const expr = parseExpr();
     let withColor = null;
     if (match('KEYWORD', 'WITHCOLOR')) {
-      const colorToken = expect('COLOR_NAME');
-      withColor = colorToken.value;
+      withColor = parseExpr();
     }
     return { type: 'printat', row, col, expr, withColor, line: t.line };
   }

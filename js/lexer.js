@@ -2,18 +2,13 @@ const KEYWORDS = new Set([
   'PRINT', 'PRINTAT', 'CLEARSCREEN', 'INPUT', 'GETKEY', 'RANDOM',
   'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'ENDIF',
   'FOR', 'GOESFROM', 'TO', 'WITHSTEP', 'ENDFOR',
-  'WHILE', 'ENDWHILE', 'COLOR', 'BEEP', 'PLAY', 'WITHWAVE',
+  'WHILE', 'ENDWHILE', 'SETCOLOR', 'BEEP', 'PLAY', 'WITHWAVE',
   'DATA', 'READ', 'AND', 'OR', 'NOT', 'WITHCOLOR',
   'SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE',
   'PLAYPOLY',
   'INBACKGROUND', 'ONREPEAT', 'PAUSEPLAY', 'RESUMEPLAY', 'STOPPLAY',
 ]);
 
-const COLOR_KEYWORDS = new Set([
-  'BLACK', 'BLUE', 'GREEN', 'CYAN', 'RED', 'MAGENTA', 'BROWN',
-  'LIGHTGRAY', 'DARKGRAY', 'LIGHTBLUE', 'LIGHTGREEN', 'LIGHTCYAN',
-  'LIGHTRED', 'LIGHTMAGENTA', 'YELLOW', 'WHITE',
-]);
 
 function tokenize(source) {
   const tokens = [];
@@ -124,8 +119,6 @@ function tokenize(source) {
         const upper = word.toUpperCase();
         if (KEYWORDS.has(upper)) {
           tokens.push({ type: 'KEYWORD', value: upper, line: lineNum + 1, col: startCol });
-        } else if (COLOR_KEYWORDS.has(upper)) {
-          tokens.push({ type: 'COLOR_NAME', value: upper, line: lineNum + 1, col: startCol });
         } else {
           tokens.push({ type: 'IDENT', value: word, line: lineNum + 1, col: startCol });
         }

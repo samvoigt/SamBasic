@@ -1,23 +1,4 @@
-const EGA_COLORS = {
-  BLACK:        '#000000',
-  BLUE:         '#0000AA',
-  GREEN:        '#00AA00',
-  CYAN:         '#00AAAA',
-  RED:          '#AA0000',
-  MAGENTA:      '#AA00AA',
-  BROWN:        '#AA5500',
-  LIGHTGRAY:    '#AAAAAA',
-  DARKGRAY:     '#555555',
-  LIGHTBLUE:    '#5555FF',
-  LIGHTGREEN:   '#55FF55',
-  LIGHTCYAN:    '#55FFFF',
-  LIGHTRED:     '#FF5555',
-  LIGHTMAGENTA: '#FF55FF',
-  YELLOW:       '#FFFF55',
-  WHITE:        '#FFFFFF',
-};
-
-const COLOR_NAMES = Object.keys(EGA_COLORS);
+const DEFAULT_COLOR = '#AAAAAA';
 
 const COLS = 80;
 const ROWS = 25;
@@ -29,12 +10,13 @@ class Screen {
     this.rows = ROWS;
     this.cursorRow = 0;
     this.cursorCol = 0;
-    this.globalColor = 'LIGHTGRAY';
+    this.globalColor = DEFAULT_COLOR;
     this.buffer = [];
     this.clear();
   }
 
   clear() {
+    this.globalColor = DEFAULT_COLOR;
     this.buffer = [];
     for (let r = 0; r < this.rows; r++) {
       const row = [];
@@ -48,11 +30,8 @@ class Screen {
     this.render();
   }
 
-  setColor(colorName) {
-    const upper = colorName.toUpperCase();
-    if (EGA_COLORS[upper]) {
-      this.globalColor = upper;
-    }
+  setColor(hexStr) {
+    this.globalColor = hexStr;
   }
 
   scroll() {
@@ -138,10 +117,10 @@ class Screen {
           run += this.escapeHtml(this.buffer[r][i].char);
           i++;
         }
-        if (color === 'LIGHTGRAY') {
+        if (color === DEFAULT_COLOR) {
           line += run;
         } else {
-          line += `<span class="c-${color}" style="color:${EGA_COLORS[color]}">${run}</span>`;
+          line += `<span style="color:${color}">${run}</span>`;
         }
       }
       lines.push(line);
@@ -158,10 +137,9 @@ class Screen {
 
   showError(message) {
     this.clear();
-    this.globalColor = 'LIGHTRED';
+    this.globalColor = '#FF5555';
     this.print(message);
-    this.globalColor = 'LIGHTGRAY';
+    this.globalColor = DEFAULT_COLOR;
     this.render();
   }
 }
-

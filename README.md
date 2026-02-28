@@ -49,7 +49,7 @@ CLEARSCREEN                        ' Clear the screen
 
 Both `PRINT` and `PRINTAT` support `WITHCOLOR`:
 ```
-PRINT "alert!" WITHCOLOR RED
+PRINT "alert!" WITHCOLOR RED&
 ```
 
 ### Input
@@ -122,12 +122,18 @@ Members are prefixed with `.` and must include a type suffix (`#`, `$`, `@`, or 
 ### Color
 
 ```
-COLOR GREEN                       ' Set global text color
+SETCOLOR GREEN&                   ' Set global text color
 ```
 
-Uses the 16-color EGA palette:
+Colors are structs with `.red#`, `.green#`, `.blue#` members (0–255). The 16 EGA colors are built-in:
 
-`BLACK`, `BLUE`, `GREEN`, `CYAN`, `RED`, `MAGENTA`, `BROWN`, `LIGHTGRAY`, `DARKGRAY`, `LIGHTBLUE`, `LIGHTGREEN`, `LIGHTCYAN`, `LIGHTRED`, `LIGHTMAGENTA`, `YELLOW`, `WHITE`
+`BLACK&`, `BLUE&`, `GREEN&`, `CYAN&`, `RED&`, `MAGENTA&`, `BROWN&`, `LIGHTGRAY&`, `DARKGRAY&`, `LIGHTBLUE&`, `LIGHTGREEN&`, `LIGHTCYAN&`, `LIGHTRED&`, `LIGHTMAGENTA&`, `YELLOW&`, `WHITE&`
+
+You can define custom colors:
+```
+myColor& = {.red# = 255, .green# = 128, .blue# = 0}
+SETCOLOR myColor&
+```
 
 ### Sound
 

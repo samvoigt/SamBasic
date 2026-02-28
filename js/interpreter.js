@@ -27,6 +27,7 @@ class Interpreter {
     this.strVars = {};
     this.arrVars = {};
     this.structVars = {};
+    this._initBuiltinColors();
     this.pc = 0;
     this.running = false;
     this.paused = false;
@@ -36,6 +37,40 @@ class Interpreter {
     this._inputBuffer = '';
     this._inputHandler = null;
     this._stmtCount = 0;
+  }
+
+  _initBuiltinColors() {
+    const colors = {
+      BLACK:        [0, 0, 0],
+      BLUE:         [0, 0, 170],
+      GREEN:        [0, 170, 0],
+      CYAN:         [0, 170, 170],
+      RED:          [170, 0, 0],
+      MAGENTA:      [170, 0, 170],
+      BROWN:        [170, 85, 0],
+      LIGHTGRAY:    [170, 170, 170],
+      DARKGRAY:     [85, 85, 85],
+      LIGHTBLUE:    [85, 85, 255],
+      LIGHTGREEN:   [85, 255, 85],
+      LIGHTCYAN:    [85, 255, 255],
+      LIGHTRED:     [255, 85, 85],
+      LIGHTMAGENTA: [255, 85, 255],
+      YELLOW:       [255, 255, 85],
+      WHITE:        [255, 255, 255],
+    };
+    for (const [name, [r, g, b]] of Object.entries(colors)) {
+      this.structVars[name] = { 'red#': r, 'green#': g, 'blue#': b };
+    }
+  }
+
+  _colorStructToHex(obj, line) {
+    if (typeof obj !== 'object' || obj === null) {
+      throw new Error(`SETCOLOR/WITHCOLOR requires a color struct with .red#, .green#, .blue# members${line ? ' at line ' + line : ''}`);
+    }
+    const r = Math.max(0, Math.min(255, Math.floor(obj['red#'] || 0)));
+    const g = Math.max(0, Math.min(255, Math.floor(obj['green#'] || 0)));
+    const b = Math.max(0, Math.min(255, Math.floor(obj['blue#'] || 0)));
+    return '#' + r.toString(16).padStart(2, '0') + g.toString(16).padStart(2, '0') + b.toString(16).padStart(2, '0');
   }
 
   load(ast, dataPool, labels) {
@@ -49,7 +84,6 @@ class Interpreter {
     this.running = true;
     this.paused = false;
     this.screen.clear();
-    this.screen.globalColor = 'LIGHTGRAY';
     this.pc = 0;
     this._stmtCount = 0;
 
@@ -219,7 +253,10 @@ class Interpreter {
     switch (stmt.type) {
       case 'print': {
         const val = this.evalExpr(stmt.expr);
-        const color = stmt.withColor || null;
+        let color = null;
+        if (stmt.withColor) {
+          color = this._colorStructToHex(this.evalExpr(stmt.withColor), stmt.line);
+        }
         this.screen.print(val, color);
         this.screen.render();
         break;
@@ -228,7 +265,10 @@ class Interpreter {
         const row = Math.floor(this.evalExpr(stmt.row));
         const col = Math.floor(this.evalExpr(stmt.col));
         const val = this.evalExpr(stmt.expr);
-        const color = stmt.withColor || null;
+        let color = null;
+        if (stmt.withColor) {
+          color = this._colorStructToHex(this.evalExpr(stmt.withColor), stmt.line);
+        }
         this.screen.printAt(row, col, val, color);
         this.screen.render();
         break;
@@ -314,8 +354,9 @@ case 'if': {
         }
         break;
       }
-      case 'color': {
-        this.screen.setColor(stmt.color);
+      case 'setcolor': {
+        const colorVal = this.evalExpr(stmt.expr);
+        this.screen.setColor(this._colorStructToHex(colorVal, stmt.line));
         break;
       }
       case 'beep': {
