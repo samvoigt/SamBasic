@@ -17,10 +17,10 @@ const KEYWORDS = new Set([
 
 const TYPED_KEYWORDS = {
   INPUT: '$', GETKEY: '$', RANDOM: '#',
-  LENGTH: '#', SUBSTRING: '$', UPPERCASE: '$', LOWERCASE: '$', CONTAINS: '!',
+  LENGTH: '#', SUBSTRING: '$', UPPERCASE: '$', LOWERCASE: '$', CONTAINS: '?',
   ABS: '#', SQRT: '#', ROUND: '#', FLOOR: '#', CEIL: '#',
   MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
-  OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '!',
+  OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?',
 };
 
 
@@ -135,7 +135,7 @@ function tokenize(source) {
           i++;
         }
         // Check for variable suffix: name# name$ name@ name& name!
-        if (i < line.length && (line[i] === '#' || line[i] === '$' || line[i] === '@' || line[i] === '&' || line[i] === '!')) {
+        if (i < line.length && (line[i] === '#' || line[i] === '$' || line[i] === '@' || line[i] === '&' || line[i] === '?')) {
           const suffix = line[i];
           i++;
           const upper = word.toUpperCase();
@@ -147,7 +147,7 @@ function tokenize(source) {
             }
             throw new SyntaxError(`Wrong suffix for '${upper}' — expected '${upper}${expectedSuffix}' but got '${word}${suffix}' at line ${lineNum + 1}, col ${startCol + 1}`);
           }
-          const typeMap = { '#': 'NUM_VAR', '$': 'STR_VAR', '@': 'ARR_VAR', '&': 'STRUCT_VAR', '!': 'BOOL_VAR' };
+          const typeMap = { '#': 'NUM_VAR', '$': 'STR_VAR', '@': 'ARR_VAR', '&': 'STRUCT_VAR', '?': 'BOOL_VAR' };
           tokens.push({ type: typeMap[suffix], value: word, line: lineNum + 1, col: startCol });
           continue;
         }

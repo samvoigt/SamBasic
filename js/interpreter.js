@@ -814,7 +814,7 @@ class Interpreter {
         case '$': this.strVars[key] = arg.value; break;
         case '@': this.arrVars[key] = arg.value; break;
         case '&': this.structVars[key] = arg.value; break;
-        case '!': this.boolVars[key] = arg.value; break;
+        case '?': this.boolVars[key] = arg.value; break;
       }
     }
 
@@ -823,7 +823,7 @@ class Interpreter {
       const globalScope = this.callStack[0]; // outermost/main scope
       for (const g of func.globals) {
         const varKey = g.name;
-        const suffixToStore = { '#': 'numVars', '$': 'strVars', '@': 'arrVars', '&': 'structVars', '!': 'boolVars' };
+        const suffixToStore = { '#': 'numVars', '$': 'strVars', '@': 'arrVars', '&': 'structVars', '?': 'boolVars' };
         const storeName = suffixToStore[g.suffix];
         const globalStore = globalScope[storeName];
         if (!(varKey in globalStore)) {
@@ -941,7 +941,7 @@ class Interpreter {
           throw new Error(`Missing required parameter '${paramDisplay}' at line ${line}`);
         }
         // Default values by type
-        const defaults = { '#': 0, '$': '', '@': [], '&': {}, '!': 0 };
+        const defaults = { '#': 0, '$': '', '@': [], '&': {}, '?': 0 };
         values[i] = defaults[params[i].varSuffix];
       }
       // Deep-copy arrays and structs for pass-by-value

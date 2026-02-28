@@ -15,19 +15,7 @@
           <textarea id="code-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
             placeholder="Enter SamBasic code here..."></textarea>
         </div>
-        <div class="files-pane">
-          <div class="files-header">
-            <span>Local Files</span>
-            <div class="files-buttons">
-              <button id="btn-upload" class="toolbar-btn files-btn">Upload</button>
-              <button id="btn-download" class="toolbar-btn files-btn" disabled>Download</button>
-              <button id="btn-remove" class="toolbar-btn files-btn" disabled>Remove</button>
-            </div>
-          </div>
-          <div class="files-list" id="files-list"></div>
-        </div>
         <input type="file" id="file-input" accept=".sam" hidden>
-        <input type="file" id="file-input-upload" hidden>
       </div>
 
       <div class="monitor-pane">
@@ -40,10 +28,30 @@
               </div>
             </div>
             <div class="monitor-bottom">
-              <div class="monitor-badge">Voigtlectrics 9000</div>
+              <div class="monitor-badge">VoigtVision</div>
               <button id="btn-power" class="power-btn" title="Power">&#9679;</button>
             </div>
           </div>
+        </div>
+        <div class="computer-tower">
+          <div class="tower-top">
+            <div class="tower-badge">Voigtlectrics 9000 Pro</div>
+            <div class="tower-vents"></div>
+          </div>
+          <div class="drive-bay">
+            <div class="files-pane">
+              <div class="files-header">
+                <span>Local Files</span>
+                <div class="files-buttons">
+                  <button id="btn-upload" class="toolbar-btn files-btn">Upload</button>
+                  <button id="btn-download" class="toolbar-btn files-btn" disabled>Download</button>
+                  <button id="btn-remove" class="toolbar-btn files-btn" disabled>Remove</button>
+                </div>
+              </div>
+              <div class="files-list" id="files-list"></div>
+            </div>
+          </div>
+          <input type="file" id="file-input-upload" hidden>
         </div>
       </div>
     </div>

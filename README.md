@@ -26,7 +26,7 @@ Variables end with a sigil to indicate their type:
 | `$`    | String    | `name$ = "Sam"`    |
 | `@`    | Array     | `data@ = [1,2,3]`  |
 | `&`    | Structure | `pt& = {.x# = 0}` |
-| `!`    | Boolean   | `done! = YES`      |
+| `?`    | Boolean   | `done? = YES`      |
 
 Keywords must be **UPPERCASE**.
 
@@ -85,7 +85,7 @@ s$ = SUBSTRING$ "hello world", 2, 4             ' "ello"
 s$ = SUBSTRING$ TEXT "abcdef", START 3, LENGTH 2 ' "cd"
 s$ = UPPERCASE$ "hello"                          ' "HELLO"
 s$ = LOWERCASE$ "HELLO"                          ' "hello"
-found! = CONTAINS! "hello world", "world"        ' YES (1)
+found? = CONTAINS? "hello world", "world"        ' YES (1)
 ```
 
 All string indices are **1-based**. `SUBSTRING$` throws an error if the index is out of range. Use `SUBSTRING$ text, index, 1` to get a single character. `LENGTH#` also works on arrays, returning the number of elements.
@@ -272,7 +272,7 @@ person&.name$ = "Alex"           ' Assign to a member
 
 The one-liner form also works: `person& = {.height# = 72, .name$ = "Sam"}`
 
-Members are prefixed with `.` and must include a type suffix (`#`, `$`, `@`, `&`, or `!`).
+Members are prefixed with `.` and must include a type suffix (`#`, `$`, `@`, `&`, or `?`).
 
 ### Color
 
@@ -341,7 +341,7 @@ f# = OPEN# FILE "data.txt"                 ' MODE defaults to READ
 ```
 line$ = READFILELINE$ FILE f#               ' Read one line (without trailing newline)
 ch$ = READFILECHARACTER$ FILE f#            ' Read one character
-eof! = ENDOFFILE! FILE f#                   ' Check for end of file (YES/NO)
+eof? = ENDOFFILE? FILE f#                   ' Check for end of file (YES/NO)
 ```
 
 **Write to a file:**
@@ -361,7 +361,7 @@ Files are automatically closed (and saved) when the program ends or is stopped.
 ```
 out# = OPEN# FILE "copy.txt" MODE WRITE
 in# = OPEN# FILE "source.txt"
-WHILE NOT (ENDOFFILE! in#)
+WHILE NOT (ENDOFFILE? in#)
   line$ = READFILELINE$ FILE in#
   WRITEFILELINE FILE out# LINE line$
 END WHILE

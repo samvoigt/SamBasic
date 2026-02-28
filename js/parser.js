@@ -45,7 +45,7 @@ function parse(tokens) {
     if (tokens[i].type === 'KEYWORD' && tokens[i].value === 'FUNCTION') {
       const next = tokens[i + 1];
       if (next) {
-        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!', 'IDENT': '' };
+        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?', 'IDENT': '' };
         const suffix = suffixMap[next.type];
         if (suffix !== undefined) knownFunctions[next.value] = suffix;
       }
@@ -54,7 +54,7 @@ function parse(tokens) {
 
   function isKnownFunction(token) {
     if (!knownFunctions.hasOwnProperty(token.value)) return false;
-    const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!', 'IDENT': '' };
+    const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?', 'IDENT': '' };
     const tokenSuffix = suffixMap[token.type];
     return tokenSuffix !== undefined && knownFunctions[token.value] === tokenSuffix;
   }
@@ -186,7 +186,7 @@ function parse(tokens) {
       if (peek().type === 'DOT') {
         advance(); // .
         const memberToken = advance();
-        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
+        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?' };
         const suffix = suffixMap[memberToken.type];
         if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${t.line}`);
         return { type: 'structmember', structName: name, memberName: memberToken.value, memberSuffix: suffix };
@@ -408,7 +408,7 @@ function parse(tokens) {
       }
       advance(); // GLOBAL
       const vars = [];
-      const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
+      const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?' };
       const p = peek();
       const suffix = suffixMap[p.type];
       if (suffix === undefined) {
@@ -473,10 +473,10 @@ function parse(tokens) {
       }
       const TYPED_KW_SUFFIXES = {
         INPUT: '$', GETKEY: '$', RANDOM: '#',
-        LENGTH: '#', SUBSTRING: '$', UPPERCASE: '$', LOWERCASE: '$', CONTAINS: '!',
+        LENGTH: '#', SUBSTRING: '$', UPPERCASE: '$', LOWERCASE: '$', CONTAINS: '?',
         ABS: '#', SQRT: '#', ROUND: '#', FLOOR: '#', CEIL: '#',
         MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
-        OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '!',
+        OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?',
       };
       if (TYPED_KW_SUFFIXES[upper]) {
         throw new SyntaxError(`Did you mean '${upper}${TYPED_KW_SUFFIXES[upper]}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -696,7 +696,7 @@ function parse(tokens) {
       }
       expect('DOT');
       const memToken = advance();
-      const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
+      const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?' };
       const suffix = suffixMap[memToken.type];
       if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${memToken.line}`);
       expect('COMPARE', '=');
@@ -736,7 +736,7 @@ function parse(tokens) {
         label = advance().value;
       }
       const varToken = advance();
-      const paramTypeMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
+      const paramTypeMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?' };
       const paramSuffix = paramTypeMap[varToken.type];
       if (!paramSuffix) {
         throw new SyntaxError(`Expected typed variable for parameter at line ${varToken.line}`);
@@ -805,7 +805,7 @@ function parse(tokens) {
   function parseFunctionCall() {
     const ref = advance(); // IDENT or typed var (function name)
     const name = ref.value;
-    const suffixFromType = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!', 'IDENT': '' };
+    const suffixFromType = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?', 'IDENT': '' };
     const suffix = suffixFromType[ref.type] || '';
     const args = [];
 
@@ -829,7 +829,7 @@ function parse(tokens) {
   function parseFunctionCallInParens() {
     const ref = advance(); // IDENT or typed var (function name)
     const name = ref.value;
-    const suffixFromType = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!', 'IDENT': '' };
+    const suffixFromType = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?', 'IDENT': '' };
     const suffix = suffixFromType[ref.type] || '';
     const args = [];
 
@@ -902,7 +902,7 @@ function parse(tokens) {
       if (peek().type === 'DOT') {
         advance(); // .
         const memberToken = advance();
-        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
+        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?' };
         const suffix = suffixMap[memberToken.type];
         if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${line}`);
         expect('COMPARE', '=');
@@ -925,7 +925,7 @@ function parse(tokens) {
         do {
           expect('DOT');
           const memToken = advance();
-          const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
+          const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?' };
           const suffix = suffixMap[memToken.type];
           if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${line}`);
           expect('COMPARE', '=');
