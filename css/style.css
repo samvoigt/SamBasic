@@ -136,6 +136,7 @@ html, body {
   user-select: none;
   overflow: hidden;
   border-right: 1px solid #313244;
+  white-space: pre;
 }
 
 #code-editor {
