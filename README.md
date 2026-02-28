@@ -20,11 +20,12 @@ Open `index.html` in any modern browser. Type code in the editor on the left, pr
 
 Variables end with a sigil to indicate their type:
 
-| Suffix | Type   | Example            |
-|--------|--------|--------------------|
-| `#`    | Number | `score# = 100`    |
-| `$`    | String | `name$ = "Sam"`   |
-| `@`    | Array  | `data@ = [1,2,3]` |
+| Suffix | Type      | Example            |
+|--------|-----------|---------------------|
+| `#`    | Number    | `score# = 100`     |
+| `$`    | String    | `name$ = "Sam"`    |
+| `@`    | Array     | `data@ = [1,2,3]`  |
+| `&`    | Structure | `pt& = {.x# = 0}` |
 
 Keywords must be **UPPERCASE**.
 
@@ -105,6 +106,18 @@ PRINT grid@[2][3]                ' 2D access
 ```
 
 Arrays are untyped — they can hold both numbers and strings.
+
+### Structures
+
+```
+person& = {.height# = 72, .name$ = "Sam"}
+PRINT person&.name$              ' Access a member
+PRINT person&.height#
+
+person&.name$ = "Alex"           ' Assign to a member
+```
+
+Members are prefixed with `.` and must include a type suffix (`#`, `$`, `@`, or `&`).
 
 ### Color
 

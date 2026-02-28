@@ -158,6 +158,21 @@ function parse(tokens) {
       return { type: 'arrvar', name };
     }
 
+    if (t.type === 'STRUCT_VAR') {
+      advance();
+      const name = t.value;
+      // check for member access: myStruct&.member#
+      if (peek().type === 'DOT') {
+        advance(); // .
+        const memberToken = advance();
+        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&' };
+        const suffix = suffixMap[memberToken.type];
+        if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${t.line}`);
+        return { type: 'structmember', structName: name, memberName: memberToken.value, memberSuffix: suffix };
+      }
+      return { type: 'structvar', name };
+    }
+
     if (t.type === 'LPAREN') {
       advance();
       const expr = parseExpr();
@@ -250,8 +265,8 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
       return parseRead();
     }
 
-    // Assignment: var# = expr, var$ = expr, var@ = expr, var@[i] = expr
-    if (t.type === 'NUM_VAR' || t.type === 'STR_VAR' || t.type === 'ARR_VAR') {
+    // Assignment: var# = expr, var$ = expr, var@ = expr, var@[i] = expr, var& = {...}
+    if (t.type === 'NUM_VAR' || t.type === 'STR_VAR' || t.type === 'ARR_VAR' || t.type === 'STRUCT_VAR') {
       return parseAssignment();
     }
 
@@ -464,6 +479,38 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
   function parseAssignment() {
     const varToken = advance();
     const line = varToken.line;
+
+    if (varToken.type === 'STRUCT_VAR') {
+      // Member assignment: myStruct&.name$ = expr
+      if (peek().type === 'DOT') {
+        advance(); // .
+        const memberToken = advance();
+        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&' };
+        const suffix = suffixMap[memberToken.type];
+        if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${line}`);
+        expect('COMPARE', '=');
+        const value = parseExpr();
+        return { type: 'assign_struct_member', name: varToken.value, memberName: memberToken.value, memberSuffix: suffix, value, line };
+      }
+      // Full struct assignment: myStruct& = {.height# = 72, .name$ = "Sam"}
+      expect('COMPARE', '=');
+      expect('LBRACE');
+      const members = [];
+      if (peek().type !== 'RBRACE') {
+        do {
+          expect('DOT');
+          const memToken = advance();
+          const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&' };
+          const suffix = suffixMap[memToken.type];
+          if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${line}`);
+          expect('COMPARE', '=');
+          const value = parseExpr();
+          members.push({ name: memToken.value, suffix, value });
+        } while (match('COMMA'));
+      }
+      expect('RBRACE');
+      return { type: 'assign_struct', name: varToken.value, members, line };
+    }
 
     if (varToken.type === 'ARR_VAR') {
       // arr@[i] = expr  OR  arr@ = 10  OR  arr@ = [1,2,3]

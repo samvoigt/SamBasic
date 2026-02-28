@@ -26,6 +26,7 @@ class Interpreter {
     this.numVars = {};
     this.strVars = {};
     this.arrVars = {};
+    this.structVars = {};
     this.pc = 0;
     this.running = false;
     this.paused = false;
@@ -140,6 +141,14 @@ class Interpreter {
       case 'numvar': return this.numVars[node.name] ?? 0;
       case 'strvar': return this.strVars[node.name] ?? '';
       case 'arrvar': return this.arrVars[node.name] ?? [];
+      case 'structvar': return this.structVars[node.name] ?? {};
+      case 'structmember': {
+        const struct = this.structVars[node.structName];
+        if (!struct) throw new Error(`Struct ${node.structName}& not initialized`);
+        const key = node.memberName + node.memberSuffix;
+        if (!(key in struct)) throw new Error(`Member .${key} not found in ${node.structName}&`);
+        return struct[key];
+      }
       case 'arrindex': {
         const arr = this.arrVars[node.name];
         if (!arr) throw new Error(`Array ${node.name}@ not initialized`);
@@ -385,6 +394,21 @@ case 'if': {
       }
       case 'assign_str': {
         this.strVars[stmt.name] = String(this.evalExpr(stmt.value));
+        break;
+      }
+      case 'assign_struct': {
+        const obj = {};
+        for (const m of stmt.members) {
+          obj[m.name + m.suffix] = this.evalExpr(m.value);
+        }
+        this.structVars[stmt.name] = obj;
+        break;
+      }
+      case 'assign_struct_member': {
+        if (!this.structVars[stmt.name]) {
+          this.structVars[stmt.name] = {};
+        }
+        this.structVars[stmt.name][stmt.memberName + stmt.memberSuffix] = this.evalExpr(stmt.value);
         break;
       }
       case 'assign_arr_alloc': {

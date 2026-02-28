@@ -95,6 +95,9 @@ function tokenize(source) {
       if (line[i] === ']') { tokens.push({ type: 'RBRACKET', value: ']', line: lineNum + 1, col: startCol }); i++; continue; }
       if (line[i] === ',') { tokens.push({ type: 'COMMA', value: ',', line: lineNum + 1, col: startCol }); i++; continue; }
       if (line[i] === '=') { tokens.push({ type: 'COMPARE', value: '=', line: lineNum + 1, col: startCol }); i++; continue; }
+      if (line[i] === '{') { tokens.push({ type: 'LBRACE', value: '{', line: lineNum + 1, col: startCol }); i++; continue; }
+      if (line[i] === '}') { tokens.push({ type: 'RBRACE', value: '}', line: lineNum + 1, col: startCol }); i++; continue; }
+      if (line[i] === '.') { tokens.push({ type: 'DOT', value: '.', line: lineNum + 1, col: startCol }); i++; continue; }
 
       // operators
       if ('+-*/^%'.includes(line[i])) {
@@ -110,11 +113,11 @@ function tokenize(source) {
           word += line[i];
           i++;
         }
-        // Check for variable suffix: name# name$ name@
-        if (i < line.length && (line[i] === '#' || line[i] === '$' || line[i] === '@')) {
+        // Check for variable suffix: name# name$ name@ name&
+        if (i < line.length && (line[i] === '#' || line[i] === '$' || line[i] === '@' || line[i] === '&')) {
           const suffix = line[i];
           i++;
-          const typeMap = { '#': 'NUM_VAR', '$': 'STR_VAR', '@': 'ARR_VAR' };
+          const typeMap = { '#': 'NUM_VAR', '$': 'STR_VAR', '@': 'ARR_VAR', '&': 'STRUCT_VAR' };
           tokens.push({ type: typeMap[suffix], value: word, line: lineNum + 1, col: startCol });
           continue;
         }
