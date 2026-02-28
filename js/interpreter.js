@@ -47,6 +47,7 @@ class Interpreter {
     this.MAX_RECURSION_DEPTH = 256;
     this.fileHandles = {};
     this.nextFileHandle = 1;
+    this.warnedVars = new Set();
   }
 
   _initBuiltinColors() {
@@ -195,11 +196,36 @@ class Interpreter {
       case 'number': return node.value;
       case 'string': return node.value;
       case 'boolean': return node.value;
-      case 'numvar': return this.numVars[node.name] ?? 0;
-      case 'strvar': return this.strVars[node.name] ?? '';
-      case 'boolvar': return this.boolVars[node.name] ?? 0;
-      case 'arrvar': return this.arrVars[node.name] ?? [];
-      case 'structvar': return this.structVars[node.name] ?? {};
+      case 'numvar':
+        if (!(node.name in this.numVars)) {
+          this._warnUninitialized(node.name, '#', '0');
+          return 0;
+        }
+        return this.numVars[node.name];
+      case 'strvar':
+        if (!(node.name in this.strVars)) {
+          this._warnUninitialized(node.name, '$', '""');
+          return '';
+        }
+        return this.strVars[node.name];
+      case 'boolvar':
+        if (!(node.name in this.boolVars)) {
+          this._warnUninitialized(node.name, '?', 'NO');
+          return 0;
+        }
+        return this.boolVars[node.name];
+      case 'arrvar':
+        if (!(node.name in this.arrVars)) {
+          this._warnUninitialized(node.name, '@', '[]');
+          return [];
+        }
+        return this.arrVars[node.name];
+      case 'structvar':
+        if (!(node.name in this.structVars)) {
+          this._warnUninitialized(node.name, '&', '{}');
+          return {};
+        }
+        return this.structVars[node.name];
       case 'structmember': {
         const struct = this.structVars[node.structName];
         if (!struct) throw new Error(`Struct ${node.structName}& not initialized`);
@@ -277,6 +303,15 @@ class Interpreter {
       case 'NOT': return val ? 0 : 1;
       default:
         throw new Error(`Unknown unary operator: ${node.op}`);
+    }
+  }
+
+  _warnUninitialized(name, suffix, defaultStr) {
+    const key = name + suffix;
+    if (!this.warnedVars.has(key)) {
+      this.warnedVars.add(key);
+      this.screen.print(`Warning: variable '${key}' used before assignment (defaulting to ${defaultStr})`, '#FFFF55');
+      this.screen.render();
     }
   }
 
@@ -464,6 +499,27 @@ class Interpreter {
             if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
             if (fh.mode !== 'read') throw new Error(`ENDOFFILE can only be used on files opened for reading at line ${stmt.line}`);
             result = fh.pos >= fh.content.length ? 1 : 0;
+            break;
+          }
+          case 'TONUMBER': {
+            const val = await this.evalExpr(stmt.params.VALUE);
+            const num = parseFloat(val);
+            if (isNaN(num)) {
+              throw new Error(`TONUMBER: cannot convert '${val}' to number at line ${stmt.line}`);
+            }
+            result = num;
+            break;
+          }
+          case 'TOSTRING': {
+            const val = await this.evalExpr(stmt.params.VALUE);
+            result = String(val);
+            break;
+          }
+          case 'INDEXOF': {
+            const text = String(await this.evalExpr(stmt.params.TEXT));
+            const find = String(await this.evalExpr(stmt.params.FIND));
+            const idx = text.indexOf(find);
+            result = idx === -1 ? 0 : idx + 1;
             break;
           }
           default:

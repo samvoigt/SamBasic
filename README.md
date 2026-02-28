@@ -30,6 +30,8 @@ Variables end with a sigil to indicate their type:
 
 Keywords must be **UPPERCASE**.
 
+**Uninitialized variable warnings:** If you use a variable before assigning it a value, SamBasic prints a yellow warning on the CRT screen (e.g., `Warning: variable 'x#' used before assignment (defaulting to 0)`). Each variable only triggers the warning once. Variables default to `0` for numbers, `""` for strings, `NO` for booleans, `[]` for arrays, and `{}` for structs.
+
 ### String Escape Sequences
 
 Strings support backslash escape sequences:
@@ -89,6 +91,27 @@ found? = CONTAINS? "hello world", "world"        ' YES (1)
 ```
 
 All string indices are **1-based**. `SUBSTRING$` throws an error if the index is out of range. Use `SUBSTRING$ text, index, 1` to get a single character. `LENGTH#` also works on arrays, returning the number of elements.
+
+### Conversion Functions
+
+```
+x# = TONUMBER# "42.5"                          ' 42.5
+x# = TONUMBER# "hello"                         ' ERROR: cannot convert
+s$ = TOSTRING$ 42                              ' "42"
+s$ = TOSTRING$ 3.14                            ' "3.14"
+```
+
+`TONUMBER#` converts a string to a number. It throws an error if the value cannot be parsed. `TOSTRING$` converts any value to its string representation.
+
+### String Search
+
+```
+i# = INDEXOF# "hello world", "world"           ' 7
+i# = INDEXOF# "hello", "xyz"                   ' 0 (not found)
+i# = INDEXOF# TEXT "abcabc", FIND "b"          ' 2
+```
+
+`INDEXOF#` returns the **1-based** position of the first occurrence of `FIND` within `TEXT`, or `0` if not found.
 
 ### Math Functions
 
