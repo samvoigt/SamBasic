@@ -26,6 +26,7 @@ Variables end with a sigil to indicate their type:
 | `$`    | String    | `name$ = "Sam"`    |
 | `@`    | Array     | `data@ = [1,2,3]`  |
 | `&`    | Structure | `pt& = {.x# = 0}` |
+| `!`    | Boolean   | `done! = YES`      |
 
 Keywords must be **UPPERCASE**.
 
@@ -117,7 +118,7 @@ PRINT person&.height#
 person&.name$ = "Alex"           ' Assign to a member
 ```
 
-Members are prefixed with `.` and must include a type suffix (`#`, `$`, `@`, or `&`).
+Members are prefixed with `.` and must include a type suffix (`#`, `$`, `@`, `&`, or `!`).
 
 ### Color
 

@@ -7,6 +7,7 @@ const KEYWORDS = new Set([
   'SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE',
   'PLAYPOLY',
   'INBACKGROUND', 'ONREPEAT', 'PAUSEPLAY', 'RESUMEPLAY', 'STOPPLAY',
+  'YES', 'NO',
 ]);
 
 
@@ -108,11 +109,11 @@ function tokenize(source) {
           word += line[i];
           i++;
         }
-        // Check for variable suffix: name# name$ name@ name&
-        if (i < line.length && (line[i] === '#' || line[i] === '$' || line[i] === '@' || line[i] === '&')) {
+        // Check for variable suffix: name# name$ name@ name& name!
+        if (i < line.length && (line[i] === '#' || line[i] === '$' || line[i] === '@' || line[i] === '&' || line[i] === '!')) {
           const suffix = line[i];
           i++;
-          const typeMap = { '#': 'NUM_VAR', '$': 'STR_VAR', '@': 'ARR_VAR', '&': 'STRUCT_VAR' };
+          const typeMap = { '#': 'NUM_VAR', '$': 'STR_VAR', '@': 'ARR_VAR', '&': 'STRUCT_VAR', '!': 'BOOL_VAR' };
           tokens.push({ type: typeMap[suffix], value: word, line: lineNum + 1, col: startCol });
           continue;
         }

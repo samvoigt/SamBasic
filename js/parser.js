@@ -165,12 +165,22 @@ function parse(tokens) {
       if (peek().type === 'DOT') {
         advance(); // .
         const memberToken = advance();
-        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&' };
+        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
         const suffix = suffixMap[memberToken.type];
         if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${t.line}`);
         return { type: 'structmember', structName: name, memberName: memberToken.value, memberSuffix: suffix };
       }
       return { type: 'structvar', name };
+    }
+
+    if (t.type === 'BOOL_VAR') {
+      advance();
+      return { type: 'boolvar', name: t.value };
+    }
+
+    if (t.type === 'KEYWORD' && (t.value === 'YES' || t.value === 'NO')) {
+      advance();
+      return { type: 'boolean', value: t.value === 'YES' ? 1 : 0 };
     }
 
     if (t.type === 'LPAREN') {
@@ -265,8 +275,8 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
       return parseRead();
     }
 
-    // Assignment: var# = expr, var$ = expr, var@ = expr, var@[i] = expr, var& = {...}
-    if (t.type === 'NUM_VAR' || t.type === 'STR_VAR' || t.type === 'ARR_VAR' || t.type === 'STRUCT_VAR') {
+    // Assignment: var# = expr, var$ = expr, var@ = expr, var@[i] = expr, var& = {...}, var! = YES/NO
+    if (t.type === 'NUM_VAR' || t.type === 'STR_VAR' || t.type === 'ARR_VAR' || t.type === 'STRUCT_VAR' || t.type === 'BOOL_VAR') {
       return parseAssignment();
     }
 
@@ -483,7 +493,7 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
       if (peek().type === 'DOT') {
         advance(); // .
         const memberToken = advance();
-        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&' };
+        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
         const suffix = suffixMap[memberToken.type];
         if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${line}`);
         expect('COMPARE', '=');
@@ -498,7 +508,7 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
         do {
           expect('DOT');
           const memToken = advance();
-          const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&' };
+          const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
           const suffix = suffixMap[memToken.type];
           if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${line}`);
           expect('COMPARE', '=');
@@ -568,6 +578,9 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     const value = parseExpr();
     if (varToken.type === 'NUM_VAR') {
       return { type: 'assign_num', name: varToken.value, value, line };
+    }
+    if (varToken.type === 'BOOL_VAR') {
+      return { type: 'assign_bool', name: varToken.value, value, line };
     }
     return { type: 'assign_str', name: varToken.value, value, line };
   }

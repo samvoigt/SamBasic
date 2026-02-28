@@ -27,6 +27,7 @@ class Interpreter {
     this.strVars = {};
     this.arrVars = {};
     this.structVars = {};
+    this.boolVars = {};
     this._initBuiltinColors();
     this.pc = 0;
     this.running = false;
@@ -172,8 +173,10 @@ class Interpreter {
     switch (node.type) {
       case 'number': return node.value;
       case 'string': return node.value;
+      case 'boolean': return node.value;
       case 'numvar': return this.numVars[node.name] ?? 0;
       case 'strvar': return this.strVars[node.name] ?? '';
+      case 'boolvar': return this.boolVars[node.name] ?? 0;
       case 'arrvar': return this.arrVars[node.name] ?? [];
       case 'structvar': return this.structVars[node.name] ?? {};
       case 'structmember': {
@@ -435,6 +438,10 @@ case 'if': {
       }
       case 'assign_str': {
         this.strVars[stmt.name] = String(this.evalExpr(stmt.value));
+        break;
+      }
+      case 'assign_bool': {
+        this.boolVars[stmt.name] = this.evalExpr(stmt.value) ? 1 : 0;
         break;
       }
       case 'assign_struct': {
