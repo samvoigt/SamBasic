@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SamBasic Interpreter</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <div class="editor-pane">
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button id="btn-run" class="toolbar-btn run-btn">Run</button>
+          <button id="btn-pause" class="toolbar-btn" disabled>Pause</button>
+          <button id="btn-step" class="toolbar-btn" disabled>Step</button>
+          <button id="btn-stop" class="toolbar-btn" disabled>Stop</button>
+        </div>
+        <div class="toolbar-group">
+          <button id="btn-save" class="toolbar-btn">Save</button>
+          <button id="btn-load" class="toolbar-btn">Load</button>
+          <select id="example-select" class="toolbar-btn">
+            <option value="">Examples...</option>
+            <option value="hello">Hello World</option>
+            <option value="fizzbuzz">FizzBuzz</option>
+          </select>
+        </div>
+      </div>
+      <div class="editor-container">
+        <div class="line-numbers" id="line-numbers"></div>
+        <textarea id="code-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+          placeholder="Enter SamBasic code here..."></textarea>
+      </div>
+      <input type="file" id="file-input" accept=".sam" hidden>
+    </div>
+
+    <div class="monitor-pane">
+      <div class="monitor">
+        <div class="monitor-bezel">
+          <div class="monitor-label">Voigtlectrics 9000</div>
+          <div class="monitor-screen-frame">
+            <div class="monitor-screen" id="monitor-screen">
+              <div class="scanlines"></div>
+              <pre id="screen-output" class="screen-content"></pre>
+            </div>
+          </div>
+        </div>
+        <div class="monitor-stand">
+          <div class="monitor-stand-neck"></div>
+          <div class="monitor-stand-base"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/screen.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/lexer.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/interpreter.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

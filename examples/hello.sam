@@ -1,0 +1,31 @@
+COLOR GREEN
+PRINT "================================"
+PRINT "  Welcome to SamBasic!"
+PRINT "  The Voigtlectrics 9000"
+PRINT "================================"
+COLOR LIGHTGRAY
+PRINT ""
+PRINT "Hello, World!"
+PRINT ""
+COLOR CYAN
+PRINT "This is a simple demo program."
+COLOR YELLOW
+PRINT "SamBasic supports 16 EGA colors!"
+COLOR LIGHTGRAY
+PRINT ""
+INPUT "What is your name? ", $name
+PRINT ""
+COLOR LIGHTGREEN
+PRINT "Nice to meet you, " + $name + "!"
+COLOR LIGHTGRAY
+PRINT ""
+BEEP
+PRINT "Press any key..."
+LABEL $waitkey
+GETKEY $k
+IF $k = "" THEN
+  GOTO $waitkey
+ENDIF
+PRINT "You pressed: " + $k
+PRINT ""
+PRINT "Goodbye!"
