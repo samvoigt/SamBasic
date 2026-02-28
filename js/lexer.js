@@ -9,6 +9,7 @@ const KEYWORDS = new Set([
   'PAUSEPLAY', 'RESUMEPLAY', 'STOPPLAY',
   'YES', 'NO',
   'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL',
+  'STRUCT', 'ENDSTRUCT',
   'LENGTH', 'SUBSTRING', 'UPPERCASE', 'LOWERCASE', 'CONTAINS',
   'ABS', 'SQRT', 'ROUND', 'FLOOR', 'CEIL', 'MIN', 'MAX', 'SIN', 'COS', 'LOG', 'SIGN',
   'SLEEP', 'SIZE',
@@ -93,20 +94,6 @@ function tokenize(source) {
         if (line[i + 1] === '=') {
           tokens.push({ type: 'COMPARE', value: '>=', line: lineNum + 1, col: startCol });
           i += 2;
-        } else if (i + 1 < line.length && /[a-zA-Z]/.test(line[i + 1])) {
-          // FUNC_REF: >name or >name# etc.
-          i++; // skip >
-          let name = '';
-          while (i < line.length && /[a-zA-Z0-9_]/.test(line[i])) {
-            name += line[i];
-            i++;
-          }
-          let suffix = '';
-          if (i < line.length && '#$@&!'.includes(line[i])) {
-            suffix = line[i];
-            i++;
-          }
-          tokens.push({ type: 'FUNC_REF', value: name, suffix, line: lineNum + 1, col: startCol });
         } else {
           tokens.push({ type: 'COMPARE', value: '>', line: lineNum + 1, col: startCol });
           i++;

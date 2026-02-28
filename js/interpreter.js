@@ -179,7 +179,7 @@ class Interpreter {
   }
 
   // Evaluate expression AST node
-  evalExpr(node) {
+  async evalExpr(node) {
     switch (node.type) {
       case 'number': return node.value;
       case 'string': return node.value;
@@ -200,27 +200,28 @@ class Interpreter {
         const arr = this.arrVars[node.name];
         if (!arr) throw new Error(`Array ${node.name}@ not initialized`);
         if (node.indices.length === 1) {
-          const idx = Math.floor(this.evalExpr(node.indices[0])) - 1; // 1-indexed to 0-indexed
+          const idx = Math.floor(await this.evalExpr(node.indices[0])) - 1; // 1-indexed to 0-indexed
           if (idx < 0 || idx >= arr.length) throw new Error(`Array index out of bounds: ${idx + 1}`);
           return arr[idx];
         } else if (node.indices.length === 2) {
-          const i = Math.floor(this.evalExpr(node.indices[0])) - 1;
-          const j = Math.floor(this.evalExpr(node.indices[1])) - 1;
+          const i = Math.floor(await this.evalExpr(node.indices[0])) - 1;
+          const j = Math.floor(await this.evalExpr(node.indices[1])) - 1;
           if (!arr[i]) throw new Error(`Array index out of bounds: ${i + 1}`);
           return arr[i][j];
         }
         throw new Error(`Too many array dimensions`);
       }
-      case 'binop': return this.evalBinop(node);
-      case 'unaryop': return this.evalUnary(node);
+      case 'binop': return await this.evalBinop(node);
+      case 'unaryop': return await this.evalUnary(node);
+      case 'funccall': return await this.execFunctionCall(node, node.line);
       default:
         throw new Error(`Unknown expression type: ${node.type}`);
     }
   }
 
-  evalBinop(node) {
-    const left = this.evalExpr(node.left);
-    const right = this.evalExpr(node.right);
+  async evalBinop(node) {
+    const left = await this.evalExpr(node.left);
+    const right = await this.evalExpr(node.right);
 
     switch (node.op) {
       case '+':
@@ -251,8 +252,8 @@ class Interpreter {
     }
   }
 
-  evalUnary(node) {
-    const val = this.evalExpr(node.expr);
+  async evalUnary(node) {
+    const val = await this.evalExpr(node.expr);
     switch (node.op) {
       case '-': return -val;
       case 'NOT': return val ? 0 : 1;
@@ -265,22 +266,22 @@ class Interpreter {
   async execStmt(stmt) {
     switch (stmt.type) {
       case 'print': {
-        const val = this.evalExpr(stmt.expr);
+        const val = await this.evalExpr(stmt.expr);
         let color = null;
         if (stmt.withColor) {
-          color = this._colorStructToHex(this.evalExpr(stmt.withColor), stmt.line);
+          color = this._colorStructToHex(await this.evalExpr(stmt.withColor), stmt.line);
         }
         this.screen.print(val, color);
         this.screen.render();
         break;
       }
       case 'printat': {
-        const row = Math.floor(this.evalExpr(stmt.row));
-        const col = Math.floor(this.evalExpr(stmt.col));
-        const val = this.evalExpr(stmt.expr);
+        const row = Math.floor(await this.evalExpr(stmt.row));
+        const col = Math.floor(await this.evalExpr(stmt.col));
+        const val = await this.evalExpr(stmt.expr);
         let color = null;
         if (stmt.withColor) {
-          color = this._colorStructToHex(this.evalExpr(stmt.withColor), stmt.line);
+          color = this._colorStructToHex(await this.evalExpr(stmt.withColor), stmt.line);
         }
         this.screen.printAt(row, col, val, color);
         this.screen.render();
@@ -295,7 +296,7 @@ class Interpreter {
         switch (stmt.keyword) {
           case 'INPUT': {
             if (stmt.params.TEXT) {
-              const promptText = this.evalExpr(stmt.params.TEXT);
+              const promptText = await this.evalExpr(stmt.params.TEXT);
               this.screen.printInline(promptText);
               this.screen.render();
             }
@@ -308,7 +309,7 @@ class Interpreter {
             break;
           }
           case 'RANDOM': {
-            const max = Math.floor(this.evalExpr(stmt.params.MAX));
+            const max = Math.floor(await this.evalExpr(stmt.params.MAX));
             result = Math.floor(Math.random() * (max + 1));
             break;
           }
@@ -318,12 +319,12 @@ class Interpreter {
             }
             result = this.dataPool[this.dataPointer++];
             if (result && typeof result === 'object' && result.type) {
-              result = this.evalExpr(result);
+              result = await this.evalExpr(result);
             }
             break;
           }
           case 'LENGTH': {
-            const val = this.evalExpr(stmt.params.VALUE);
+            const val = await this.evalExpr(stmt.params.VALUE);
             if (Array.isArray(val)) {
               result = val.length;
             } else {
@@ -332,9 +333,9 @@ class Interpreter {
             break;
           }
           case 'SUBSTRING': {
-            const str = String(this.evalExpr(stmt.params.TEXT));
-            const start = Math.floor(this.evalExpr(stmt.params.START));
-            const len = Math.floor(this.evalExpr(stmt.params.LENGTH));
+            const str = String(await this.evalExpr(stmt.params.TEXT));
+            const start = Math.floor(await this.evalExpr(stmt.params.START));
+            const len = Math.floor(await this.evalExpr(stmt.params.LENGTH));
             if (start < 1 || start > str.length) {
               throw new Error(`SUBSTRING: START index ${start} out of range (1-${str.length}) at line ${stmt.line}`);
             }
@@ -342,65 +343,65 @@ class Interpreter {
             break;
           }
           case 'UPPERCASE': {
-            result = String(this.evalExpr(stmt.params.TEXT)).toUpperCase();
+            result = String(await this.evalExpr(stmt.params.TEXT)).toUpperCase();
             break;
           }
           case 'LOWERCASE': {
-            result = String(this.evalExpr(stmt.params.TEXT)).toLowerCase();
+            result = String(await this.evalExpr(stmt.params.TEXT)).toLowerCase();
             break;
           }
           case 'CONTAINS': {
-            const text = String(this.evalExpr(stmt.params.TEXT));
-            const find = String(this.evalExpr(stmt.params.FIND));
+            const text = String(await this.evalExpr(stmt.params.TEXT));
+            const find = String(await this.evalExpr(stmt.params.FIND));
             result = text.includes(find) ? 1 : 0;
             break;
           }
           case 'ABS': {
-            result = Math.abs(this.evalExpr(stmt.params.VALUE));
+            result = Math.abs(await this.evalExpr(stmt.params.VALUE));
             break;
           }
           case 'SQRT': {
-            const val = this.evalExpr(stmt.params.VALUE);
+            const val = await this.evalExpr(stmt.params.VALUE);
             if (val < 0) throw new Error(`SQRT: cannot take square root of negative number at line ${stmt.line}`);
             result = Math.sqrt(val);
             break;
           }
           case 'ROUND': {
-            result = Math.round(this.evalExpr(stmt.params.VALUE));
+            result = Math.round(await this.evalExpr(stmt.params.VALUE));
             break;
           }
           case 'FLOOR': {
-            result = Math.floor(this.evalExpr(stmt.params.VALUE));
+            result = Math.floor(await this.evalExpr(stmt.params.VALUE));
             break;
           }
           case 'CEIL': {
-            result = Math.ceil(this.evalExpr(stmt.params.VALUE));
+            result = Math.ceil(await this.evalExpr(stmt.params.VALUE));
             break;
           }
           case 'MIN': {
-            result = Math.min(this.evalExpr(stmt.params.A), this.evalExpr(stmt.params.B));
+            result = Math.min(await this.evalExpr(stmt.params.A), await this.evalExpr(stmt.params.B));
             break;
           }
           case 'MAX': {
-            result = Math.max(this.evalExpr(stmt.params.A), this.evalExpr(stmt.params.B));
+            result = Math.max(await this.evalExpr(stmt.params.A), await this.evalExpr(stmt.params.B));
             break;
           }
           case 'SIN': {
-            result = Math.sin(this.evalExpr(stmt.params.VALUE));
+            result = Math.sin(await this.evalExpr(stmt.params.VALUE));
             break;
           }
           case 'COS': {
-            result = Math.cos(this.evalExpr(stmt.params.VALUE));
+            result = Math.cos(await this.evalExpr(stmt.params.VALUE));
             break;
           }
           case 'LOG': {
-            const val = this.evalExpr(stmt.params.VALUE);
+            const val = await this.evalExpr(stmt.params.VALUE);
             if (val <= 0) throw new Error(`LOG: value must be positive at line ${stmt.line}`);
             result = Math.log(val);
             break;
           }
           case 'SIGN': {
-            result = Math.sign(this.evalExpr(stmt.params.VALUE));
+            result = Math.sign(await this.evalExpr(stmt.params.VALUE));
             break;
           }
           default:
@@ -432,8 +433,8 @@ class Interpreter {
       case 'goto': {
         throw new GotoSignal(stmt.label);
       }
-case 'if': {
-        const cond = this.evalExpr(stmt.condition);
+      case 'if': {
+        const cond = await this.evalExpr(stmt.condition);
         if (cond) {
           await this.execBlock(stmt.thenBody);
         } else if (stmt.elseBody) {
@@ -442,9 +443,9 @@ case 'if': {
         break;
       }
       case 'for': {
-        const lower = Math.floor(this.evalExpr(stmt.lower));
-        const upper = Math.floor(this.evalExpr(stmt.upper));
-        const step = stmt.step ? Math.floor(this.evalExpr(stmt.step)) : 1;
+        const lower = Math.floor(await this.evalExpr(stmt.lower));
+        const upper = Math.floor(await this.evalExpr(stmt.upper));
+        const step = stmt.step ? Math.floor(await this.evalExpr(stmt.step)) : 1;
         if (step === 0) throw new Error(`FOR loop step cannot be 0 at line ${stmt.line}`);
 
         for (let i = lower; step > 0 ? i <= upper : i >= upper; i += step) {
@@ -464,7 +465,7 @@ case 'if': {
         break;
       }
       case 'while': {
-        while (this.running && this.evalExpr(stmt.condition)) {
+        while (this.running && await this.evalExpr(stmt.condition)) {
           await this.execBlock(stmt.body);
 
           this._stmtCount++;
@@ -479,7 +480,7 @@ case 'if': {
         break;
       }
       case 'setcolor': {
-        const colorVal = this.evalExpr(stmt.expr);
+        const colorVal = await this.evalExpr(stmt.expr);
         this.screen.setColor(this._colorStructToHex(colorVal, stmt.line));
         break;
       }
@@ -488,16 +489,16 @@ case 'if': {
         break;
       }
       case 'sleep': {
-        const seconds = this.evalExpr(stmt.duration);
+        const seconds = await this.evalExpr(stmt.duration);
         await new Promise(resolve => setTimeout(resolve, seconds * 1000));
         break;
       }
       case 'play': {
         if (this.audio) {
-          const musicStr = String(this.evalExpr(stmt.expr));
-          const waveType = stmt.waveExpr ? String(this.evalExpr(stmt.waveExpr)) : 'square';
-          const inBackground = stmt.backgroundExpr ? !!this.evalExpr(stmt.backgroundExpr) : false;
-          const onRepeat = stmt.repeatExpr ? !!this.evalExpr(stmt.repeatExpr) : false;
+          const musicStr = String(await this.evalExpr(stmt.expr));
+          const waveType = stmt.waveExpr ? String(await this.evalExpr(stmt.waveExpr)) : 'square';
+          const inBackground = stmt.backgroundExpr ? !!(await this.evalExpr(stmt.backgroundExpr)) : false;
+          const onRepeat = stmt.repeatExpr ? !!(await this.evalExpr(stmt.repeatExpr)) : false;
           if (inBackground) {
             this.audio.playSequenceBg(musicStr, waveType, onRepeat);
           } else if (onRepeat) {
@@ -512,12 +513,15 @@ case 'if': {
       }
       case 'playpoly': {
         if (this.audio) {
-          const voices = stmt.voices.map(v => ({
-            musicStr: String(this.evalExpr(v.expr)),
-            waveType: v.waveExpr ? String(this.evalExpr(v.waveExpr)) : null,
-          }));
-          const inBackground = stmt.backgroundExpr ? !!this.evalExpr(stmt.backgroundExpr) : false;
-          const onRepeat = stmt.repeatExpr ? !!this.evalExpr(stmt.repeatExpr) : false;
+          const voices = [];
+          for (const v of stmt.voices) {
+            voices.push({
+              musicStr: String(await this.evalExpr(v.expr)),
+              waveType: v.waveExpr ? String(await this.evalExpr(v.waveExpr)) : null,
+            });
+          }
+          const inBackground = stmt.backgroundExpr ? !!(await this.evalExpr(stmt.backgroundExpr)) : false;
+          const onRepeat = stmt.repeatExpr ? !!(await this.evalExpr(stmt.repeatExpr)) : false;
           if (inBackground) {
             this.audio.playPolyBg(voices, onRepeat);
           } else if (onRepeat) {
@@ -547,21 +551,21 @@ case 'if': {
         break;
       }
       case 'assign_num': {
-        this.numVars[stmt.name] = this.evalExpr(stmt.value);
+        this.numVars[stmt.name] = await this.evalExpr(stmt.value);
         break;
       }
       case 'assign_str': {
-        this.strVars[stmt.name] = String(this.evalExpr(stmt.value));
+        this.strVars[stmt.name] = String(await this.evalExpr(stmt.value));
         break;
       }
       case 'assign_bool': {
-        this.boolVars[stmt.name] = this.evalExpr(stmt.value) ? 1 : 0;
+        this.boolVars[stmt.name] = (await this.evalExpr(stmt.value)) ? 1 : 0;
         break;
       }
       case 'assign_struct': {
         const obj = {};
         for (const m of stmt.members) {
-          obj[m.name + m.suffix] = this.evalExpr(m.value);
+          obj[m.name + m.suffix] = await this.evalExpr(m.value);
         }
         this.structVars[stmt.name] = obj;
         break;
@@ -570,17 +574,17 @@ case 'if': {
         if (!this.structVars[stmt.name]) {
           this.structVars[stmt.name] = {};
         }
-        this.structVars[stmt.name][stmt.memberName + stmt.memberSuffix] = this.evalExpr(stmt.value);
+        this.structVars[stmt.name][stmt.memberName + stmt.memberSuffix] = await this.evalExpr(stmt.value);
         break;
       }
       case 'assign_arr_alloc': {
-        const size = Math.floor(this.evalExpr(stmt.size));
+        const size = Math.floor(await this.evalExpr(stmt.size));
         this.arrVars[stmt.name] = new Array(size).fill(0);
         break;
       }
       case 'assign_arr_alloc2d': {
-        const rows = Math.floor(this.evalExpr(stmt.size1));
-        const cols = Math.floor(this.evalExpr(stmt.size2));
+        const rows = Math.floor(await this.evalExpr(stmt.size1));
+        const cols = Math.floor(await this.evalExpr(stmt.size2));
         const arr = [];
         for (let r = 0; r < rows; r++) {
           arr.push(new Array(cols).fill(0));
@@ -589,26 +593,36 @@ case 'if': {
         break;
       }
       case 'assign_arr_literal': {
-        this.arrVars[stmt.name] = stmt.items.map(item => this.evalExpr(item));
+        const items = [];
+        for (const item of stmt.items) {
+          items.push(await this.evalExpr(item));
+        }
+        this.arrVars[stmt.name] = items;
         break;
       }
       case 'assign_arr_multi': {
-        this.arrVars[stmt.name] = stmt.dimensions.map(dim =>
-          dim.map(item => this.evalExpr(item))
-        );
+        const dims = [];
+        for (const dim of stmt.dimensions) {
+          const row = [];
+          for (const item of dim) {
+            row.push(await this.evalExpr(item));
+          }
+          dims.push(row);
+        }
+        this.arrVars[stmt.name] = dims;
         break;
       }
       case 'assign_arr_index': {
         const arr = this.arrVars[stmt.name];
         if (!arr) throw new Error(`Array ${stmt.name}@ not initialized at line ${stmt.line}`);
-        const val = this.evalExpr(stmt.value);
+        const val = await this.evalExpr(stmt.value);
         if (stmt.indices.length === 1) {
-          const idx = Math.floor(this.evalExpr(stmt.indices[0])) - 1;
+          const idx = Math.floor(await this.evalExpr(stmt.indices[0])) - 1;
           if (idx < 0 || idx >= arr.length) throw new Error(`Array index out of bounds at line ${stmt.line}`);
           arr[idx] = val;
         } else if (stmt.indices.length === 2) {
-          const i = Math.floor(this.evalExpr(stmt.indices[0])) - 1;
-          const j = Math.floor(this.evalExpr(stmt.indices[1])) - 1;
+          const i = Math.floor(await this.evalExpr(stmt.indices[0])) - 1;
+          const j = Math.floor(await this.evalExpr(stmt.indices[1])) - 1;
           if (!arr[i]) throw new Error(`Array index out of bounds at line ${stmt.line}`);
           arr[i][j] = val;
         }
@@ -619,7 +633,7 @@ case 'if': {
         break;
       }
       case 'return': {
-        const val = stmt.value ? this.evalExpr(stmt.value) : null;
+        const val = stmt.value ? await this.evalExpr(stmt.value) : null;
         throw new ReturnSignal(val);
       }
       case 'void_funccall': {
@@ -676,14 +690,14 @@ case 'if': {
   async execFunctionCall(callNode, line) {
     const func = this.functions[callNode.name];
     if (!func) {
-      throw new Error(`Undefined function '>${callNode.name}' at line ${line}`);
+      throw new Error(`Undefined function '${callNode.name}${callNode.suffix || ''}' at line ${line}`);
     }
 
     if (this.callStack.length >= this.MAX_RECURSION_DEPTH) {
       throw new Error(`Maximum recursion depth (${this.MAX_RECURSION_DEPTH}) exceeded at line ${line}`);
     }
 
-    const resolvedArgs = this._resolveArgs(func, callNode.args, line);
+    const resolvedArgs = await this._resolveArgs(func, callNode.args, line);
 
     // Save current scope
     this.callStack.push({
@@ -742,12 +756,12 @@ case 'if': {
 
     // Check typed function returned a value
     if (func.returnType !== 'void' && returnValue === null) {
-      throw new Error(`Function '>${callNode.name}' must return a value at line ${line}`);
+      throw new Error(`Function '${callNode.name}${callNode.suffix || ''}' must return a value at line ${line}`);
     }
 
     // Enforce return type
     if (returnValue !== null && func.returnType !== 'void') {
-      const nameWithSuffix = '>' + callNode.name + (callNode.suffix || '');
+      const nameWithSuffix = callNode.name + (callNode.suffix || '');
       switch (func.returnType) {
         case 'num':
           if (typeof returnValue !== 'number') {
@@ -776,7 +790,7 @@ case 'if': {
     return returnValue;
   }
 
-  _resolveArgs(func, args, line) {
+  async _resolveArgs(func, args, line) {
     const params = func.params;
     const assigned = new Array(params.length).fill(false);
     const values = new Array(params.length).fill(undefined);
@@ -785,7 +799,7 @@ case 'if': {
     for (const arg of args) {
       if (arg.label) {
         // Named argument — find matching param by label
-        const idx = params.findIndex(p => p.label === arg.label);
+        const idx = params.findIndex(p => p.label !== null && p.label === arg.label);
         if (idx === -1) {
           throw new Error(`Unknown parameter '${arg.label}' at line ${line}`);
         }
@@ -793,7 +807,7 @@ case 'if': {
           throw new Error(`Parameter '${arg.label}' already provided at line ${line}`);
         }
         assigned[idx] = true;
-        values[idx] = this.evalExpr(arg.value);
+        values[idx] = await this.evalExpr(arg.value);
       } else {
         // Positional — find next unassigned param
         while (positionalIndex < params.length && assigned[positionalIndex]) {
@@ -803,7 +817,7 @@ case 'if': {
           throw new Error(`Too many arguments (expected ${params.length}) at line ${line}`);
         }
         assigned[positionalIndex] = true;
-        values[positionalIndex] = this.evalExpr(arg.value);
+        values[positionalIndex] = await this.evalExpr(arg.value);
         positionalIndex++;
       }
     }
@@ -813,7 +827,8 @@ case 'if': {
     for (let i = 0; i < params.length; i++) {
       if (!assigned[i]) {
         if (!params[i].optional) {
-          throw new Error(`Missing required parameter '${params[i].label}' at line ${line}`);
+          const paramDisplay = params[i].label || (params[i].varName + params[i].varSuffix);
+          throw new Error(`Missing required parameter '${paramDisplay}' at line ${line}`);
         }
         // Default values by type
         const defaults = { '#': 0, '$': '', '@': [], '&': {}, '!': 0 };

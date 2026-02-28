@@ -40,6 +40,26 @@ function parse(tokens) {
     return t.type === 'NEWLINE' || t.type === 'EOF';
   }
 
+  // Pre-pass: collect all function names for forward references
+  const knownFunctions = {};
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].type === 'KEYWORD' && tokens[i].value === 'FUNCTION') {
+      const next = tokens[i + 1];
+      if (next) {
+        const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!', 'IDENT': '' };
+        const suffix = suffixMap[next.type];
+        if (suffix !== undefined) knownFunctions[next.value] = suffix;
+      }
+    }
+  }
+
+  function isKnownFunction(token) {
+    if (!knownFunctions.hasOwnProperty(token.value)) return false;
+    const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!', 'IDENT': '' };
+    const tokenSuffix = suffixMap[token.type];
+    return tokenSuffix !== undefined && knownFunctions[token.value] === tokenSuffix;
+  }
+
   // Expression parsing (precedence climbing)
   function parseExpr() {
     return parseOr();
@@ -193,6 +213,12 @@ function parse(tokens) {
 
     if (t.type === 'LPAREN') {
       advance();
+      // Check if this is a function call in parens: (funcName ...)
+      if (isKnownFunction(peek())) {
+        const call = parseFunctionCallInParens();
+        expect('RPAREN');
+        return call;
+      }
       const expr = parseExpr();
       expect('RPAREN');
       return expr;
@@ -206,7 +232,7 @@ function parse(tokens) {
   function parseKeywordArgs() {
     const args = [];
     while (!atLineEnd()) {
-      if (peek().type === 'IDENT') {
+      if (peek().type === 'IDENT' && !isKnownFunction(peek())) {
         const label = advance().value.toUpperCase();
         const value = parseExpr();
         args.push({ label, value });
@@ -325,6 +351,9 @@ function parse(tokens) {
       return parseData();
     }
 
+    if (t.type === 'KEYWORD' && t.value === 'STRUCT') {
+      return parseStructBlock();
+    }
     if (t.type === 'KEYWORD' && t.value === 'FUNCTION') {
       return parseFunctionDef();
     }
@@ -341,13 +370,29 @@ function parse(tokens) {
       const duration = parseExpr();
       return { type: 'sleep', duration, line: t.line };
     }
-    if (t.type === 'FUNC_REF') {
+    // Void function call: IDENT that is a known function
+    if (t.type === 'IDENT' && isKnownFunction(t)) {
       const call = parseFunctionCall();
       return { type: 'void_funccall', call, line: t.line };
     }
 
     // Assignment: var# = expr, var$ = expr, var@ = expr, var@[i] = expr, var& = {...}, var! = YES/NO
+    // Or typed function call used as void statement (return value discarded)
     if (t.type === 'NUM_VAR' || t.type === 'STR_VAR' || t.type === 'ARR_VAR' || t.type === 'STRUCT_VAR' || t.type === 'BOOL_VAR') {
+      if (isKnownFunction(t)) {
+        // Lookahead: if next token is = or DOT or [, treat as assignment
+        const next = tokens[pos + 1];
+        if (next && (
+          (next.type === 'COMPARE' && next.value === '=') ||
+          next.type === 'DOT' ||
+          next.type === 'LBRACKET'
+        )) {
+          return parseAssignment();
+        }
+        // Otherwise it's a void function call (return value discarded)
+        const call = parseFunctionCall();
+        return { type: 'void_funccall', call, line: t.line };
+      }
       return parseAssignment();
     }
 
@@ -361,6 +406,7 @@ function parse(tokens) {
         'WHILE', 'ENDWHILE', 'SETCOLOR', 'BEEP', 'PLAY',
         'DATA', 'READ', 'AND', 'OR', 'NOT',
         'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL',
+        'STRUCT', 'ENDSTRUCT',
         'LENGTH', 'SUBSTRING', 'UPPERCASE', 'LOWERCASE', 'CONTAINS',
         'ABS', 'SQRT', 'ROUND', 'FLOOR', 'CEIL', 'MIN', 'MAX', 'SIN', 'COS', 'LOG', 'SIGN',
         'SLEEP', 'SIZE',
@@ -571,16 +617,42 @@ function parse(tokens) {
     return { type: 'data', line: t.line };
   }
 
+  function parseStructBlock() {
+    const t = advance(); // STRUCT
+    const varToken = expect('STRUCT_VAR');
+    skipNewlines();
+    const members = [];
+    while (!atEnd()) {
+      skipNewlines();
+      if (peek().type === 'KEYWORD' && peek().value === 'ENDSTRUCT') {
+        advance();
+        break;
+      }
+      expect('DOT');
+      const memToken = advance();
+      const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
+      const suffix = suffixMap[memToken.type];
+      if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${memToken.line}`);
+      expect('COMPARE', '=');
+      const value = parseExpr();
+      members.push({ name: memToken.value, suffix, value });
+      skipNewlines();
+    }
+    return { type: 'assign_struct', name: varToken.value, members, line: t.line };
+  }
+
   function parseFunctionDef() {
     if (insideFunction) {
       throw new SyntaxError(`Nested function definitions are not allowed at line ${peek().line}`);
     }
     const t = advance(); // FUNCTION
-    const ref = expect('FUNC_REF');
+    const ref = advance();
     const name = ref.value;
-    const suffixToType = { '#': 'num', '$': 'str', '@': 'arr', '&': 'struct', '!': 'bool', '': 'void' };
-    const returnType = suffixToType[ref.suffix] || 'void';
-
+    const typeSuffixMap = { 'NUM_VAR': 'num', 'STR_VAR': 'str', 'ARR_VAR': 'arr', 'STRUCT_VAR': 'struct', 'BOOL_VAR': 'bool', 'IDENT': 'void' };
+    const returnType = typeSuffixMap[ref.type];
+    if (returnType === undefined) {
+      throw new SyntaxError(`Expected function name after FUNCTION at line ${ref.line}`);
+    }
     // Parse parameters until end of line
     const params = [];
     let optionalStarted = false;
@@ -603,7 +675,7 @@ function parse(tokens) {
         throw new SyntaxError(`Expected typed variable for parameter at line ${varToken.line}`);
       }
       params.push({
-        label: label || varToken.value.toUpperCase(),
+        label: label || null,
         varName: varToken.value,
         varSuffix: paramSuffix,
         optional: optionalStarted,
@@ -638,19 +710,42 @@ function parse(tokens) {
   }
 
   function parseFunctionCall() {
-    const ref = advance(); // FUNC_REF
+    const ref = advance(); // IDENT or typed var (function name)
     const name = ref.value;
-    const suffix = ref.suffix;
+    const suffixFromType = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!', 'IDENT': '' };
+    const suffix = suffixFromType[ref.type] || '';
     const args = [];
 
     while (!atLineEnd()) {
-      // Named argument: IDENT followed by expression
-      if (peek().type === 'IDENT') {
+      // Named argument: IDENT that is NOT a known function, followed by expression
+      if (peek().type === 'IDENT' && !isKnownFunction(peek())) {
         const label = advance().value;
         const value = parseExpr();
         args.push({ label, value });
       } else {
         // Positional argument
+        const value = parseExpr();
+        args.push({ label: null, value });
+      }
+      if (!match('COMMA')) break;
+    }
+
+    return { type: 'funccall', name, suffix, args, line: ref.line };
+  }
+
+  function parseFunctionCallInParens() {
+    const ref = advance(); // IDENT or typed var (function name)
+    const name = ref.value;
+    const suffixFromType = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!', 'IDENT': '' };
+    const suffix = suffixFromType[ref.type] || '';
+    const args = [];
+
+    while (peek().type !== 'RPAREN' && !atLineEnd()) {
+      if (peek().type === 'IDENT' && !isKnownFunction(peek())) {
+        const label = advance().value;
+        const value = parseExpr();
+        args.push({ label, value });
+      } else {
         const value = parseExpr();
         args.push({ label: null, value });
       }
@@ -720,7 +815,7 @@ function parse(tokens) {
       }
       // Full struct assignment: myStruct& = {.height# = 72, .name$ = "Sam"}
       expect('COMPARE', '=');
-      if (peek().type === 'FUNC_REF') {
+      if (isKnownFunction(peek())) {
         const call = parseFunctionCall();
         return { type: 'assign_funccall', name: varToken.value, varType: 'struct', call, line };
       }
@@ -771,7 +866,7 @@ function parse(tokens) {
 
       expect('COMPARE', '=');
 
-      if (peek().type === 'FUNC_REF') {
+      if (isKnownFunction(peek())) {
         const call = parseFunctionCall();
         return { type: 'assign_funccall', name: varToken.value, varType: 'arr', call, line };
       }
@@ -816,7 +911,7 @@ function parse(tokens) {
     }
 
     expect('COMPARE', '=');
-    if (peek().type === 'FUNC_REF') {
+    if (isKnownFunction(peek())) {
       const varTypeMap = { 'NUM_VAR': 'num', 'STR_VAR': 'str', 'BOOL_VAR': 'bool' };
       const call = parseFunctionCall();
       return { type: 'assign_funccall', name: varToken.value, varType: varTypeMap[varToken.type], call, line };
