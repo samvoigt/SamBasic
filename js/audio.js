@@ -27,6 +27,40 @@ class SamAudio {
     await new Promise(resolve => setTimeout(resolve, 200));
   }
 
+  scheduleNote(note, time, waveType, gainLevel) {
+    if (note.freq === -1) {
+      // White noise percussion
+      const sampleRate = this.ctx.sampleRate;
+      const len = Math.floor(sampleRate * note.duration);
+      const buffer = this.ctx.createBuffer(1, len, sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let j = 0; j < len; j++) {
+        data[j] = Math.random() * 2 - 1;
+      }
+      const src = this.ctx.createBufferSource();
+      src.buffer = buffer;
+      const gain = this.ctx.createGain();
+      gain.gain.value = gainLevel;
+      src.connect(gain);
+      gain.connect(this.ctx.destination);
+      src.start(time);
+      gain.gain.setValueAtTime(gainLevel, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + note.duration - 0.01);
+    } else if (note.freq > 0) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = waveType;
+      osc.frequency.value = note.freq;
+      gain.gain.value = gainLevel;
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(time);
+      gain.gain.setValueAtTime(gainLevel, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + note.duration - 0.01);
+      osc.stop(time + note.duration);
+    }
+  }
+
   async playSequence(musicStr, waveType = 'square') {
     this.ensureContext();
     const notes = this.parseMusicString(musicStr);
@@ -34,24 +68,35 @@ class SamAudio {
     let time = startTime;
 
     for (const note of notes) {
-      if (note.freq > 0) {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = waveType;
-        osc.frequency.value = note.freq;
-        gain.gain.value = 0.3;
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(time);
-        gain.gain.setValueAtTime(0.3, time);
-        gain.gain.exponentialRampToValueAtTime(0.01, time + note.duration - 0.01);
-        osc.stop(time + note.duration);
-      }
+      this.scheduleNote(note, time, waveType, 0.3);
       time += note.duration;
     }
 
     const totalDuration = (time - startTime) * 1000;
     await new Promise(resolve => setTimeout(resolve, totalDuration));
+  }
+
+  async playPoly(voices) {
+    this.ensureContext();
+    const startTime = this.ctx.currentTime;
+    let maxDuration = 0;
+    const gainLevel = 0.3 / voices.length;
+
+    for (const voice of voices) {
+      const notes = this.parseMusicString(voice.musicStr);
+      const waveType = voice.waveType || 'square';
+      let time = startTime;
+
+      for (const note of notes) {
+        this.scheduleNote(note, time, waveType, gainLevel);
+        time += note.duration;
+      }
+
+      const voiceDuration = time - startTime;
+      if (voiceDuration > maxDuration) maxDuration = voiceDuration;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, maxDuration * 1000));
   }
 
   parseMusicString(str) {
@@ -150,8 +195,28 @@ class SamAudio {
         continue;
       }
 
-      // Pause/rest
-      if (ch === 'P' || ch === 'R') {
+      // Percussion (white noise)
+      if (ch === 'P') {
+        i++;
+        let length = defaultLength;
+        const numStr = this.readNumber(s, i);
+        if (numStr) {
+          length = parseInt(numStr);
+          i += numStr.length;
+        }
+        let dotMultiplier = 1;
+        if (i < s.length && s[i] === '.') {
+          dotMultiplier = 1.5;
+          i++;
+        }
+        const beatDuration = 60 / tempo;
+        const duration = (4 / length) * beatDuration * dotMultiplier;
+        notes.push({ freq: -1, duration });
+        continue;
+      }
+
+      // Rest
+      if (ch === 'R') {
         i++;
         let length = defaultLength;
         const numStr = this.readNumber(s, i);

@@ -139,7 +139,12 @@ PLAY "O4 L4 C D E F G A B > C"   ' Play notes (QBASIC PLAY syntax)
 PLAY "C D E" WITHWAVE SINE       ' Wave types: SINE, SQUARE, SAWTOOTH, TRIANGLE
 ```
 
-**PLAY string syntax:** Notes `A`-`G`, sharps `#`/`+`, flats `-`, octave `O4`, length `L8`, tempo `T120`, rest `P4`, dotted notes `.`, octave up/down `>`/`<`.
+**Polyphonic playback** — play multiple voices simultaneously with `PLAYPOLY`. Each voice is a bracketed group with its own note string and optional wave type:
+```
+PLAYPOLY ["O4 L4 C E G" WITHWAVE SINE] ["O3 L2 C G" WITHWAVE TRIANGLE]
+```
+
+**PLAY string syntax:** Notes `A`-`G`, sharps `#`/`+`, flats `-`, octave `O4`, length `L8`, tempo `T120`, rest `R4`, percussion `P4` (white noise hit), dotted notes `.`, octave up/down `>`/`<`.
 
 ### Data
 

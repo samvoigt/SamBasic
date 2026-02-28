@@ -326,6 +326,16 @@ class Interpreter {
         }
         break;
       }
+      case 'playpoly': {
+        if (this.audio) {
+          const voices = stmt.voices.map(v => ({
+            musicStr: String(this.evalExpr(v.expr)),
+            waveType: v.waveType,
+          }));
+          await this.audio.playPoly(voices);
+        }
+        break;
+      }
       case 'data': {
         // no-op at runtime; data is collected at parse time
         break;

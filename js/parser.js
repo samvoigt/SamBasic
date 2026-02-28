@@ -234,6 +234,9 @@ function parse(tokens) {
     if (t.type === 'KEYWORD' && t.value === 'PLAY') {
       return parsePlay();
     }
+    if (t.type === 'KEYWORD' && t.value === 'PLAYPOLY') {
+      return parsePlayPoly();
+    }
     if (t.type === 'KEYWORD' && t.value === 'DATA') {
       return parseData();
     }
@@ -392,6 +395,30 @@ function parse(tokens) {
       }
     }
     return { type: 'play', expr, waveType, line: t.line };
+  }
+
+  function parsePlayPoly() {
+    const t = advance(); // PLAYPOLY
+    const voices = [];
+    while (peek().type === 'LBRACKET') {
+      advance(); // [
+      const expr = parseExpr();
+      let waveType = null;
+      if (match('KEYWORD', 'WITHWAVE')) {
+        const wt = peek();
+        if (wt.type === 'KEYWORD' && ['SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE'].includes(wt.value)) {
+          waveType = advance().value.toLowerCase();
+        } else {
+          throw new SyntaxError(`Expected wave type after WITHWAVE at line ${t.line}`);
+        }
+      }
+      expect('RBRACKET');
+      voices.push({ expr, waveType });
+    }
+    if (voices.length === 0) {
+      throw new SyntaxError(`PLAYPOLY requires at least one [voice] at line ${t.line}`);
+    }
+    return { type: 'playpoly', voices, line: t.line };
   }
 
   function parseData() {
