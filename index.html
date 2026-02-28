@@ -15,7 +15,19 @@
           <textarea id="code-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
             placeholder="Enter SamBasic code here..."></textarea>
         </div>
+        <div class="files-pane">
+          <div class="files-header">
+            <span>Local Files</span>
+            <div class="files-buttons">
+              <button id="btn-upload" class="toolbar-btn files-btn">Upload</button>
+              <button id="btn-download" class="toolbar-btn files-btn" disabled>Download</button>
+              <button id="btn-remove" class="toolbar-btn files-btn" disabled>Remove</button>
+            </div>
+          </div>
+          <div class="files-list" id="files-list"></div>
+        </div>
         <input type="file" id="file-input" accept=".sam" hidden>
+        <input type="file" id="file-input-upload" hidden>
       </div>
 
       <div class="monitor-pane">

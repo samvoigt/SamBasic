@@ -54,9 +54,66 @@ html, body {
   flex: 1;
   display: flex;
   background: var(--editor-bg);
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
   overflow: hidden;
   position: relative;
+  min-height: 0;
+}
+
+/* === Local Files Pane === */
+.files-pane {
+  max-height: 150px;
+  background: var(--editor-bg);
+  border-top: 1px solid #313244;
+  border-radius: 0 0 8px 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.files-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  color: #585B70;
+  font-size: 13px;
+}
+
+.files-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.files-btn {
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+}
+
+.files-list {
+  overflow-y: auto;
+  flex: 1;
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-size: 13px;
+}
+
+.files-item {
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.files-item:hover {
+  background: #2A2A3E;
+}
+
+.files-item.selected {
+  background: #3A3A50;
+}
+
+.files-empty {
+  padding: 8px 12px;
+  color: #585B70;
+  font-style: italic;
+  text-align: center;
 }
 
 /* === Bottom Toolbar === */

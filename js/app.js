@@ -12,8 +12,14 @@ const btnLoad = document.getElementById('btn-load');
 const fileInput = document.getElementById('file-input');
 const btnPower = document.getElementById('btn-power');
 const monitorScreen = document.getElementById('monitor-screen');
+const filesList = document.getElementById('files-list');
+const btnUpload = document.getElementById('btn-upload');
+const btnDownload = document.getElementById('btn-download');
+const btnRemove = document.getElementById('btn-remove');
+const fileInputUpload = document.getElementById('file-input-upload');
 
 let monitorOn = true;
+let selectedFile = null;
 let powerPausedInterpreter = false;
 let currentRunId = 0;
 
@@ -55,6 +61,7 @@ btnRun.addEventListener('click', async () => {
     if (runId === currentRunId) {
       setRunning(false);
     }
+    refreshFileList();
   }
 });
 
@@ -80,6 +87,7 @@ btnStop.addEventListener('click', () => {
   interpreter.stop();
   setRunning(false);
   btnPause.innerHTML = '<span class="btn-icon">&#9646;&#9646;</span> Pause';
+  refreshFileList();
 });
 
 // Save
@@ -137,3 +145,93 @@ btnPower.addEventListener('click', () => {
   }
 });
 
+// === Local Files Panel ===
+
+function refreshFileList() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('sambasic_file:')) {
+      keys.push(key.slice('sambasic_file:'.length));
+    }
+  }
+  keys.sort((a, b) => a.localeCompare(b));
+
+  filesList.innerHTML = '';
+  if (keys.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'files-empty';
+    empty.textContent = 'No files';
+    filesList.appendChild(empty);
+    selectedFile = null;
+  } else {
+    if (selectedFile && !keys.includes(selectedFile)) {
+      selectedFile = null;
+    }
+    for (const name of keys) {
+      const item = document.createElement('div');
+      item.className = 'files-item';
+      item.textContent = name;
+      if (name === selectedFile) {
+        item.classList.add('selected');
+      }
+      filesList.appendChild(item);
+    }
+  }
+  btnDownload.disabled = !selectedFile;
+  btnRemove.disabled = !selectedFile;
+}
+
+filesList.addEventListener('click', (e) => {
+  const item = e.target.closest('.files-item');
+  if (!item) return;
+  const name = item.textContent;
+  if (name === selectedFile) {
+    selectedFile = null;
+  } else {
+    selectedFile = name;
+  }
+  filesList.querySelectorAll('.files-item').forEach(el => {
+    el.classList.toggle('selected', el.textContent === selectedFile);
+  });
+  btnDownload.disabled = !selectedFile;
+  btnRemove.disabled = !selectedFile;
+});
+
+btnUpload.addEventListener('click', () => {
+  fileInputUpload.click();
+});
+
+fileInputUpload.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    localStorage.setItem('sambasic_file:' + file.name, reader.result);
+    refreshFileList();
+  };
+  reader.readAsText(file);
+  fileInputUpload.value = '';
+});
+
+btnDownload.addEventListener('click', () => {
+  if (!selectedFile) return;
+  const content = localStorage.getItem('sambasic_file:' + selectedFile);
+  if (content == null) return;
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = selectedFile;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+btnRemove.addEventListener('click', () => {
+  if (!selectedFile) return;
+  localStorage.removeItem('sambasic_file:' + selectedFile);
+  selectedFile = null;
+  refreshFileList();
+});
+
+refreshFileList();
