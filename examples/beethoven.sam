@@ -1,0 +1,44 @@
+' =============================================
+'   Ode to Joy - Beethoven's Symphony No. 9
+'   Arranged for SamBasic polyphonic playback
+' =============================================
+
+CLEARSCREEN
+
+COLOR YELLOW
+PRINTAT 8, 31, "Ludwig van Beethoven"
+
+COLOR LIGHTGRAY
+PRINTAT 10, 23, "Symphony No. 9 in D minor, Op. 125"
+
+COLOR WHITE
+PRINTAT 12, 34, "~ Ode to Joy ~"
+
+COLOR DARKGRAY
+PRINTAT 14, 30, "Arranged for SamBasic"
+
+COLOR LIGHTGREEN
+PRINTAT 18, 34, "Now playing..."
+
+' Melody voice
+$m = "O4 T100 L4 "
+' A section
+$m = $m + "E E F G G F E D C C D E E. D8 D2 "
+' A section (second ending)
+$m = $m + "E E F G G F E D C C D E D. C8 C2 "
+' B section
+$m = $m + "D D E C D E8F8 E C D E8F8 E D C D O3 G2 "
+' A section reprise
+$m = $m + "O4 E E F G G F E D C C D E D. C8 C2"
+
+' Bass voice
+$b = "O3 T100 L2 "
+$b = $b + "C C G G F F G G "
+$b = $b + "C C G G F F G C "
+$b = $b + "G C G C G G F G "
+$b = $b + "C C G G F F G C"
+
+PLAYPOLY [$m WITHWAVE SINE] [$b WITHWAVE TRIANGLE]
+
+COLOR YELLOW
+PRINTAT 20, 37, "~ Fin ~"
