@@ -459,7 +459,7 @@ function parse(tokens) {
       const KEYWORDS = new Set([
         'PRINT', 'PRINTAT', 'CLEARSCREEN',
         'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'END',
-        'FOR', 'GOESFROM', 'TO', 'WITHSTEP',
+        'FOR', 'FROM', 'TO', 'WITHSTEP',
         'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',
         'AND', 'OR', 'NOT',
         'FUNCTION', 'RETURN', 'OPTIONAL', 'GLOBAL',
@@ -632,7 +632,7 @@ function parse(tokens) {
     if (peek().type === 'NUM_VAR') {
       varName = advance().value;
     }
-    expect('KEYWORD', 'GOESFROM');
+    expect('KEYWORD', 'FROM');
     const lower = parseExpr();
     expect('KEYWORD', 'TO');
     const upper = parseExpr();

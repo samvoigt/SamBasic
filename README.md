@@ -123,7 +123,7 @@ END IF
 
 **For Loop:**
 ```
-FOR i# GOESFROM 1 TO 10 WITHSTEP 2
+FOR i# FROM 1 TO 10 WITHSTEP 2
   PRINT i#
 END FOR
 ```
@@ -185,7 +185,7 @@ FUNCTION repeat TEXT msg$ OPTIONAL TIMES count#
   IF count# = 0 THEN
     count# = 1
   END IF
-  FOR i# GOESFROM 1 TO count#
+  FOR i# FROM 1 TO count#
     PRINT msg$
   END FOR
 END FUNCTION
