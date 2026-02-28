@@ -145,7 +145,7 @@ function parse(tokens) {
     if (t.type === 'ARR_VAR') {
       advance();
       const name = t.value;
-      // check for index access: @arr[idx] or @arr[i][j]
+      // check for index access: arr@[idx] or arr@[i][j]
       if (peek().type === 'LBRACKET') {
         const indices = [];
         while (peek().type === 'LBRACKET') {
@@ -250,7 +250,7 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
       return parseRead();
     }
 
-    // Assignment: #var = expr, $var = expr, @var = expr, @var[i] = expr
+    // Assignment: var# = expr, var$ = expr, var@ = expr, var@[i] = expr
     if (t.type === 'NUM_VAR' || t.type === 'STR_VAR' || t.type === 'ARR_VAR') {
       return parseAssignment();
     }
@@ -290,7 +290,7 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     expect('COMMA');
     const varToken = advance();
     if (varToken.type !== 'NUM_VAR' && varToken.type !== 'STR_VAR') {
-      throw new SyntaxError(`INPUT requires a # or $ variable at line ${t.line}`);
+      throw new SyntaxError(`INPUT requires a number# or string$ variable at line ${t.line}`);
     }
     return {
       type: 'input',
@@ -451,7 +451,7 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     const t = advance(); // READ
     const varToken = advance();
     if (varToken.type !== 'NUM_VAR' && varToken.type !== 'STR_VAR') {
-      throw new SyntaxError(`READ requires a # or $ variable at line ${t.line}`);
+      throw new SyntaxError(`READ requires a number# or string$ variable at line ${t.line}`);
     }
     return {
       type: 'read',
@@ -466,13 +466,10 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     const line = varToken.line;
 
     if (varToken.type === 'ARR_VAR') {
-      // @arr[i] = expr  OR  @arr = 10  OR  @arr = [1,2,3]
+      // arr@[i] = expr  OR  arr@ = 10  OR  arr@ = [1,2,3]
       if (peek().type === 'LBRACKET') {
-        // Could be index assignment @arr[i] = expr
-        // Or could be array literal @arr = [1,2,3]
-        // Peek ahead: if this is @var[...] = then it's index assignment
-        // But we just consumed @var, so check if next is [ and after ] is =
-        // Actually, need to check: is this = sign after brackets?
+        // Could be index assignment arr@[i] = expr
+        // Or could be array literal arr@ = [1,2,3]
         // Save position and try index assignment
         const savedPos = pos;
         const indices = [];
@@ -513,7 +510,7 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
         }
       }
 
-      // Size allocation: @arr = 10 or @arr = 10, 10
+      // Size allocation: arr@ = 10 or arr@ = 10, 10
       const size1 = parseExpr();
       if (match('COMMA')) {
         const size2 = parseExpr();

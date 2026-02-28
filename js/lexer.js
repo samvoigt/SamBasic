@@ -62,23 +62,6 @@ function tokenize(source) {
       // negative number: minus followed by digit, and previous token is an operator/keyword/comma/lparen/newline or start of line
       // (handled as OP MINUS in the lexer; parser handles unary minus)
 
-      // variable prefixes
-      if (line[i] === '#' || line[i] === '$' || line[i] === '@') {
-        const prefix = line[i];
-        i++;
-        let name = '';
-        while (i < line.length && /[a-zA-Z0-9_]/.test(line[i])) {
-          name += line[i];
-          i++;
-        }
-        if (name === '') {
-          throw new SyntaxError(`Expected variable name after '${prefix}' at line ${lineNum + 1}`);
-        }
-        const typeMap = { '#': 'NUM_VAR', '$': 'STR_VAR', '@': 'ARR_VAR' };
-        tokens.push({ type: typeMap[prefix], value: name, line: lineNum + 1, col: startCol });
-        continue;
-      }
-
       // comparison operators
       if (line[i] === '<') {
         if (line[i + 1] === '>') {
@@ -120,12 +103,20 @@ function tokenize(source) {
         continue;
       }
 
-      // identifiers and keywords
+      // identifiers, keywords, and variables (suffix sigil)
       if (/[a-zA-Z_]/.test(line[i])) {
         let word = '';
         while (i < line.length && /[a-zA-Z0-9_]/.test(line[i])) {
           word += line[i];
           i++;
+        }
+        // Check for variable suffix: name# name$ name@
+        if (i < line.length && (line[i] === '#' || line[i] === '$' || line[i] === '@')) {
+          const suffix = line[i];
+          i++;
+          const typeMap = { '#': 'NUM_VAR', '$': 'STR_VAR', '@': 'ARR_VAR' };
+          tokens.push({ type: typeMap[suffix], value: word, line: lineNum + 1, col: startCol });
+          continue;
         }
         const upper = word.toUpperCase();
         if (KEYWORDS.has(upper)) {

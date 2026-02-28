@@ -68,7 +68,7 @@ class Interpreter {
           if (e instanceof GotoSignal) {
             const target = this.labels[e.label];
             if (target === undefined) {
-              throw new Error(`Undefined label '$${e.label}' at line ${stmt.line}`);
+              throw new Error(`Undefined label '${e.label}$' at line ${stmt.line}`);
             }
             this.pc = target;
             continue;
@@ -142,7 +142,7 @@ class Interpreter {
       case 'arrvar': return this.arrVars[node.name] ?? [];
       case 'arrindex': {
         const arr = this.arrVars[node.name];
-        if (!arr) throw new Error(`Array @${node.name} not initialized`);
+        if (!arr) throw new Error(`Array ${node.name}@ not initialized`);
         if (node.indices.length === 1) {
           const idx = Math.floor(this.evalExpr(node.indices[0])) - 1; // 1-indexed to 0-indexed
           if (idx < 0 || idx >= arr.length) throw new Error(`Array index out of bounds: ${idx + 1}`);
@@ -414,7 +414,7 @@ case 'if': {
       }
       case 'assign_arr_index': {
         const arr = this.arrVars[stmt.name];
-        if (!arr) throw new Error(`Array @${stmt.name} not initialized at line ${stmt.line}`);
+        if (!arr) throw new Error(`Array ${stmt.name}@ not initialized at line ${stmt.line}`);
         const val = this.evalExpr(stmt.value);
         if (stmt.indices.length === 1) {
           const idx = Math.floor(this.evalExpr(stmt.indices[0])) - 1;
