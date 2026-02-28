@@ -275,7 +275,7 @@ function parse(tokens) {
     }
     if (t.type === 'KEYWORD' && t.value === 'LABEL') {
       advance();
-      const labelToken = expect('STR_VAR');
+      const labelToken = expect('IDENT');
       if (!insideFunction) {
         const stmtIndex = ast.length;
         labels[labelToken.value] = stmtIndex;
@@ -284,7 +284,7 @@ function parse(tokens) {
     }
     if (t.type === 'KEYWORD' && t.value === 'GOTO') {
       advance();
-      const labelToken = expect('STR_VAR');
+      const labelToken = expect('IDENT');
       return { type: 'goto', label: labelToken.value, line: t.line };
     }
     if (t.type === 'KEYWORD' && t.value === 'IF') {
@@ -349,6 +349,25 @@ function parse(tokens) {
     // Assignment: var# = expr, var$ = expr, var@ = expr, var@[i] = expr, var& = {...}, var! = YES/NO
     if (t.type === 'NUM_VAR' || t.type === 'STR_VAR' || t.type === 'ARR_VAR' || t.type === 'STRUCT_VAR' || t.type === 'BOOL_VAR') {
       return parseAssignment();
+    }
+
+    // Check for common mistake: lowercase keyword
+    if (t.type === 'IDENT') {
+      const upper = t.value.toUpperCase();
+      const KEYWORDS = new Set([
+        'PRINT', 'PRINTAT', 'CLEARSCREEN', 'INPUT', 'GETKEY', 'RANDOM',
+        'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'ENDIF',
+        'FOR', 'GOESFROM', 'TO', 'WITHSTEP', 'ENDFOR',
+        'WHILE', 'ENDWHILE', 'SETCOLOR', 'BEEP', 'PLAY',
+        'DATA', 'READ', 'AND', 'OR', 'NOT',
+        'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL',
+        'LENGTH', 'SUBSTRING', 'UPPERCASE', 'LOWERCASE', 'CONTAINS',
+        'ABS', 'SQRT', 'ROUND', 'FLOOR', 'CEIL', 'MIN', 'MAX', 'SIN', 'COS', 'LOG', 'SIGN',
+        'SLEEP', 'SIZE',
+      ]);
+      if (KEYWORDS.has(upper)) {
+        throw new SyntaxError(`Did you mean '${upper}'? Keywords must be UPPERCASE at line ${t.line}`);
+      }
     }
 
     throw new SyntaxError(`Unexpected ${t.type} '${t.value}' at line ${t.line}`);
@@ -456,15 +475,17 @@ function parse(tokens) {
         advance();
         break;
       }
-      if (peek().type === 'KEYWORD' && peek().value === 'ELSEIF') {
-        const elseifToken = advance(); // consume ELSEIF
-        const nested = parseIfChain(elseifToken);
-        elseBody = [nested];
-        break;
-      }
       if (peek().type === 'KEYWORD' && peek().value === 'ELSE') {
-        advance();
+        const elseToken = advance(); // consume ELSE
         skipNewlines();
+        // ELSE IF → recurse into parseIfChain
+        if (peek().type === 'KEYWORD' && peek().value === 'IF') {
+          advance(); // consume IF
+          const nested = parseIfChain(elseToken);
+          elseBody = [nested];
+          break;
+        }
+        // Plain ELSE
         elseBody = [];
         while (!atEnd()) {
           skipNewlines();
@@ -645,12 +666,11 @@ function parse(tokens) {
     GETKEY: [],
     RANDOM: [{ name: 'MAX', required: true }],
     READ: [],
-    LENGTH: [{ name: 'TEXT', required: true }],
+    LENGTH: [{ name: 'VALUE', required: true }],
     SUBSTRING: [{ name: 'TEXT', required: true }, { name: 'START', required: true }, { name: 'LENGTH', required: true }],
     UPPERCASE: [{ name: 'TEXT', required: true }],
     LOWERCASE: [{ name: 'TEXT', required: true }],
     CONTAINS: [{ name: 'TEXT', required: true }, { name: 'FIND', required: true }],
-    CHARACTERAT: [{ name: 'TEXT', required: true }, { name: 'INDEX', required: true }],
     ABS: [{ name: 'VALUE', required: true }],
     SQRT: [{ name: 'VALUE', required: true }],
     ROUND: [{ name: 'VALUE', required: true }],
@@ -781,13 +801,18 @@ function parse(tokens) {
         }
       }
 
-      // Size allocation: arr@ = 10 or arr@ = 10, 10
-      const size1 = parseExpr();
-      if (match('COMMA')) {
-        const size2 = parseExpr();
-        return { type: 'assign_arr_alloc2d', name: varToken.value, size1, size2, line };
+      // Size allocation: arr@ = SIZE 10 or arr@ = SIZE 10, 10
+      if (peek().type === 'KEYWORD' && peek().value === 'SIZE') {
+        advance(); // consume SIZE
+        const size1 = parseExpr();
+        if (match('COMMA')) {
+          const size2 = parseExpr();
+          return { type: 'assign_arr_alloc2d', name: varToken.value, size1, size2, line };
+        }
+        return { type: 'assign_arr_alloc', name: varToken.value, size: size1, line };
       }
-      return { type: 'assign_arr_alloc', name: varToken.value, size: size1, line };
+
+      throw new SyntaxError(`Expected '[' for array literal or 'SIZE' for array allocation after '=' at line ${line}`);
     }
 
     expect('COMPARE', '=');

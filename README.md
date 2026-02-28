@@ -30,6 +30,23 @@ Variables end with a sigil to indicate their type:
 
 Keywords must be **UPPERCASE**.
 
+### String Escape Sequences
+
+Strings support backslash escape sequences:
+
+| Escape | Character       |
+|--------|-----------------|
+| `\"`   | Literal `"`     |
+| `\\`   | Literal `\`     |
+| `\n`   | Newline         |
+| `\t`   | Tab             |
+
+```
+PRINT "She said \"hello\""
+PRINT "line1\nline2"
+PRINT "col1\tcol2"
+```
+
 ### Operators
 
 **Arithmetic:** `+`, `-`, `*`, `/`, `%` (modulo), `^` (exponent)
@@ -62,17 +79,16 @@ k$ = GETKEY                          ' Read currently pressed key (non-blocking)
 ### String Functions
 
 ```
-x# = LENGTH "hello"                           ' 5
+x# = LENGTH "hello"                           ' 5 (VALUE param)
 n# = LENGTH items@                             ' Array length
 s$ = SUBSTRING "hello world", 2, 4            ' "ello"
 s$ = SUBSTRING TEXT "abcdef", START 3, LENGTH 2  ' "cd"
 s$ = UPPERCASE "hello"                         ' "HELLO"
 s$ = LOWERCASE "HELLO"                         ' "hello"
 found! = CONTAINS "hello world", "world"       ' YES (1)
-c$ = CHARACTERAT "hello", 1                    ' "h"
 ```
 
-All string indices are **1-based**. `SUBSTRING` and `CHARACTERAT` throw an error if the index is out of range. `LENGTH` also works on arrays, returning the number of elements.
+All string indices are **1-based**. `SUBSTRING` throws an error if the index is out of range. Use `SUBSTRING text, index, 1` to get a single character. `LENGTH` also works on arrays, returning the number of elements.
 
 ### Math Functions
 
@@ -94,11 +110,11 @@ x# = SIGN -42                ' -1
 
 ### Control Flow
 
-**If / Else / Elseif:**
+**If / Else If / Else:**
 ```
 IF x# > 10 THEN
   PRINT "big"
-ELSEIF x# > 5 THEN
+ELSE IF x# > 5 THEN
   PRINT "medium"
 ELSE
   PRINT "small"
@@ -122,9 +138,9 @@ ENDWHILE
 
 **Labels and Goto:**
 ```
-LABEL start$
+LABEL start
 PRINT "looping"
-GOTO start$
+GOTO start
 ```
 
 ### Functions
@@ -190,9 +206,9 @@ PRINT x#          ' 120
 ### Arrays
 
 ```
-items@ = 10                       ' Allocate array of size 10 (filled with 0)
+items@ = SIZE 10                  ' Allocate array of size 10 (filled with 0)
 items@ = [1, 2, 3]               ' Array literal
-grid@ = 5, 5                     ' 2D array (5x5)
+grid@ = SIZE 5, 5                ' 2D array (5x5)
 grid@ = [1,2,3][4,5,6][7,8,9]   ' 2D array literal
 
 items@[1] = 42                   ' Set element (1-indexed)

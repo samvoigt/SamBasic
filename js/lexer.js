@@ -9,9 +9,9 @@ const KEYWORDS = new Set([
   'PAUSEPLAY', 'RESUMEPLAY', 'STOPPLAY',
   'YES', 'NO',
   'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL',
-  'LENGTH', 'SUBSTRING', 'UPPERCASE', 'LOWERCASE', 'CONTAINS', 'CHARACTERAT',
+  'LENGTH', 'SUBSTRING', 'UPPERCASE', 'LOWERCASE', 'CONTAINS',
   'ABS', 'SQRT', 'ROUND', 'FLOOR', 'CEIL', 'MIN', 'MAX', 'SIN', 'COS', 'LOG', 'SIGN',
-  'SLEEP', 'ELSEIF',
+  'SLEEP', 'SIZE',
 ]);
 
 
@@ -40,6 +40,18 @@ function tokenize(source) {
         i++;
         let str = '';
         while (i < line.length && line[i] !== '"') {
+          if (line[i] === '\\' && i + 1 < line.length) {
+            i++;
+            switch (line[i]) {
+              case '"': str += '"'; break;
+              case '\\': str += '\\'; break;
+              case 'n': str += '\n'; break;
+              case 't': str += '\t'; break;
+              default: str += '\\' + line[i]; break;
+            }
+            i++;
+            continue;
+          }
           str += line[i];
           i++;
         }

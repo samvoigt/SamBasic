@@ -114,7 +114,7 @@ class Interpreter {
           if (e instanceof GotoSignal) {
             const target = this.labels[e.label];
             if (target === undefined) {
-              throw new Error(`Undefined label '${e.label}$' at line ${stmt.line}`);
+              throw new Error(`Undefined label '${e.label}' at line ${stmt.line}`);
             }
             this.pc = target;
             continue;
@@ -323,7 +323,7 @@ class Interpreter {
             break;
           }
           case 'LENGTH': {
-            const val = this.evalExpr(stmt.params.TEXT);
+            const val = this.evalExpr(stmt.params.VALUE);
             if (Array.isArray(val)) {
               result = val.length;
             } else {
@@ -353,15 +353,6 @@ class Interpreter {
             const text = String(this.evalExpr(stmt.params.TEXT));
             const find = String(this.evalExpr(stmt.params.FIND));
             result = text.includes(find) ? 1 : 0;
-            break;
-          }
-          case 'CHARACTERAT': {
-            const str = String(this.evalExpr(stmt.params.TEXT));
-            const index = Math.floor(this.evalExpr(stmt.params.INDEX));
-            if (index < 1 || index > str.length) {
-              throw new Error(`CHARACTERAT: INDEX ${index} out of range (1-${str.length}) at line ${stmt.line}`);
-            }
-            result = str[index - 1];
             break;
           }
           case 'ABS': {
@@ -754,6 +745,34 @@ case 'if': {
       throw new Error(`Function '>${callNode.name}' must return a value at line ${line}`);
     }
 
+    // Enforce return type
+    if (returnValue !== null && func.returnType !== 'void') {
+      const nameWithSuffix = '>' + callNode.name + (callNode.suffix || '');
+      switch (func.returnType) {
+        case 'num':
+          if (typeof returnValue !== 'number') {
+            throw new Error(`Function '${nameWithSuffix}' expected to return a number but got ${typeof returnValue} at line ${line}`);
+          }
+          break;
+        case 'str':
+          if (typeof returnValue !== 'string') {
+            throw new Error(`Function '${nameWithSuffix}' expected to return a string but got ${typeof returnValue} at line ${line}`);
+          }
+          break;
+        case 'arr':
+          if (!Array.isArray(returnValue)) {
+            throw new Error(`Function '${nameWithSuffix}' expected to return an array but got ${typeof returnValue} at line ${line}`);
+          }
+          break;
+        case 'struct':
+          if (typeof returnValue !== 'object' || Array.isArray(returnValue)) {
+            throw new Error(`Function '${nameWithSuffix}' expected to return a struct but got ${typeof returnValue} at line ${line}`);
+          }
+          break;
+        // bool: coerced to 0/1 at call site, no check needed
+      }
+    }
+
     return returnValue;
   }
 
@@ -830,7 +849,7 @@ case 'if': {
         if (e instanceof GotoSignal) {
           const target = localLabels[e.label];
           if (target === undefined) {
-            throw new Error(`Undefined label '${e.label}$' at line ${stmt.line}`);
+            throw new Error(`Undefined label '${e.label}' at line ${stmt.line}`);
           }
           pc = target;
           continue;
