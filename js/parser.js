@@ -396,19 +396,26 @@ function parse(tokens) {
     if (t.type === 'IDENT') {
       const upper = t.value.toUpperCase();
       const KEYWORDS = new Set([
-        'PRINT', 'PRINTAT', 'CLEARSCREEN', 'INPUT', 'GETKEY', 'RANDOM',
+        'PRINT', 'PRINTAT', 'CLEARSCREEN',
         'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'ENDIF',
         'FOR', 'GOESFROM', 'TO', 'WITHSTEP', 'ENDFOR',
         'WHILE', 'ENDWHILE', 'SETCOLOR', 'BEEP', 'PLAY',
         'AND', 'OR', 'NOT',
         'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL',
         'STRUCT', 'ENDSTRUCT',
-        'LENGTH', 'SUBSTRING', 'UPPERCASE', 'LOWERCASE', 'CONTAINS',
-        'ABS', 'SQRT', 'ROUND', 'FLOOR', 'CEIL', 'MIN', 'MAX', 'SIN', 'COS', 'LOG', 'SIGN',
         'SLEEP', 'SIZE',
       ]);
       if (KEYWORDS.has(upper)) {
         throw new SyntaxError(`Did you mean '${upper}'? Keywords must be UPPERCASE at line ${t.line}`);
+      }
+      const TYPED_KW_SUFFIXES = {
+        INPUT: '$', GETKEY: '$', RANDOM: '#',
+        LENGTH: '#', SUBSTRING: '$', UPPERCASE: '$', LOWERCASE: '$', CONTAINS: '!',
+        ABS: '#', SQRT: '#', ROUND: '#', FLOOR: '#', CEIL: '#',
+        MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
+      };
+      if (TYPED_KW_SUFFIXES[upper]) {
+        throw new SyntaxError(`Did you mean '${upper}${TYPED_KW_SUFFIXES[upper]}'? Keywords must be UPPERCASE at line ${t.line}`);
       }
     }
 

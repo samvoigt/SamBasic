@@ -1,5 +1,5 @@
 const KEYWORDS = new Set([
-  'PRINT', 'PRINTAT', 'CLEARSCREEN', 'INPUT', 'GETKEY', 'RANDOM',
+  'PRINT', 'PRINTAT', 'CLEARSCREEN',
   'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'ENDIF',
   'FOR', 'GOESFROM', 'TO', 'WITHSTEP', 'ENDFOR',
   'WHILE', 'ENDWHILE', 'SETCOLOR', 'BEEP', 'PLAY',
@@ -10,10 +10,15 @@ const KEYWORDS = new Set([
   'YES', 'NO',
   'FUNCTION', 'ENDFUNCTION', 'RETURN', 'OPTIONAL',
   'STRUCT', 'ENDSTRUCT',
-  'LENGTH', 'SUBSTRING', 'UPPERCASE', 'LOWERCASE', 'CONTAINS',
-  'ABS', 'SQRT', 'ROUND', 'FLOOR', 'CEIL', 'MIN', 'MAX', 'SIN', 'COS', 'LOG', 'SIGN',
   'SLEEP', 'SIZE',
 ]);
+
+const TYPED_KEYWORDS = {
+  INPUT: '$', GETKEY: '$', RANDOM: '#',
+  LENGTH: '#', SUBSTRING: '$', UPPERCASE: '$', LOWERCASE: '$', CONTAINS: '!',
+  ABS: '#', SQRT: '#', ROUND: '#', FLOOR: '#', CEIL: '#',
+  MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
+};
 
 
 function tokenize(source) {
@@ -130,6 +135,15 @@ function tokenize(source) {
         if (i < line.length && (line[i] === '#' || line[i] === '$' || line[i] === '@' || line[i] === '&' || line[i] === '!')) {
           const suffix = line[i];
           i++;
+          const upper = word.toUpperCase();
+          const expectedSuffix = TYPED_KEYWORDS[upper];
+          if (expectedSuffix !== undefined) {
+            if (suffix === expectedSuffix) {
+              tokens.push({ type: 'KEYWORD', value: upper, line: lineNum + 1, col: startCol });
+              continue;
+            }
+            throw new SyntaxError(`Wrong suffix for '${upper}' — expected '${upper}${expectedSuffix}' but got '${word}${suffix}' at line ${lineNum + 1}, col ${startCol + 1}`);
+          }
           const typeMap = { '#': 'NUM_VAR', '$': 'STR_VAR', '@': 'ARR_VAR', '&': 'STRUCT_VAR', '!': 'BOOL_VAR' };
           tokens.push({ type: typeMap[suffix], value: word, line: lineNum + 1, col: startCol });
           continue;
