@@ -45,7 +45,9 @@ FOR #i GOESFROM 1 TO #len
 ENDFOR
 
 ' Place first food
-RUNBLOCK placeFood
+#returnTo = 1
+GOTO $placeFood
+LABEL $returnFood1
 
 ' === Main Loop ===
 LABEL $loop
@@ -139,7 +141,9 @@ ELSE
   #len = #len + 1
   @sx[#len] = #hx
   @sy[#len] = #hy
-  RUNBLOCK placeFood
+  #returnTo = 2
+  GOTO $placeFood
+  LABEL $returnFood2
 ENDIF
 
 ' Draw new head
@@ -155,32 +159,37 @@ PRINTAT 12, 30, "    GAME OVER!     "
 PRINTAT 13, 30, "   Score: " + #score + "      "
 BEEP
 
-' === Blocks ===
-BLOCK placeFood
-  #foodX = 77
-  RANDOM #foodX
-  #foodX = #foodX + 2
-  #foodY = 19
-  RANDOM #foodY
-  #foodY = #foodY + 4
-  ' Make sure food doesn't land on the snake
-  #onSnake = 1
-  WHILE #onSnake = 1
-    #onSnake = 0
-    FOR #fi GOESFROM 1 TO #len
-      IF @sx[#fi] = #foodX AND @sy[#fi] = #foodY THEN
-        #onSnake = 1
-      ENDIF
-    ENDFOR
-    IF #onSnake = 1 THEN
-      #foodX = 77
-      RANDOM #foodX
-      #foodX = #foodX + 2
-      #foodY = 19
-      RANDOM #foodY
-      #foodY = #foodY + 4
+' === Place Food Subroutine ===
+LABEL $placeFood
+#foodX = 77
+RANDOM #foodX
+#foodX = #foodX + 2
+#foodY = 19
+RANDOM #foodY
+#foodY = #foodY + 4
+' Make sure food doesn't land on the snake
+#onSnake = 1
+WHILE #onSnake = 1
+  #onSnake = 0
+  FOR #fi GOESFROM 1 TO #len
+    IF @sx[#fi] = #foodX AND @sy[#fi] = #foodY THEN
+      #onSnake = 1
     ENDIF
-  ENDWHILE
-  COLOR RED
-  PRINTAT #foodY, #foodX, "*"
-ENDBLOCK
+  ENDFOR
+  IF #onSnake = 1 THEN
+    #foodX = 77
+    RANDOM #foodX
+    #foodX = #foodX + 2
+    #foodY = 19
+    RANDOM #foodY
+    #foodY = #foodY + 4
+  ENDIF
+ENDWHILE
+COLOR RED
+PRINTAT #foodY, #foodX, "*"
+IF #returnTo = 1 THEN
+  GOTO $returnFood1
+ENDIF
+IF #returnTo = 2 THEN
+  GOTO $returnFood2
+ENDIF

@@ -3,7 +3,6 @@ function parse(tokens) {
   const ast = [];
   const dataPool = [];
   const labels = {};
-  const blocks = {};
 
   function peek() { return tokens[pos]; }
   function advance() { return tokens[pos++]; }
@@ -208,12 +207,7 @@ function parse(tokens) {
       const labelToken = expect('STR_VAR');
       return { type: 'goto', label: labelToken.value, line: t.line };
     }
-    if (t.type === 'KEYWORD' && t.value === 'RUNBLOCK') {
-      advance();
-      const nameToken = expect('IDENT');
-      return { type: 'runblock', name: nameToken.value, line: t.line };
-    }
-    if (t.type === 'KEYWORD' && t.value === 'IF') {
+if (t.type === 'KEYWORD' && t.value === 'IF') {
       return parseIf();
     }
     if (t.type === 'KEYWORD' && t.value === 'FOR') {
@@ -539,27 +533,9 @@ function parse(tokens) {
   // Main parse loop
   skipNewlines();
   while (!atEnd()) {
-    // BLOCK definitions are extracted, not added to main AST
-    if (peek().type === 'KEYWORD' && peek().value === 'BLOCK') {
-      const t = advance(); // BLOCK
-      const nameToken = expect('IDENT');
-      skipNewlines();
-      const body = [];
-      while (!atEnd()) {
-        skipNewlines();
-        if (peek().type === 'KEYWORD' && peek().value === 'ENDBLOCK') {
-          advance();
-          break;
-        }
-        body.push(parseStatement());
-        skipNewlines();
-      }
-      blocks[nameToken.value] = body;
-    } else {
-      ast.push(parseStatement());
-    }
+    ast.push(parseStatement());
     skipNewlines();
   }
 
-  return { ast, dataPool, labels, blocks };
+  return { ast, dataPool, labels };
 }

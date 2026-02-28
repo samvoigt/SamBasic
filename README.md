@@ -91,21 +91,6 @@ PRINT "looping"
 GOTO $start
 ```
 
-**Blocks (subroutines):**
-```
-BLOCK greet
-  COLOR LIGHTGREEN
-  PRINT "Hello from the block!"
-  COLOR LIGHTGRAY
-ENDBLOCK
-
-PRINT "Before block"
-RUNBLOCK greet
-PRINT "After block"
-```
-
-Define reusable blocks of code with `BLOCK name` / `ENDBLOCK`. Call them with `RUNBLOCK name`. Block names are plain identifiers (no sigil prefix). Blocks can be called multiple times and from anywhere in the program. Execution returns to the line after `RUNBLOCK` when the block finishes.
-
 ### Arrays
 
 ```
