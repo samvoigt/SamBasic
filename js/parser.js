@@ -336,6 +336,11 @@ function parse(tokens) {
       }
       return { type: 'return', value, line: t.line };
     }
+    if (t.type === 'KEYWORD' && t.value === 'SLEEP') {
+      advance();
+      const duration = parseExpr();
+      return { type: 'sleep', duration, line: t.line };
+    }
     if (t.type === 'FUNC_REF') {
       const call = parseFunctionCall();
       return { type: 'void_funccall', call, line: t.line };
@@ -434,6 +439,10 @@ function parse(tokens) {
 
   function parseIf() {
     const t = advance(); // IF
+    return parseIfChain(t);
+  }
+
+  function parseIfChain(t) {
     const condition = parseExpr();
     expect('KEYWORD', 'THEN');
     skipNewlines();
@@ -445,6 +454,12 @@ function parse(tokens) {
       skipNewlines();
       if (peek().type === 'KEYWORD' && peek().value === 'ENDIF') {
         advance();
+        break;
+      }
+      if (peek().type === 'KEYWORD' && peek().value === 'ELSEIF') {
+        const elseifToken = advance(); // consume ELSEIF
+        const nested = parseIfChain(elseifToken);
+        elseBody = [nested];
         break;
       }
       if (peek().type === 'KEYWORD' && peek().value === 'ELSE') {
@@ -636,6 +651,17 @@ function parse(tokens) {
     LOWERCASE: [{ name: 'TEXT', required: true }],
     CONTAINS: [{ name: 'TEXT', required: true }, { name: 'FIND', required: true }],
     CHARACTERAT: [{ name: 'TEXT', required: true }, { name: 'INDEX', required: true }],
+    ABS: [{ name: 'VALUE', required: true }],
+    SQRT: [{ name: 'VALUE', required: true }],
+    ROUND: [{ name: 'VALUE', required: true }],
+    FLOOR: [{ name: 'VALUE', required: true }],
+    CEIL: [{ name: 'VALUE', required: true }],
+    MIN: [{ name: 'A', required: true }, { name: 'B', required: true }],
+    MAX: [{ name: 'A', required: true }, { name: 'B', required: true }],
+    SIN: [{ name: 'VALUE', required: true }],
+    COS: [{ name: 'VALUE', required: true }],
+    LOG: [{ name: 'VALUE', required: true }],
+    SIGN: [{ name: 'VALUE', required: true }],
   };
 
   function parseAssignBuiltinKeyword(varToken, line) {

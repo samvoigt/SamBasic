@@ -63,6 +63,7 @@ k$ = GETKEY                          ' Read currently pressed key (non-blocking)
 
 ```
 x# = LENGTH "hello"                           ' 5
+n# = LENGTH items@                             ' Array length
 s$ = SUBSTRING "hello world", 2, 4            ' "ello"
 s$ = SUBSTRING TEXT "abcdef", START 3, LENGTH 2  ' "cd"
 s$ = UPPERCASE "hello"                         ' "HELLO"
@@ -71,14 +72,34 @@ found! = CONTAINS "hello world", "world"       ' YES (1)
 c$ = CHARACTERAT "hello", 1                    ' "h"
 ```
 
-All string indices are **1-based**. `SUBSTRING` and `CHARACTERAT` throw an error if the index is out of range.
+All string indices are **1-based**. `SUBSTRING` and `CHARACTERAT` throw an error if the index is out of range. `LENGTH` also works on arrays, returning the number of elements.
+
+### Math Functions
+
+```
+x# = ABS -5                  ' 5
+x# = SQRT 16                 ' 4
+x# = ROUND 3.7               ' 4
+x# = FLOOR 3.9               ' 3
+x# = CEIL 3.1                ' 4
+x# = MIN 3, 7                ' 3
+x# = MAX 3, 7                ' 7
+x# = SIN 3.14159             ' ~0 (radians)
+x# = COS 0                   ' 1
+x# = LOG 2.71828             ' ~1 (natural log)
+x# = SIGN -42                ' -1
+```
+
+`SQRT` errors if the value is negative. `LOG` errors if the value is not positive. `SIN` and `COS` use radians. `SIGN` returns -1, 0, or 1.
 
 ### Control Flow
 
-**If / Else:**
+**If / Else / Elseif:**
 ```
 IF x# > 10 THEN
   PRINT "big"
+ELSEIF x# > 5 THEN
+  PRINT "medium"
 ELSE
   PRINT "small"
 ENDIF
@@ -249,6 +270,8 @@ msg$ = READ                      ' Reads "hello" into msg$
 ```
 x# = RANDOM 100                  ' Random int between 0 and 100
 x# = RANDOM MAX 50               ' Named parameter form
+SLEEP 2                           ' Pause execution for 2 seconds
+SLEEP 0.5                         ' Pause for 500ms (fractional seconds)
 ```
 
 ### Comments

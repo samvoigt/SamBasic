@@ -323,7 +323,12 @@ class Interpreter {
             break;
           }
           case 'LENGTH': {
-            result = String(this.evalExpr(stmt.params.TEXT)).length;
+            const val = this.evalExpr(stmt.params.TEXT);
+            if (Array.isArray(val)) {
+              result = val.length;
+            } else {
+              result = String(val).length;
+            }
             break;
           }
           case 'SUBSTRING': {
@@ -357,6 +362,54 @@ class Interpreter {
               throw new Error(`CHARACTERAT: INDEX ${index} out of range (1-${str.length}) at line ${stmt.line}`);
             }
             result = str[index - 1];
+            break;
+          }
+          case 'ABS': {
+            result = Math.abs(this.evalExpr(stmt.params.VALUE));
+            break;
+          }
+          case 'SQRT': {
+            const val = this.evalExpr(stmt.params.VALUE);
+            if (val < 0) throw new Error(`SQRT: cannot take square root of negative number at line ${stmt.line}`);
+            result = Math.sqrt(val);
+            break;
+          }
+          case 'ROUND': {
+            result = Math.round(this.evalExpr(stmt.params.VALUE));
+            break;
+          }
+          case 'FLOOR': {
+            result = Math.floor(this.evalExpr(stmt.params.VALUE));
+            break;
+          }
+          case 'CEIL': {
+            result = Math.ceil(this.evalExpr(stmt.params.VALUE));
+            break;
+          }
+          case 'MIN': {
+            result = Math.min(this.evalExpr(stmt.params.A), this.evalExpr(stmt.params.B));
+            break;
+          }
+          case 'MAX': {
+            result = Math.max(this.evalExpr(stmt.params.A), this.evalExpr(stmt.params.B));
+            break;
+          }
+          case 'SIN': {
+            result = Math.sin(this.evalExpr(stmt.params.VALUE));
+            break;
+          }
+          case 'COS': {
+            result = Math.cos(this.evalExpr(stmt.params.VALUE));
+            break;
+          }
+          case 'LOG': {
+            const val = this.evalExpr(stmt.params.VALUE);
+            if (val <= 0) throw new Error(`LOG: value must be positive at line ${stmt.line}`);
+            result = Math.log(val);
+            break;
+          }
+          case 'SIGN': {
+            result = Math.sign(this.evalExpr(stmt.params.VALUE));
             break;
           }
           default:
@@ -441,6 +494,11 @@ case 'if': {
       }
       case 'beep': {
         if (this.audio) await this.audio.beep();
+        break;
+      }
+      case 'sleep': {
+        const seconds = this.evalExpr(stmt.duration);
+        await new Promise(resolve => setTimeout(resolve, seconds * 1000));
         break;
       }
       case 'play': {
