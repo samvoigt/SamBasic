@@ -37,11 +37,12 @@ class Interpreter {
     this._stmtCount = 0;
   }
 
-  load(ast, dataPool, labels) {
+  load(ast, dataPool, labels, blocks) {
     this.reset();
     this.ast = ast;
     this.dataPool = dataPool;
     this.labels = labels;
+    this.blocks = blocks || {};
   }
 
   async run() {
@@ -257,6 +258,12 @@ class Interpreter {
       }
       case 'goto': {
         throw new GotoSignal(stmt.label);
+      }
+      case 'runblock': {
+        const body = this.blocks[stmt.name];
+        if (!body) throw new Error(`Undefined block '${stmt.name}' at line ${stmt.line}`);
+        await this.execBlock(body);
+        break;
       }
       case 'if': {
         const cond = this.evalExpr(stmt.condition);

@@ -5,6 +5,7 @@ const KEYWORDS = new Set([
   'WHILE', 'ENDWHILE', 'COLOR', 'BEEP', 'PLAY', 'WITHWAVE',
   'DATA', 'READ', 'AND', 'OR', 'NOT', 'WITHCOLOR',
   'SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE',
+  'BLOCK', 'ENDBLOCK', 'RUNBLOCK',
 ]);
 
 const COLOR_KEYWORDS = new Set([

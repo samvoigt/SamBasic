@@ -38,8 +38,8 @@ btnRun.addEventListener('click', async () => {
 
   try {
     const tokens = tokenize(source);
-    const { ast, dataPool, labels } = parse(tokens);
-    interpreter.load(ast, dataPool, labels);
+    const { ast, dataPool, labels, blocks } = parse(tokens);
+    interpreter.load(ast, dataPool, labels, blocks);
     setRunning(true);
     await interpreter.run();
   } catch (e) {
