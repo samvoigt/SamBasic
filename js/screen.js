@@ -96,12 +96,16 @@ class Screen {
     const r = row - 1;
     const c = col - 1;
     if (r < 0 || r >= this.rows || c < 0) return;
-    this.cursorRow = r;
-    this.cursorCol = c;
+    const clr = color || this.globalColor;
     const str = String(text);
+    let writeCol = c;
     for (const ch of str) {
-      this.writeChar(ch, color);
+      if (writeCol >= this.cols) break;
+      this.buffer[r][writeCol] = { char: ch, color: clr };
+      writeCol++;
     }
+    this.cursorRow = r;
+    this.cursorCol = Math.min(writeCol, this.cols - 1);
   }
 
   render() {
