@@ -137,11 +137,22 @@ Uses the 16-color EGA palette:
 BEEP                              ' Short beep
 PLAY "O4 L4 C D E F G A B > C"   ' Play notes (QBASIC PLAY syntax)
 PLAY "C D E" WITHWAVE SINE       ' Wave types: SINE, SQUARE, SAWTOOTH, TRIANGLE
+PLAY "C D E" INBACKGROUND        ' Play in background (non-blocking)
+PLAY "C D E" ONREPEAT            ' Loop until program stops (blocking)
+PLAY "C D E" INBACKGROUND ONREPEAT ' Loop in background
 ```
 
 **Polyphonic playback** — play multiple voices simultaneously with `PLAYPOLY`. Each voice is a bracketed group with its own note string and optional wave type:
 ```
 PLAYPOLY ["O4 L4 C E G" WITHWAVE SINE] ["O3 L2 C G" WITHWAVE TRIANGLE]
+PLAYPOLY ["C E G"] ["C G"] INBACKGROUND ONREPEAT
+```
+
+**Playback control** — control background audio:
+```
+PAUSEPLAY                         ' Pause background audio
+RESUMEPLAY                        ' Resume paused audio
+STOPPLAY                          ' Stop background audio
 ```
 
 **PLAY string syntax:** Notes `A`-`G`, sharps `#`/`+`, flats `-`, octave `O4`, length `L8`, tempo `T120`, rest `R4`, percussion `P4` (white noise hit), dotted notes `.`, octave up/down `>`/`<`.

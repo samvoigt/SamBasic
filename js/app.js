@@ -14,6 +14,8 @@ const btnPower = document.getElementById('btn-power');
 const monitorScreen = document.getElementById('monitor-screen');
 
 let monitorOn = true;
+let powerPausedInterpreter = false;
+let currentRunId = 0;
 
 // Initialize
 const crtScreen = new Screen(screenOutput);
@@ -36,6 +38,11 @@ btnRun.addEventListener('click', async () => {
   const source = codeEditor.value;
   if (!source.trim()) return;
 
+  if (interpreter.running) {
+    interpreter.stop();
+  }
+
+  const runId = ++currentRunId;
   try {
     const tokens = tokenize(source);
     const { ast, dataPool, labels, blocks } = parse(tokens);
@@ -45,7 +52,9 @@ btnRun.addEventListener('click', async () => {
   } catch (e) {
     crtScreen.showError(`ERROR: ${e.message}`);
   } finally {
-    setRunning(false);
+    if (runId === currentRunId) {
+      setRunning(false);
+    }
   }
 });
 
@@ -56,6 +65,7 @@ btnPause.addEventListener('click', () => {
     btnPause.innerHTML = '<span class="btn-icon">&#9646;&#9646;</span> Pause';
   } else {
     interpreter.pause();
+    audio.stopBackground();
     btnPause.innerHTML = '<span class="btn-icon">&#9654;</span> Resume';
   }
 });
@@ -68,6 +78,7 @@ btnStep.addEventListener('click', () => {
 // Stop
 btnStop.addEventListener('click', () => {
   interpreter.stop();
+  setRunning(false);
   btnPause.innerHTML = '<span class="btn-icon">&#9646;&#9646;</span> Pause';
 });
 
@@ -103,20 +114,25 @@ fileInput.addEventListener('change', (e) => {
 // Power
 btnPower.addEventListener('click', () => {
   if (monitorOn) {
-    // Turn off: stop any running program, black out screen
-    if (interpreter.running) {
-      interpreter.stop();
-      btnPause.innerHTML = '<span class="btn-icon">&#9646;&#9646;</span> Pause';
-      setRunning(false);
+    // Turn off: pause program and all audio, black out screen
+    if (interpreter.running && !interpreter.paused) {
+      interpreter.pause();
+      powerPausedInterpreter = true;
     }
+    audio.suspendAll();
     monitorScreen.classList.add('off');
     btnPower.classList.add('off');
     monitorOn = false;
   } else {
-    // Turn on: restore screen
+    // Turn on: resume audio and program, restore screen
     monitorScreen.classList.remove('off');
     btnPower.classList.remove('off');
     monitorOn = true;
+    audio.resumeAll();
+    if (powerPausedInterpreter) {
+      interpreter.resume();
+      powerPausedInterpreter = false;
+    }
     crtScreen.render();
   }
 });

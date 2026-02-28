@@ -1,6 +1,23 @@
 class SamAudio {
   constructor() {
-    this.ctx = null;
+    this.ctx = null;      // foreground audio context
+    this._bgCtx = null;   // background audio context (separate so pause/stop don't affect foreground)
+    // Background playback state
+    this._bgNodes = [];
+    this._bgTimeout = null;
+    this._bgPlaying = false;
+    this._bgPaused = false;
+    this._bgRemaining = 0;
+    this._bgStartTime = 0;
+    this._bgDuration = 0;
+    // Stored for repeat
+    this._bgVoices = null;
+    this._bgMusicStr = null;
+    this._bgWaveType = null;
+    this._bgOnRepeat = false;
+    this._bgIsPoly = false;
+    // Power button tracking
+    this._powerPausedBg = false;
   }
 
   ensureContext() {
@@ -9,6 +26,15 @@ class SamAudio {
     }
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
+    }
+  }
+
+  _ensureBgContext() {
+    if (!this._bgCtx) {
+      this._bgCtx = new AudioContext();
+    }
+    if (this._bgCtx.state === 'suspended') {
+      this._bgCtx.resume();
     }
   }
 
@@ -27,38 +53,42 @@ class SamAudio {
     await new Promise(resolve => setTimeout(resolve, 200));
   }
 
-  scheduleNote(note, time, waveType, gainLevel) {
+  scheduleNote(note, time, waveType, gainLevel, ctx) {
+    if (!ctx) ctx = this.ctx;
     if (note.freq === -1) {
       // White noise percussion
-      const sampleRate = this.ctx.sampleRate;
+      const sampleRate = ctx.sampleRate;
       const len = Math.floor(sampleRate * note.duration);
-      const buffer = this.ctx.createBuffer(1, len, sampleRate);
+      const buffer = ctx.createBuffer(1, len, sampleRate);
       const data = buffer.getChannelData(0);
       for (let j = 0; j < len; j++) {
         data[j] = Math.random() * 2 - 1;
       }
-      const src = this.ctx.createBufferSource();
+      const src = ctx.createBufferSource();
       src.buffer = buffer;
-      const gain = this.ctx.createGain();
+      const gain = ctx.createGain();
       gain.gain.value = gainLevel;
       src.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(ctx.destination);
       src.start(time);
       gain.gain.setValueAtTime(gainLevel, time);
       gain.gain.exponentialRampToValueAtTime(0.01, time + note.duration - 0.01);
+      return src;
     } else if (note.freq > 0) {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.type = waveType;
       osc.frequency.value = note.freq;
       gain.gain.value = gainLevel;
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(ctx.destination);
       osc.start(time);
       gain.gain.setValueAtTime(gainLevel, time);
       gain.gain.exponentialRampToValueAtTime(0.01, time + note.duration - 0.01);
       osc.stop(time + note.duration);
+      return osc;
     }
+    return null;
   }
 
   async playSequence(musicStr, waveType = 'square') {
@@ -97,6 +127,173 @@ class SamAudio {
     }
 
     await new Promise(resolve => setTimeout(resolve, maxDuration * 1000));
+  }
+
+  // --- Background playback ---
+
+  stopBackground() {
+    for (const node of this._bgNodes) {
+      try { node.stop(); } catch (e) {}
+      try { node.disconnect(); } catch (e) {}
+    }
+    this._bgNodes = [];
+    if (this._bgTimeout != null) {
+      clearTimeout(this._bgTimeout);
+      this._bgTimeout = null;
+    }
+    this._bgPlaying = false;
+    this._bgPaused = false;
+    this._bgOnRepeat = false;
+    if (this._bgCtx) {
+      this._bgCtx.close();
+      this._bgCtx = null;
+    }
+  }
+
+  stopAll() {
+    this.stopBackground();
+    if (this.ctx) {
+      this.ctx.close();
+      this.ctx = null;
+    }
+  }
+
+  suspendAll() {
+    // Pause bg audio timing if active
+    if (this._bgPlaying && !this._bgPaused) {
+      this.pauseBackground();
+      this._powerPausedBg = true;
+    } else {
+      this._powerPausedBg = false;
+    }
+    // Suspend foreground context to freeze any playing notes
+    if (this.ctx && this.ctx.state === 'running') {
+      this.ctx.suspend();
+    }
+  }
+
+  resumeAll() {
+    // Resume foreground context
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+    // Resume bg audio if power-paused
+    if (this._powerPausedBg) {
+      this._powerPausedBg = false;
+      this.resumeBackground();
+    }
+  }
+
+  pauseBackground() {
+    if (!this._bgPlaying || this._bgPaused) return;
+    this._bgPaused = true;
+    const elapsed = Date.now() - this._bgStartTime;
+    this._bgRemaining = Math.max(0, this._bgDuration - elapsed);
+    if (this._bgTimeout != null) {
+      clearTimeout(this._bgTimeout);
+      this._bgTimeout = null;
+    }
+    if (this._bgCtx) {
+      this._bgCtx.suspend();
+    }
+  }
+
+  resumeBackground() {
+    if (!this._bgPlaying || !this._bgPaused) return;
+    this._bgPaused = false;
+    if (this._bgCtx) {
+      this._bgCtx.resume();
+    }
+    this._bgStartTime = Date.now();
+    this._bgDuration = this._bgRemaining;
+    this._bgTimeout = setTimeout(() => this._bgFinished(), this._bgRemaining);
+  }
+
+  _bgFinished() {
+    this._bgTimeout = null;
+    for (const node of this._bgNodes) {
+      try { node.disconnect(); } catch (e) {}
+    }
+    this._bgNodes = [];
+
+    if (this._bgOnRepeat) {
+      if (this._bgIsPoly) {
+        this._scheduleBgPoly(this._bgVoices);
+      } else {
+        this._scheduleBgSequence(this._bgMusicStr, this._bgWaveType);
+      }
+    } else {
+      this._bgPlaying = false;
+      if (this._bgCtx) {
+        this._bgCtx.close();
+        this._bgCtx = null;
+      }
+    }
+  }
+
+  playSequenceBg(musicStr, waveType = 'square', onRepeat = false) {
+    this.stopBackground();
+    this._ensureBgContext();
+    this._bgOnRepeat = onRepeat;
+    this._bgIsPoly = false;
+    this._bgMusicStr = musicStr;
+    this._bgWaveType = waveType;
+    this._bgPlaying = true;
+    this._bgPaused = false;
+    this._scheduleBgSequence(musicStr, waveType);
+  }
+
+  _scheduleBgSequence(musicStr, waveType) {
+    const notes = this.parseMusicString(musicStr);
+    const startTime = this._bgCtx.currentTime;
+    let time = startTime;
+
+    for (const note of notes) {
+      const node = this.scheduleNote(note, time, waveType, 0.3, this._bgCtx);
+      if (node) this._bgNodes.push(node);
+      time += note.duration;
+    }
+
+    const totalDuration = (time - startTime) * 1000;
+    this._bgStartTime = Date.now();
+    this._bgDuration = totalDuration;
+    this._bgTimeout = setTimeout(() => this._bgFinished(), totalDuration);
+  }
+
+  playPolyBg(voices, onRepeat = false) {
+    this.stopBackground();
+    this._ensureBgContext();
+    this._bgOnRepeat = onRepeat;
+    this._bgIsPoly = true;
+    this._bgVoices = voices;
+    this._bgPlaying = true;
+    this._bgPaused = false;
+    this._scheduleBgPoly(voices);
+  }
+
+  _scheduleBgPoly(voices) {
+    const startTime = this._bgCtx.currentTime;
+    let maxDuration = 0;
+    const gainLevel = 0.3 / voices.length;
+
+    for (const voice of voices) {
+      const notes = this.parseMusicString(voice.musicStr);
+      const waveType = voice.waveType || 'square';
+      let time = startTime;
+
+      for (const note of notes) {
+        const node = this.scheduleNote(note, time, waveType, gainLevel, this._bgCtx);
+        if (node) this._bgNodes.push(node);
+        time += note.duration;
+      }
+
+      const voiceDuration = time - startTime;
+      if (voiceDuration > maxDuration) maxDuration = voiceDuration;
+    }
+
+    this._bgStartTime = Date.now();
+    this._bgDuration = maxDuration * 1000;
+    this._bgTimeout = setTimeout(() => this._bgFinished(), maxDuration * 1000);
   }
 
   parseMusicString(str) {

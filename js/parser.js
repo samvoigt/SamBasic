@@ -237,6 +237,18 @@ function parse(tokens) {
     if (t.type === 'KEYWORD' && t.value === 'PLAYPOLY') {
       return parsePlayPoly();
     }
+    if (t.type === 'KEYWORD' && t.value === 'PAUSEPLAY') {
+      advance();
+      return { type: 'pauseplay', line: t.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'RESUMEPLAY') {
+      advance();
+      return { type: 'resumeplay', line: t.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'STOPPLAY') {
+      advance();
+      return { type: 'stopplay', line: t.line };
+    }
     if (t.type === 'KEYWORD' && t.value === 'DATA') {
       return parseData();
     }
@@ -394,7 +406,9 @@ function parse(tokens) {
         throw new SyntaxError(`Expected wave type after WITHWAVE at line ${t.line}`);
       }
     }
-    return { type: 'play', expr, waveType, line: t.line };
+    const inBackground = !!match('KEYWORD', 'INBACKGROUND');
+    const onRepeat = !!match('KEYWORD', 'ONREPEAT');
+    return { type: 'play', expr, waveType, inBackground, onRepeat, line: t.line };
   }
 
   function parsePlayPoly() {
@@ -418,7 +432,9 @@ function parse(tokens) {
     if (voices.length === 0) {
       throw new SyntaxError(`PLAYPOLY requires at least one [voice] at line ${t.line}`);
     }
-    return { type: 'playpoly', voices, line: t.line };
+    const inBackground = !!match('KEYWORD', 'INBACKGROUND');
+    const onRepeat = !!match('KEYWORD', 'ONREPEAT');
+    return { type: 'playpoly', voices, inBackground, onRepeat, line: t.line };
   }
 
   function parseData() {

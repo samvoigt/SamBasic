@@ -114,6 +114,7 @@ class Interpreter {
   stop() {
     this.running = false;
     this.paused = false;
+    if (this.audio) this.audio.stopAll();
     if (this._pauseResolve) {
       this._pauseResolve();
       this._pauseResolve = null;
@@ -322,7 +323,16 @@ class Interpreter {
       case 'play': {
         if (this.audio) {
           const musicStr = String(this.evalExpr(stmt.expr));
-          await this.audio.playSequence(musicStr, stmt.waveType || 'square');
+          const waveType = stmt.waveType || 'square';
+          if (stmt.inBackground) {
+            this.audio.playSequenceBg(musicStr, waveType, stmt.onRepeat);
+          } else if (stmt.onRepeat) {
+            while (this.running) {
+              await this.audio.playSequence(musicStr, waveType);
+            }
+          } else {
+            await this.audio.playSequence(musicStr, waveType);
+          }
         }
         break;
       }
@@ -332,8 +342,28 @@ class Interpreter {
             musicStr: String(this.evalExpr(v.expr)),
             waveType: v.waveType,
           }));
-          await this.audio.playPoly(voices);
+          if (stmt.inBackground) {
+            this.audio.playPolyBg(voices, stmt.onRepeat);
+          } else if (stmt.onRepeat) {
+            while (this.running) {
+              await this.audio.playPoly(voices);
+            }
+          } else {
+            await this.audio.playPoly(voices);
+          }
         }
+        break;
+      }
+      case 'pauseplay': {
+        if (this.audio) this.audio.pauseBackground();
+        break;
+      }
+      case 'resumeplay': {
+        if (this.audio) this.audio.resumeBackground();
+        break;
+      }
+      case 'stopplay': {
+        if (this.audio) this.audio.stopBackground();
         break;
       }
       case 'data': {
