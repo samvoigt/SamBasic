@@ -416,7 +416,7 @@ class Interpreter {
             const fileName = String(await this.evalExpr(stmt.params.FILE));
             const mode = stmt.params.MODE ? String(await this.evalExpr(stmt.params.MODE)).toLowerCase() : 'read';
             if (mode !== 'read' && mode !== 'write' && mode !== 'append') {
-              throw new Error(`Invalid file mode '${mode}' — expected 'read', 'write', or 'append' at line ${stmt.line}`);
+              throw new Error(`Invalid file mode '${mode}' — expected READ, WRITE, or APPEND at line ${stmt.line}`);
             }
             let content = '';
             if (mode === 'read') {

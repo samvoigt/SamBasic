@@ -331,10 +331,10 @@ Files are stored in `localStorage` and persist across sessions.
 
 **Open a file:**
 ```
-f# = OPEN# FILE "data.txt" MODE "read"     ' Open for reading (file must exist)
-f# = OPEN# FILE "out.txt" MODE "write"     ' Open for writing (truncates/creates)
-f# = OPEN# FILE "log.txt" MODE "append"    ' Open for appending (creates or preserves)
-f# = OPEN# FILE "data.txt"                 ' MODE defaults to "read"
+f# = OPEN# FILE "data.txt" MODE READ       ' Open for reading (file must exist)
+f# = OPEN# FILE "out.txt" MODE WRITE       ' Open for writing (truncates/creates)
+f# = OPEN# FILE "log.txt" MODE APPEND      ' Open for appending (creates or preserves)
+f# = OPEN# FILE "data.txt"                 ' MODE defaults to READ
 ```
 
 **Read from a file:**
@@ -359,7 +359,7 @@ Files are automatically closed (and saved) when the program ends or is stopped.
 
 **Complete example — copy a file:**
 ```
-out# = OPEN# FILE "copy.txt" MODE "write"
+out# = OPEN# FILE "copy.txt" MODE WRITE
 in# = OPEN# FILE "source.txt"
 WHILE NOT (ENDOFFILE! in#)
   line$ = READFILELINE$ FILE in#

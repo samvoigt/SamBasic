@@ -214,7 +214,7 @@ function parse(tokens) {
     }
 
     // Wave type keywords as expression constants
-    if (t.type === 'KEYWORD' && ['SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE'].includes(t.value)) {
+    if (t.type === 'KEYWORD' && ['SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE', 'READ', 'WRITE', 'APPEND'].includes(t.value)) {
       advance();
       return { type: 'string', value: t.value.toLowerCase() };
     }
@@ -463,6 +463,7 @@ function parse(tokens) {
         'STRUCT', 'ENDSTRUCT',
         'SLEEP', 'SIZE',
         'CLOSE', 'WRITEFILELINE', 'WRITEFILECHARACTER',
+        'READ', 'WRITE', 'APPEND',
       ]);
       if (KEYWORDS.has(upper)) {
         throw new SyntaxError(`Did you mean '${upper}'? Keywords must be UPPERCASE at line ${t.line}`);
