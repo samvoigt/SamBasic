@@ -742,6 +742,57 @@ class Interpreter {
         }
         break;
       }
+      case 'arr_append': {
+        const arr = this.arrVars[stmt.name];
+        if (!arr) throw new Error(`Array ${stmt.name}@ not initialized at line ${stmt.line}`);
+        const val = await this.evalExpr(stmt.value);
+        if (Array.isArray(val)) {
+          for (const item of val) {
+            if (Array.isArray(item)) throw new Error(`APPEND only works on 1-dimensional arrays at line ${stmt.line}`);
+            arr.push(item);
+          }
+        } else {
+          arr.push(val);
+        }
+        break;
+      }
+      case 'arr_insert': {
+        const arr = this.arrVars[stmt.name];
+        if (!arr) throw new Error(`Array ${stmt.name}@ not initialized at line ${stmt.line}`);
+        const idx = Math.floor(await this.evalExpr(stmt.index)) - 1;
+        if (idx < 0 || idx > arr.length) throw new Error(`INSERT index out of bounds at line ${stmt.line}`);
+        const val = await this.evalExpr(stmt.value);
+        arr.splice(idx, 0, val);
+        break;
+      }
+      case 'arr_remove': {
+        const arr = this.arrVars[stmt.name];
+        if (!arr) throw new Error(`Array ${stmt.name}@ not initialized at line ${stmt.line}`);
+        const idx = Math.floor(await this.evalExpr(stmt.index)) - 1;
+        if (idx < 0 || idx >= arr.length) throw new Error(`REMOVE index out of bounds at line ${stmt.line}`);
+        arr.splice(idx, 1);
+        break;
+      }
+      case 'sort': {
+        const arr = this.arrVars[stmt.name];
+        if (!arr) throw new Error(`Array ${stmt.name}@ not initialized at line ${stmt.line}`);
+        const cmp = stmt.order === 'DESCENDING'
+          ? (a, b) => (a < b ? 1 : a > b ? -1 : 0)
+          : (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+        arr.sort(cmp);
+        break;
+      }
+      case 'trim': {
+        const text = String(this.strVars[stmt.name] || '');
+        if (stmt.mode === 'LEFT') {
+          this.strVars[stmt.name] = text.trimStart();
+        } else if (stmt.mode === 'RIGHT') {
+          this.strVars[stmt.name] = text.trimEnd();
+        } else {
+          this.strVars[stmt.name] = text.trim();
+        }
+        break;
+      }
       case 'funcdef': {
         // no-op at runtime; function definitions are collected at parse time
         break;

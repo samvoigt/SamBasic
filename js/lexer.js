@@ -13,6 +13,8 @@ const KEYWORDS = new Set([
   'STRUCT',
   'SLEEP', 'SIZE',
   'READ', 'WRITE', 'APPEND',
+  'SORT', 'INSERT', 'REMOVE',
+  'TRIM',
 ]);
 
 const TYPED_KEYWORDS = {

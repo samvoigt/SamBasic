@@ -90,6 +90,14 @@ s$ = LOWERCASE$ "HELLO"                          ' "hello"
 found? = CONTAINS? "hello world", "world"        ' YES (1)
 ```
 
+**Trimming whitespace (mutates in place):**
+```
+s$ = "  hello  "
+TRIM s$                             ' s$ is now "hello"
+TRIM LEFT s$                        ' trims leading whitespace only
+TRIM RIGHT s$                       ' trims trailing whitespace only
+```
+
 All string indices are **1-based**. `SUBSTRING$` throws an error if the index is out of range. Use `SUBSTRING$ text, index, 1` to get a single character. `LENGTH#` also works on arrays, returning the number of elements.
 
 ### Conversion Functions
@@ -303,6 +311,19 @@ PRINT grid@[2][3]                ' 2D access
 ```
 
 Arrays are untyped — they can hold both numbers and strings.
+
+**Array mutation:**
+```
+APPEND items@ 42              ' Add 42 to end
+APPEND items@ [1, 2, 3]       ' Spread elements — array grows by 3
+INSERT items@ 3, 42           ' Insert 42 at index 3 (1-based)
+REMOVE items@ 3               ' Remove element at index 3 (1-based)
+SORT items@                    ' Sort ascending (default)
+SORT ASCENDING items@          ' Sort ascending (explicit)
+SORT DESCENDING items@         ' Sort descending
+```
+
+`APPEND` with an array literal spreads the elements (2D arrays error). `INSERT` allows index 1 through `LENGTH# + 1` (to insert at the end). `REMOVE` errors on out-of-bounds index. `SORT` works on both numbers and strings.
 
 ### Structures
 

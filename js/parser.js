@@ -427,6 +427,52 @@ function parse(tokens) {
       }
       return { type: 'global_decl', vars, line: t.line };
     }
+    // APPEND items@ expr
+    if (t.type === 'KEYWORD' && t.value === 'APPEND') {
+      advance();
+      const arrToken = expect('ARR_VAR');
+      const value = parseExpr();
+      return { type: 'arr_append', name: arrToken.value, value, line: t.line };
+    }
+    // INSERT items@ index, value
+    if (t.type === 'KEYWORD' && t.value === 'INSERT') {
+      advance();
+      const arrToken = expect('ARR_VAR');
+      const index = parseExpr();
+      expect('COMMA');
+      const value = parseExpr();
+      return { type: 'arr_insert', name: arrToken.value, index, value, line: t.line };
+    }
+    // REMOVE items@ index
+    if (t.type === 'KEYWORD' && t.value === 'REMOVE') {
+      advance();
+      const arrToken = expect('ARR_VAR');
+      const index = parseExpr();
+      return { type: 'arr_remove', name: arrToken.value, index, line: t.line };
+    }
+    // TRIM [LEFT|RIGHT] str$
+    if (t.type === 'KEYWORD' && t.value === 'TRIM') {
+      advance();
+      let mode = null;
+      if (peek().type === 'IDENT' &&
+          (peek().value.toUpperCase() === 'LEFT' || peek().value.toUpperCase() === 'RIGHT')) {
+        mode = advance().value.toUpperCase();
+      }
+      const strToken = expect('STR_VAR');
+      return { type: 'trim', name: strToken.value, mode, line: t.line };
+    }
+    // SORT [ASCENDING|DESCENDING] items@
+    if (t.type === 'KEYWORD' && t.value === 'SORT') {
+      advance();
+      let order = 'ASCENDING';
+      if (peek().type === 'IDENT' &&
+          (peek().value.toUpperCase() === 'ASCENDING' || peek().value.toUpperCase() === 'DESCENDING')) {
+        order = advance().value.toUpperCase();
+      }
+      const arrToken = expect('ARR_VAR');
+      return { type: 'sort', name: arrToken.value, order, line: t.line };
+    }
+
     // Void function call: IDENT that is a known function
     if (t.type === 'IDENT' && isKnownFunction(t)) {
       const call = parseFunctionCall();
@@ -467,6 +513,8 @@ function parse(tokens) {
         'SLEEP', 'SIZE',
         'CLOSE', 'WRITEFILELINE', 'WRITEFILECHARACTER',
         'READ', 'WRITE', 'APPEND',
+        'SORT', 'INSERT', 'REMOVE',
+        'TRIM',
       ]);
       if (KEYWORDS.has(upper)) {
         throw new SyntaxError(`Did you mean '${upper}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -891,6 +939,7 @@ function parse(tokens) {
     const kw = advance(); // consume the keyword
     const keyword = kw.value;
     const paramDefs = BUILTIN_KEYWORD_PARAMS[keyword];
+
     const args = parseKeywordArgs();
     const resolved = resolveBuiltinArgs(args, paramDefs, line);
 
