@@ -267,8 +267,146 @@ class Interpreter {
         if (fh.mode !== 'read') throw new Error(`ENDOFFILE can only be used on files opened for reading at line ${node.line}`);
         return fh.pos >= fh.content.length ? 1 : 0;
       }
+      case 'builtin_call':
+        return await this.evalBuiltinKeyword(node.keyword, node.params, node.mode, node.line);
       default:
         throw new Error(`Unknown expression type: ${node.type}`);
+    }
+  }
+
+  async evalBuiltinKeyword(keyword, params, mode, line) {
+    switch (keyword) {
+      case 'INPUT': {
+        if (params.TEXT) {
+          const promptText = await this.evalExpr(params.TEXT);
+          this.screen.printInline(promptText);
+          this.screen.render();
+        }
+        return await this.waitForInput();
+      }
+      case 'GETKEY':
+        return this.currentKey;
+      case 'RANDOM': {
+        const max = Math.floor(await this.evalExpr(params.MAX));
+        return Math.floor(Math.random() * (max + 1));
+      }
+      case 'LENGTH': {
+        const val = await this.evalExpr(params.VALUE);
+        return Array.isArray(val) ? val.length : String(val).length;
+      }
+      case 'SUBSTRING': {
+        const str = String(await this.evalExpr(params.TEXT));
+        const start = Math.floor(await this.evalExpr(params.START));
+        const len = Math.floor(await this.evalExpr(params.LENGTH));
+        if (start < 1 || start > str.length) {
+          throw new Error(`SUBSTRING: START index ${start} out of range (1-${str.length}) at line ${line}`);
+        }
+        return str.substring(start - 1, start - 1 + len);
+      }
+      case 'UPPERCASE':
+        return String(await this.evalExpr(params.TEXT)).toUpperCase();
+      case 'LOWERCASE':
+        return String(await this.evalExpr(params.TEXT)).toLowerCase();
+      case 'CONTAINS': {
+        const text = String(await this.evalExpr(params.TEXT));
+        const find = String(await this.evalExpr(params.FIND));
+        return text.includes(find) ? 1 : 0;
+      }
+      case 'ABS':
+        return Math.abs(await this.evalExpr(params.VALUE));
+      case 'SQRT': {
+        const val = await this.evalExpr(params.VALUE);
+        if (val < 0) throw new Error(`SQRT: cannot take square root of negative number at line ${line}`);
+        return Math.sqrt(val);
+      }
+      case 'ROUND':
+        return Math.round(await this.evalExpr(params.VALUE));
+      case 'FLOOR':
+        return Math.floor(await this.evalExpr(params.VALUE));
+      case 'CEIL':
+        return Math.ceil(await this.evalExpr(params.VALUE));
+      case 'MIN':
+        return Math.min(await this.evalExpr(params.A), await this.evalExpr(params.B));
+      case 'MAX':
+        return Math.max(await this.evalExpr(params.A), await this.evalExpr(params.B));
+      case 'SIN':
+        return Math.sin(await this.evalExpr(params.VALUE));
+      case 'COS':
+        return Math.cos(await this.evalExpr(params.VALUE));
+      case 'LOG': {
+        const val = await this.evalExpr(params.VALUE);
+        if (val <= 0) throw new Error(`LOG: value must be positive at line ${line}`);
+        return Math.log(val);
+      }
+      case 'SIGN':
+        return Math.sign(await this.evalExpr(params.VALUE));
+      case 'OPEN': {
+        const fileName = String(await this.evalExpr(params.FILE));
+        const fileMode = params.MODE ? String(await this.evalExpr(params.MODE)).toLowerCase() : 'read';
+        if (fileMode !== 'read' && fileMode !== 'write' && fileMode !== 'append') {
+          throw new Error(`Invalid file mode '${fileMode}' — expected READ, WRITE, or APPEND at line ${line}`);
+        }
+        let content = '';
+        if (fileMode === 'read') {
+          const stored = localStorage.getItem('sambasic_file:' + fileName);
+          if (stored === null) throw new Error(`File '${fileName}' not found at line ${line}`);
+          content = stored;
+        } else if (fileMode === 'append') {
+          const stored = localStorage.getItem('sambasic_file:' + fileName);
+          if (stored !== null) content = stored;
+        }
+        const handle = this.nextFileHandle++;
+        this.fileHandles[handle] = { name: fileName, content, pos: 0, mode: fileMode };
+        return handle;
+      }
+      case 'READFILELINE': {
+        const handle = await this.evalExpr(params.FILE);
+        const fh = this.fileHandles[handle];
+        if (!fh) throw new Error(`Invalid file handle at line ${line}`);
+        if (fh.mode !== 'read') throw new Error(`Cannot read from file opened for writing at line ${line}`);
+        if (fh.pos >= fh.content.length) throw new Error(`End of file reached at line ${line}`);
+        const nlIdx = fh.content.indexOf('\n', fh.pos);
+        if (nlIdx === -1) {
+          const result = fh.content.substring(fh.pos);
+          fh.pos = fh.content.length;
+          return result;
+        }
+        const result = fh.content.substring(fh.pos, nlIdx);
+        fh.pos = nlIdx + 1;
+        return result;
+      }
+      case 'READFILECHARACTER': {
+        const handle = await this.evalExpr(params.FILE);
+        const fh = this.fileHandles[handle];
+        if (!fh) throw new Error(`Invalid file handle at line ${line}`);
+        if (fh.mode !== 'read') throw new Error(`Cannot read from file opened for writing at line ${line}`);
+        if (fh.pos >= fh.content.length) throw new Error(`End of file reached at line ${line}`);
+        const ch = fh.content[fh.pos];
+        fh.pos++;
+        return ch;
+      }
+      case 'TONUMBER': {
+        const val = await this.evalExpr(params.VALUE);
+        const num = parseFloat(val);
+        if (isNaN(num)) throw new Error(`TONUMBER: cannot convert '${val}' to number at line ${line}`);
+        return num;
+      }
+      case 'TOSTRING':
+        return String(await this.evalExpr(params.VALUE));
+      case 'INDEXOF': {
+        const text = String(await this.evalExpr(params.TEXT));
+        const find = String(await this.evalExpr(params.FIND));
+        const idx = text.indexOf(find);
+        return idx === -1 ? 0 : idx + 1;
+      }
+      case 'TRIM': {
+        const text = String(await this.evalExpr(params.TEXT));
+        if (mode === 'LEFT') return text.trimStart();
+        if (mode === 'RIGHT') return text.trimEnd();
+        return text.trim();
+      }
+      default:
+        throw new Error(`Unknown builtin keyword '${keyword}' at line ${line}`);
     }
   }
 
@@ -354,189 +492,8 @@ class Interpreter {
         break;
       }
       case 'assign_builtin': {
-        let result;
-        switch (stmt.keyword) {
-          case 'INPUT': {
-            if (stmt.params.TEXT) {
-              const promptText = await this.evalExpr(stmt.params.TEXT);
-              this.screen.printInline(promptText);
-              this.screen.render();
-            }
-            result = await this.waitForInput();
-            if (result === null) return; // stopped
-            break;
-          }
-          case 'GETKEY': {
-            result = this.currentKey;
-            break;
-          }
-          case 'RANDOM': {
-            const max = Math.floor(await this.evalExpr(stmt.params.MAX));
-            result = Math.floor(Math.random() * (max + 1));
-            break;
-          }
-          case 'LENGTH': {
-            const val = await this.evalExpr(stmt.params.VALUE);
-            if (Array.isArray(val)) {
-              result = val.length;
-            } else {
-              result = String(val).length;
-            }
-            break;
-          }
-          case 'SUBSTRING': {
-            const str = String(await this.evalExpr(stmt.params.TEXT));
-            const start = Math.floor(await this.evalExpr(stmt.params.START));
-            const len = Math.floor(await this.evalExpr(stmt.params.LENGTH));
-            if (start < 1 || start > str.length) {
-              throw new Error(`SUBSTRING: START index ${start} out of range (1-${str.length}) at line ${stmt.line}`);
-            }
-            result = str.substring(start - 1, start - 1 + len);
-            break;
-          }
-          case 'UPPERCASE': {
-            result = String(await this.evalExpr(stmt.params.TEXT)).toUpperCase();
-            break;
-          }
-          case 'LOWERCASE': {
-            result = String(await this.evalExpr(stmt.params.TEXT)).toLowerCase();
-            break;
-          }
-          case 'CONTAINS': {
-            const text = String(await this.evalExpr(stmt.params.TEXT));
-            const find = String(await this.evalExpr(stmt.params.FIND));
-            result = text.includes(find) ? 1 : 0;
-            break;
-          }
-          case 'ABS': {
-            result = Math.abs(await this.evalExpr(stmt.params.VALUE));
-            break;
-          }
-          case 'SQRT': {
-            const val = await this.evalExpr(stmt.params.VALUE);
-            if (val < 0) throw new Error(`SQRT: cannot take square root of negative number at line ${stmt.line}`);
-            result = Math.sqrt(val);
-            break;
-          }
-          case 'ROUND': {
-            result = Math.round(await this.evalExpr(stmt.params.VALUE));
-            break;
-          }
-          case 'FLOOR': {
-            result = Math.floor(await this.evalExpr(stmt.params.VALUE));
-            break;
-          }
-          case 'CEIL': {
-            result = Math.ceil(await this.evalExpr(stmt.params.VALUE));
-            break;
-          }
-          case 'MIN': {
-            result = Math.min(await this.evalExpr(stmt.params.A), await this.evalExpr(stmt.params.B));
-            break;
-          }
-          case 'MAX': {
-            result = Math.max(await this.evalExpr(stmt.params.A), await this.evalExpr(stmt.params.B));
-            break;
-          }
-          case 'SIN': {
-            result = Math.sin(await this.evalExpr(stmt.params.VALUE));
-            break;
-          }
-          case 'COS': {
-            result = Math.cos(await this.evalExpr(stmt.params.VALUE));
-            break;
-          }
-          case 'LOG': {
-            const val = await this.evalExpr(stmt.params.VALUE);
-            if (val <= 0) throw new Error(`LOG: value must be positive at line ${stmt.line}`);
-            result = Math.log(val);
-            break;
-          }
-          case 'SIGN': {
-            result = Math.sign(await this.evalExpr(stmt.params.VALUE));
-            break;
-          }
-          case 'OPEN': {
-            const fileName = String(await this.evalExpr(stmt.params.FILE));
-            const mode = stmt.params.MODE ? String(await this.evalExpr(stmt.params.MODE)).toLowerCase() : 'read';
-            if (mode !== 'read' && mode !== 'write' && mode !== 'append') {
-              throw new Error(`Invalid file mode '${mode}' — expected READ, WRITE, or APPEND at line ${stmt.line}`);
-            }
-            let content = '';
-            if (mode === 'read') {
-              const stored = localStorage.getItem('sambasic_file:' + fileName);
-              if (stored === null) throw new Error(`File '${fileName}' not found at line ${stmt.line}`);
-              content = stored;
-            } else if (mode === 'append') {
-              const stored = localStorage.getItem('sambasic_file:' + fileName);
-              if (stored !== null) content = stored;
-            }
-            const handle = this.nextFileHandle++;
-            this.fileHandles[handle] = { name: fileName, content, pos: 0, mode };
-            result = handle;
-            break;
-          }
-          case 'READFILELINE': {
-            const handle = await this.evalExpr(stmt.params.FILE);
-            const fh = this.fileHandles[handle];
-            if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
-            if (fh.mode !== 'read') throw new Error(`Cannot read from file opened for writing at line ${stmt.line}`);
-            if (fh.pos >= fh.content.length) throw new Error(`End of file reached at line ${stmt.line}`);
-            const nlIdx = fh.content.indexOf('\n', fh.pos);
-            if (nlIdx === -1) {
-              result = fh.content.substring(fh.pos);
-              fh.pos = fh.content.length;
-            } else {
-              result = fh.content.substring(fh.pos, nlIdx);
-              fh.pos = nlIdx + 1;
-            }
-            break;
-          }
-          case 'READFILECHARACTER': {
-            const handle = await this.evalExpr(stmt.params.FILE);
-            const fh = this.fileHandles[handle];
-            if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
-            if (fh.mode !== 'read') throw new Error(`Cannot read from file opened for writing at line ${stmt.line}`);
-            if (fh.pos >= fh.content.length) throw new Error(`End of file reached at line ${stmt.line}`);
-            result = fh.content[fh.pos];
-            fh.pos++;
-            break;
-          }
-          case 'TONUMBER': {
-            const val = await this.evalExpr(stmt.params.VALUE);
-            const num = parseFloat(val);
-            if (isNaN(num)) {
-              throw new Error(`TONUMBER: cannot convert '${val}' to number at line ${stmt.line}`);
-            }
-            result = num;
-            break;
-          }
-          case 'TOSTRING': {
-            const val = await this.evalExpr(stmt.params.VALUE);
-            result = String(val);
-            break;
-          }
-          case 'INDEXOF': {
-            const text = String(await this.evalExpr(stmt.params.TEXT));
-            const find = String(await this.evalExpr(stmt.params.FIND));
-            const idx = text.indexOf(find);
-            result = idx === -1 ? 0 : idx + 1;
-            break;
-          }
-          case 'TRIM': {
-            const text = String(await this.evalExpr(stmt.params.TEXT));
-            if (stmt.mode === 'LEFT') {
-              result = text.trimStart();
-            } else if (stmt.mode === 'RIGHT') {
-              result = text.trimEnd();
-            } else {
-              result = text.trim();
-            }
-            break;
-          }
-          default:
-            throw new Error(`Unknown builtin keyword '${stmt.keyword}' at line ${stmt.line}`);
-        }
+        const result = await this.evalBuiltinKeyword(stmt.keyword, stmt.params, stmt.mode, stmt.line);
+        if (result === null && stmt.keyword === 'INPUT') return; // stopped
         // Type coercion based on varType
         switch (stmt.varType) {
           case 'num': {

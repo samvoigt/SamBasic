@@ -213,6 +213,21 @@ function parse(tokens) {
       return { type: 'endoffile', file: fileExpr, line: t.line };
     }
 
+    // Builtin keywords in expression context (e.g., 2 + RANDOM# 77)
+    if (t.type === 'KEYWORD' && BUILTIN_KEYWORD_PARAMS[t.value]) {
+      const kw = advance();
+      const keyword = kw.value;
+      const paramDefs = BUILTIN_KEYWORD_PARAMS[keyword];
+      let mode = null;
+      if (keyword === 'TRIM' && peek().type === 'IDENT' &&
+          (peek().value.toUpperCase() === 'LEFT' || peek().value.toUpperCase() === 'RIGHT')) {
+        mode = advance().value.toUpperCase();
+      }
+      const args = parseKeywordArgsForExpr();
+      const resolved = resolveBuiltinArgs(args, paramDefs, t.line);
+      return { type: 'builtin_call', keyword, params: resolved, mode, line: t.line };
+    }
+
     // Wave type keywords as expression constants
     if (t.type === 'KEYWORD' && ['SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE', 'READ', 'WRITE', 'APPEND'].includes(t.value)) {
       advance();
@@ -246,6 +261,36 @@ function parse(tokens) {
         args.push({ label, value });
       } else {
         const value = parseExpr();
+        args.push({ label: null, value });
+      }
+      if (!match('COMMA')) {
+        if (!atLineEnd() && peek().type === 'IDENT' && !isKnownFunction(peek())) continue;
+        break;
+      }
+    }
+    return args;
+  }
+
+  // Like parseKeywordArgs but for expression context: each arg value is parsed
+  // with parseUnary() so operators like + - * / don't get consumed as arguments.
+  function parseKeywordArgsForExpr() {
+    const args = [];
+    while (!atLineEnd()) {
+      const p = peek();
+      // Stop at operators, comparisons, closing delimiters, and logic keywords
+      if (p.type === 'OP' || p.type === 'COMPARE' || p.type === 'RPAREN' ||
+          p.type === 'RBRACKET' || p.type === 'RBRACE' ||
+          (p.type === 'KEYWORD' && (p.value === 'AND' || p.value === 'OR' ||
+          p.value === 'NOT' || p.value === 'THEN' || p.value === 'STEP' ||
+          p.value === 'TO' || p.value === 'FROM'))) {
+        break;
+      }
+      if (p.type === 'IDENT' && !isKnownFunction(p)) {
+        const label = advance().value.toUpperCase();
+        const value = parseUnary();
+        args.push({ label, value });
+      } else {
+        const value = parseUnary();
         args.push({ label: null, value });
       }
       if (!match('COMMA')) {

@@ -1,0 +1,180 @@
+' =============================================
+'   SNAKE
+'   Use arrow keys or WASD to move
+'   Eat food (*) to grow and score points
+'   Don't hit the walls or yourself!
+' =============================================
+
+' ---- Food placement function ----
+FUNCTION placeFood
+  GLOBAL snakeX@, snakeY@, foodX#, foodY#
+  overlap? = YES
+  WHILE overlap?
+    foodX# = 2 + RANDOM# 77
+    foodY# = 3 + RANDOM# 21
+    overlap? = NO
+    FOR i# FROM 1 TO LENGTH# snakeX@
+      IF snakeX@[i#] = foodX# AND snakeY@[i#] = foodY# THEN
+        overlap? = YES
+        BREAK
+      END IF
+    END FOR
+  END WHILE
+  SETCOLOR LIGHTRED&
+  PRINTAT foodY#, foodX#, "*"
+END FUNCTION
+
+' ---- Draw border ----
+SETCOLOR DARKGRAY&
+FOR c# FROM 1 TO 80
+  PRINTAT 2, c#, "-"
+  PRINTAT 25, c#, "-"
+END FOR
+FOR r# FROM 3 TO 24
+  PRINTAT r#, 1, "|"
+  PRINTAT r#, 80, "|"
+END FOR
+PRINTAT 2, 1, "+"
+PRINTAT 2, 80, "+"
+PRINTAT 25, 1, "+"
+PRINTAT 25, 80, "+"
+
+' ---- Title bar ----
+SETCOLOR YELLOW&
+PRINTAT 1, 1, "SNAKE"
+SETCOLOR LIGHTGRAY&
+PRINTAT 1, 10, "Score: 0"
+SETCOLOR DARKGRAY&
+PRINTAT 1, 62, "Arrows / WASD"
+
+' ---- Initialize snake (length 3, going right) ----
+snakeX@ = [38, 39, 40]
+snakeY@ = [13, 13, 13]
+SETCOLOR GREEN&
+PRINTAT 13, 38, "o"
+PRINTAT 13, 39, "o"
+SETCOLOR LIGHTGREEN&
+PRINTAT 13, 40, "O"
+
+' ---- Game state ----
+score# = 0
+dx# = 1
+dy# = 0
+speed# = 0.15
+alive? = YES
+foodX# = 0
+foodY# = 0
+
+' ---- Wait for player ----
+SETCOLOR WHITE&
+PRINTAT 20, 27, "Press any key to start..."
+k$ = ""
+WHILE k$ = ""
+  k$ = GETKEY$
+  SLEEP 0.05
+END WHILE
+PRINTAT 20, 27, "                          "
+
+' ---- Place first food (after clearing message) ----
+placeFood
+
+' ---- Main Game Loop ----
+WHILE alive?
+  k$ = GETKEY$
+
+  ' Update direction (prevent 180-degree reverse)
+  IF k$ = "ArrowRight" OR k$ = "d" OR k$ = "D" THEN
+    IF dx# <> -1 THEN
+      dx# = 1
+      dy# = 0
+    END IF
+  END IF
+  IF k$ = "ArrowLeft" OR k$ = "a" OR k$ = "A" THEN
+    IF dx# <> 1 THEN
+      dx# = -1
+      dy# = 0
+    END IF
+  END IF
+  IF k$ = "ArrowUp" OR k$ = "w" OR k$ = "W" THEN
+    IF dy# <> 1 THEN
+      dx# = 0
+      dy# = -1
+    END IF
+  END IF
+  IF k$ = "ArrowDown" OR k$ = "s" OR k$ = "S" THEN
+    IF dy# <> -1 THEN
+      dx# = 0
+      dy# = 1
+    END IF
+  END IF
+
+  ' Calculate new head position
+  len# = LENGTH# snakeX@
+  newX# = snakeX@[len#] + dx#
+  newY# = snakeY@[len#] + dy#
+
+  ' Wall collision
+  IF newX# < 2 OR newX# > 79 OR newY# < 3 OR newY# > 24 THEN
+    alive? = NO
+    BREAK
+  END IF
+
+  ' Self collision
+  FOR i# FROM 1 TO len#
+    IF snakeX@[i#] = newX# AND snakeY@[i#] = newY# THEN
+      alive? = NO
+      BREAK
+    END IF
+  END FOR
+  IF NOT alive? THEN
+    BREAK
+  END IF
+
+  ' Check if eating food
+  ate? = NO
+  IF newX# = foodX# AND newY# = foodY# THEN
+    ate? = YES
+    score# = score# + 10
+    scoreStr$ = TOSTRING$ score#
+    SETCOLOR LIGHTGRAY&
+    PRINTAT 1, 10, "Score: " + scoreStr$
+    ' Speed up
+    speed# = speed# - 0.003
+    IF speed# < 0.05 THEN
+      speed# = 0.05
+    END IF
+  END IF
+
+  ' Remove tail unless growing
+  IF NOT ate? THEN
+    PRINTAT snakeY@[1], snakeX@[1], " "
+    REMOVE snakeX@ 1
+    REMOVE snakeY@ 1
+  END IF
+
+  ' Turn old head into body
+  len# = LENGTH# snakeX@
+  SETCOLOR GREEN&
+  PRINTAT snakeY@[len#], snakeX@[len#], "o"
+
+  ' Add and draw new head
+  APPEND snakeX@ newX#
+  APPEND snakeY@ newY#
+  SETCOLOR LIGHTGREEN&
+  PRINTAT newY#, newX#, "O"
+
+  ' Place new food if just ate
+  IF ate? THEN
+    placeFood
+  END IF
+
+  SLEEP speed#
+END WHILE
+
+' ---- Game Over ----
+BEEP
+SETCOLOR RED&
+PRINTAT 12, 34, "GAME OVER!"
+scoreStr$ = TOSTRING$ score#
+SETCOLOR YELLOW&
+PRINTAT 14, 33, "Score: " + scoreStr$
