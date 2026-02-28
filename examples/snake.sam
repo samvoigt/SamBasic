@@ -1,0 +1,186 @@
+' === SNAKE ===
+' Arrow keys to move. Eat the food to grow!
+
+' Setup
+@sx = 200
+@sy = 200
+#len = 3
+#dir = 1
+#score = 0
+#alive = 1
+
+' Initial snake (tail to head, moving right)
+@sx[1] = 38
+@sy[1] = 12
+@sx[2] = 39
+@sy[2] = 12
+@sx[3] = 40
+@sy[3] = 12
+
+' Draw screen
+CLEARSCREEN
+
+COLOR GREEN
+PRINTAT 1, 33, "= S N A K E ="
+
+COLOR DARKGRAY
+FOR #i GOESFROM 1 TO 80
+  PRINTAT 3, #i, "#"
+  PRINTAT 24, #i, "#"
+ENDFOR
+FOR #i GOESFROM 3 TO 24
+  PRINTAT #i, 1, "#"
+  PRINTAT #i, 80, "#"
+ENDFOR
+
+COLOR YELLOW
+PRINTAT 2, 2, "Score: 0"
+COLOR DARKGRAY
+PRINTAT 2, 58, "Arrow keys to move"
+
+' Draw initial snake
+COLOR LIGHTGREEN
+FOR #i GOESFROM 1 TO #len
+  PRINTAT @sy[#i], @sx[#i], "O"
+ENDFOR
+
+' Place first food
+RUNBLOCK placeFood
+
+' === Main Loop ===
+LABEL $loop
+
+' Delay
+FOR #d GOESFROM 1 TO 1500
+ENDFOR
+
+' Input
+GETKEY $k
+
+IF $k = "ArrowUp" AND #dir <> 2 THEN
+  #dir = 0
+ENDIF
+IF $k = "ArrowRight" AND #dir <> 3 THEN
+  #dir = 1
+ENDIF
+IF $k = "ArrowDown" AND #dir <> 0 THEN
+  #dir = 2
+ENDIF
+IF $k = "ArrowLeft" AND #dir <> 1 THEN
+  #dir = 3
+ENDIF
+
+' New head position
+#hx = @sx[#len]
+#hy = @sy[#len]
+
+IF #dir = 0 THEN
+  #hy = #hy - 1
+ENDIF
+IF #dir = 1 THEN
+  #hx = #hx + 1
+ENDIF
+IF #dir = 2 THEN
+  #hy = #hy + 1
+ENDIF
+IF #dir = 3 THEN
+  #hx = #hx - 1
+ENDIF
+
+' Wall collision
+IF #hx < 2 THEN
+  #alive = 0
+ENDIF
+IF #hx > 79 THEN
+  #alive = 0
+ENDIF
+IF #hy < 4 THEN
+  #alive = 0
+ENDIF
+IF #hy > 23 THEN
+  #alive = 0
+ENDIF
+
+' Self collision
+IF #alive = 1 THEN
+  FOR #ci GOESFROM 1 TO #len
+    IF @sx[#ci] = #hx AND @sy[#ci] = #hy THEN
+      #alive = 0
+    ENDIF
+  ENDFOR
+ENDIF
+
+IF #alive = 0 THEN
+  GOTO $gameover
+ENDIF
+
+' Check food
+#ate = 0
+IF #hx = #foodX AND #hy = #foodY THEN
+  #ate = 1
+  #score = #score + 10
+  COLOR YELLOW
+  PRINTAT 2, 2, "Score: " + #score + "    "
+  BEEP
+ENDIF
+
+IF #ate = 0 THEN
+  ' Erase tail
+  PRINTAT @sy[1], @sx[1], " "
+  ' Shift body forward
+  FOR #i GOESFROM 1 TO #len - 1
+    @sx[#i] = @sx[#i + 1]
+    @sy[#i] = @sy[#i + 1]
+  ENDFOR
+  @sx[#len] = #hx
+  @sy[#len] = #hy
+ELSE
+  ' Grow snake
+  #len = #len + 1
+  @sx[#len] = #hx
+  @sy[#len] = #hy
+  RUNBLOCK placeFood
+ENDIF
+
+' Draw new head
+COLOR LIGHTGREEN
+PRINTAT #hy, #hx, "O"
+
+GOTO $loop
+
+' === Game Over ===
+LABEL $gameover
+COLOR LIGHTRED
+PRINTAT 12, 30, "    GAME OVER!     "
+PRINTAT 13, 30, "   Score: " + #score + "      "
+BEEP
+
+' === Blocks ===
+BLOCK placeFood
+  #foodX = 77
+  RANDOM #foodX
+  #foodX = #foodX + 2
+  #foodY = 19
+  RANDOM #foodY
+  #foodY = #foodY + 4
+  ' Make sure food doesn't land on the snake
+  #onSnake = 1
+  WHILE #onSnake = 1
+    #onSnake = 0
+    FOR #fi GOESFROM 1 TO #len
+      IF @sx[#fi] = #foodX AND @sy[#fi] = #foodY THEN
+        #onSnake = 1
+      ENDIF
+    ENDFOR
+    IF #onSnake = 1 THEN
+      #foodX = 77
+      RANDOM #foodX
+      #foodX = #foodX + 2
+      #foodY = 19
+      RANDOM #foodY
+      #foodY = #foodY + 4
+    ENDIF
+  ENDWHILE
+  COLOR RED
+  PRINTAT #foodY, #foodX, "*"
+ENDBLOCK
