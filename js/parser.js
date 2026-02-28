@@ -3,6 +3,8 @@ function parse(tokens) {
   const ast = [];
   const dataPool = [];
   const labels = {};
+  const functions = {};
+  let insideFunction = false;
 
   function peek() { return tokens[pos]; }
   function advance() { return tokens[pos++]; }
@@ -223,8 +225,10 @@ function parse(tokens) {
     if (t.type === 'KEYWORD' && t.value === 'LABEL') {
       advance();
       const labelToken = expect('STR_VAR');
-      const stmtIndex = ast.length;
-      labels[labelToken.value] = stmtIndex;
+      if (!insideFunction) {
+        const stmtIndex = ast.length;
+        labels[labelToken.value] = stmtIndex;
+      }
       return { type: 'label', name: labelToken.value, line: t.line };
     }
     if (t.type === 'KEYWORD' && t.value === 'GOTO') {
@@ -273,6 +277,22 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     }
     if (t.type === 'KEYWORD' && t.value === 'READ') {
       return parseRead();
+    }
+
+    if (t.type === 'KEYWORD' && t.value === 'FUNCTION') {
+      return parseFunctionDef();
+    }
+    if (t.type === 'KEYWORD' && t.value === 'RETURN') {
+      advance();
+      let value = null;
+      if (!atLineEnd()) {
+        value = parseExpr();
+      }
+      return { type: 'return', value, line: t.line };
+    }
+    if (t.type === 'FUNC_REF') {
+      const call = parseFunctionCall();
+      return { type: 'void_funccall', call, line: t.line };
     }
 
     // Assignment: var# = expr, var$ = expr, var@ = expr, var@[i] = expr, var& = {...}, var! = YES/NO
@@ -484,6 +504,95 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     };
   }
 
+  function parseFunctionDef() {
+    if (insideFunction) {
+      throw new SyntaxError(`Nested function definitions are not allowed at line ${peek().line}`);
+    }
+    const t = advance(); // FUNCTION
+    const ref = expect('FUNC_REF');
+    const name = ref.value;
+    const suffixToType = { '#': 'num', '$': 'str', '@': 'arr', '&': 'struct', '!': 'bool', '': 'void' };
+    const returnType = suffixToType[ref.suffix] || 'void';
+
+    // Parse parameters until end of line
+    const params = [];
+    let optionalStarted = false;
+    while (!atLineEnd()) {
+      if (match('KEYWORD', 'OPTIONAL')) {
+        optionalStarted = true;
+        continue;
+      }
+      // Parameter: LABEL typedVar
+      // IDENT is the label, then a typed var token follows
+      const p = peek();
+      let label = null;
+      if (p.type === 'IDENT') {
+        label = advance().value;
+      }
+      const varToken = advance();
+      const paramTypeMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '!' };
+      const paramSuffix = paramTypeMap[varToken.type];
+      if (!paramSuffix) {
+        throw new SyntaxError(`Expected typed variable for parameter at line ${varToken.line}`);
+      }
+      params.push({
+        label: label || varToken.value.toUpperCase(),
+        varName: varToken.value,
+        varSuffix: paramSuffix,
+        optional: optionalStarted,
+      });
+    }
+    skipNewlines();
+
+    // Parse body
+    insideFunction = true;
+    const body = [];
+    while (!atEnd()) {
+      skipNewlines();
+      if (peek().type === 'KEYWORD' && peek().value === 'ENDFUNCTION') {
+        advance();
+        break;
+      }
+      body.push(parseStatement());
+      skipNewlines();
+    }
+    insideFunction = false;
+
+    // Post-pass: collect labels from body into localLabels
+    const localLabels = {};
+    for (let i = 0; i < body.length; i++) {
+      if (body[i].type === 'label') {
+        localLabels[body[i].name] = i;
+      }
+    }
+
+    functions[name] = { params, returnType, body, localLabels };
+    return { type: 'funcdef', name, line: t.line };
+  }
+
+  function parseFunctionCall() {
+    const ref = advance(); // FUNC_REF
+    const name = ref.value;
+    const suffix = ref.suffix;
+    const args = [];
+
+    while (!atLineEnd()) {
+      // Named argument: IDENT followed by expression
+      if (peek().type === 'IDENT') {
+        const label = advance().value;
+        const value = parseExpr();
+        args.push({ label, value });
+      } else {
+        // Positional argument
+        const value = parseExpr();
+        args.push({ label: null, value });
+      }
+      if (!match('COMMA')) break;
+    }
+
+    return { type: 'funccall', name, suffix, args, line: ref.line };
+  }
+
   function parseAssignment() {
     const varToken = advance();
     const line = varToken.line;
@@ -502,6 +611,10 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
       }
       // Full struct assignment: myStruct& = {.height# = 72, .name$ = "Sam"}
       expect('COMPARE', '=');
+      if (peek().type === 'FUNC_REF') {
+        const call = parseFunctionCall();
+        return { type: 'assign_funccall', name: varToken.value, varType: 'struct', call, line };
+      }
       expect('LBRACE');
       const members = [];
       if (peek().type !== 'RBRACE') {
@@ -545,6 +658,11 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
 
       expect('COMPARE', '=');
 
+      if (peek().type === 'FUNC_REF') {
+        const call = parseFunctionCall();
+        return { type: 'assign_funccall', name: varToken.value, varType: 'arr', call, line };
+      }
+
       // Array literal: [1,2,3] or [1,2,3][4,5,6]
       if (peek().type === 'LBRACKET') {
         const dimensions = [];
@@ -575,6 +693,11 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     }
 
     expect('COMPARE', '=');
+    if (peek().type === 'FUNC_REF') {
+      const varTypeMap = { 'NUM_VAR': 'num', 'STR_VAR': 'str', 'BOOL_VAR': 'bool' };
+      const call = parseFunctionCall();
+      return { type: 'assign_funccall', name: varToken.value, varType: varTypeMap[varToken.type], call, line };
+    }
     const value = parseExpr();
     if (varToken.type === 'NUM_VAR') {
       return { type: 'assign_num', name: varToken.value, value, line };
@@ -592,5 +715,5 @@ if (t.type === 'KEYWORD' && t.value === 'IF') {
     skipNewlines();
   }
 
-  return { ast, dataPool, labels };
+  return { ast, dataPool, labels, functions };
 }

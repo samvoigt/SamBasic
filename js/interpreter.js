@@ -4,6 +4,12 @@ class GotoSignal {
   }
 }
 
+class ReturnSignal {
+  constructor(value) {
+    this.value = value;
+  }
+}
+
 class Interpreter {
   constructor(screen, audio) {
     this.screen = screen;
@@ -38,6 +44,9 @@ class Interpreter {
     this._inputBuffer = '';
     this._inputHandler = null;
     this._stmtCount = 0;
+    this.functions = {};
+    this.callStack = [];
+    this.MAX_RECURSION_DEPTH = 256;
   }
 
   _initBuiltinColors() {
@@ -74,11 +83,12 @@ class Interpreter {
     return '#' + r.toString(16).padStart(2, '0') + g.toString(16).padStart(2, '0') + b.toString(16).padStart(2, '0');
   }
 
-  load(ast, dataPool, labels) {
+  load(ast, dataPool, labels, functions) {
     this.reset();
     this.ast = ast;
     this.dataPool = dataPool;
     this.labels = labels;
+    this.functions = functions || {};
   }
 
   async run() {
@@ -500,6 +510,32 @@ case 'if': {
         }
         break;
       }
+      case 'funcdef': {
+        // no-op at runtime; function definitions are collected at parse time
+        break;
+      }
+      case 'return': {
+        const val = stmt.value ? this.evalExpr(stmt.value) : null;
+        throw new ReturnSignal(val);
+      }
+      case 'void_funccall': {
+        await this.execFunctionCall(stmt.call, stmt.line);
+        break;
+      }
+      case 'assign_funccall': {
+        const result = await this.execFunctionCall(stmt.call, stmt.line);
+        if (result === null || result === undefined) {
+          throw new Error(`Cannot assign void function at line ${stmt.line}`);
+        }
+        switch (stmt.varType) {
+          case 'num': this.numVars[stmt.name] = result; break;
+          case 'str': this.strVars[stmt.name] = String(result); break;
+          case 'bool': this.boolVars[stmt.name] = result ? 1 : 0; break;
+          case 'arr': this.arrVars[stmt.name] = result; break;
+          case 'struct': this.structVars[stmt.name] = result; break;
+        }
+        break;
+      }
       default:
         throw new Error(`Unknown statement type: ${stmt.type}`);
     }
@@ -518,6 +554,175 @@ case 'if': {
         await this.execStmt(stmts[i]);
       } catch (e) {
         if (e instanceof GotoSignal) throw e; // propagate to main loop
+        throw e;
+      }
+
+      this._stmtCount++;
+      if (this._stmtCount % 100 === 0) {
+        await this.yieldToEventLoop();
+      }
+
+      if (this.stepping) {
+        this.paused = true;
+        this.stepping = false;
+      }
+    }
+  }
+
+  async execFunctionCall(callNode, line) {
+    const func = this.functions[callNode.name];
+    if (!func) {
+      throw new Error(`Undefined function '>${callNode.name}' at line ${line}`);
+    }
+
+    if (this.callStack.length >= this.MAX_RECURSION_DEPTH) {
+      throw new Error(`Maximum recursion depth (${this.MAX_RECURSION_DEPTH}) exceeded at line ${line}`);
+    }
+
+    const resolvedArgs = this._resolveArgs(func, callNode.args, line);
+
+    // Save current scope
+    this.callStack.push({
+      numVars: this.numVars,
+      strVars: this.strVars,
+      arrVars: this.arrVars,
+      structVars: this.structVars,
+      boolVars: this.boolVars,
+    });
+
+    // Fresh local scope
+    this.numVars = {};
+    this.strVars = {};
+    this.arrVars = {};
+    this.structVars = {};
+    this.boolVars = {};
+    this._initBuiltinColors();
+
+    // Set parameter values
+    for (const arg of resolvedArgs) {
+      const key = arg.varName;
+      switch (arg.varSuffix) {
+        case '#': this.numVars[key] = arg.value; break;
+        case '$': this.strVars[key] = arg.value; break;
+        case '@': this.arrVars[key] = arg.value; break;
+        case '&': this.structVars[key] = arg.value; break;
+        case '!': this.boolVars[key] = arg.value; break;
+      }
+    }
+
+    let returnValue = null;
+    try {
+      await this.execFunctionBody(func.body, func.localLabels);
+    } catch (e) {
+      if (e instanceof ReturnSignal) {
+        returnValue = e.value;
+      } else {
+        // Restore scope before re-throwing
+        const saved = this.callStack.pop();
+        this.numVars = saved.numVars;
+        this.strVars = saved.strVars;
+        this.arrVars = saved.arrVars;
+        this.structVars = saved.structVars;
+        this.boolVars = saved.boolVars;
+        throw e;
+      }
+    }
+
+    // Restore caller scope
+    const saved = this.callStack.pop();
+    this.numVars = saved.numVars;
+    this.strVars = saved.strVars;
+    this.arrVars = saved.arrVars;
+    this.structVars = saved.structVars;
+    this.boolVars = saved.boolVars;
+
+    // Check typed function returned a value
+    if (func.returnType !== 'void' && returnValue === null) {
+      throw new Error(`Function '>${callNode.name}' must return a value at line ${line}`);
+    }
+
+    return returnValue;
+  }
+
+  _resolveArgs(func, args, line) {
+    const params = func.params;
+    const assigned = new Array(params.length).fill(false);
+    const values = new Array(params.length).fill(undefined);
+    let positionalIndex = 0;
+
+    for (const arg of args) {
+      if (arg.label) {
+        // Named argument — find matching param by label
+        const idx = params.findIndex(p => p.label === arg.label);
+        if (idx === -1) {
+          throw new Error(`Unknown parameter '${arg.label}' at line ${line}`);
+        }
+        if (assigned[idx]) {
+          throw new Error(`Parameter '${arg.label}' already provided at line ${line}`);
+        }
+        assigned[idx] = true;
+        values[idx] = this.evalExpr(arg.value);
+      } else {
+        // Positional — find next unassigned param
+        while (positionalIndex < params.length && assigned[positionalIndex]) {
+          positionalIndex++;
+        }
+        if (positionalIndex >= params.length) {
+          throw new Error(`Too many arguments (expected ${params.length}) at line ${line}`);
+        }
+        assigned[positionalIndex] = true;
+        values[positionalIndex] = this.evalExpr(arg.value);
+        positionalIndex++;
+      }
+    }
+
+    // Validate required params and fill defaults for optional
+    const resolved = [];
+    for (let i = 0; i < params.length; i++) {
+      if (!assigned[i]) {
+        if (!params[i].optional) {
+          throw new Error(`Missing required parameter '${params[i].label}' at line ${line}`);
+        }
+        // Default values by type
+        const defaults = { '#': 0, '$': '', '@': [], '&': {}, '!': 0 };
+        values[i] = defaults[params[i].varSuffix];
+      }
+      // Deep-copy arrays and structs for pass-by-value
+      let val = values[i];
+      if (params[i].varSuffix === '@' && Array.isArray(val)) {
+        val = JSON.parse(JSON.stringify(val));
+      } else if (params[i].varSuffix === '&' && typeof val === 'object' && val !== null) {
+        val = JSON.parse(JSON.stringify(val));
+      }
+      resolved.push({ varName: params[i].varName, varSuffix: params[i].varSuffix, value: val });
+    }
+
+    return resolved;
+  }
+
+  async execFunctionBody(body, localLabels) {
+    let pc = 0;
+    while (this.running && pc < body.length) {
+      if (this.paused) {
+        await new Promise(resolve => { this._pauseResolve = resolve; });
+        if (!this.running) break;
+      }
+
+      const stmt = body[pc];
+      pc++;
+
+      try {
+        await this.execStmt(stmt);
+      } catch (e) {
+        if (e instanceof GotoSignal) {
+          const target = localLabels[e.label];
+          if (target === undefined) {
+            throw new Error(`Undefined label '${e.label}$' at line ${stmt.line}`);
+          }
+          pc = target;
+          continue;
+        }
+        if (e instanceof ReturnSignal) throw e;
         throw e;
       }
 

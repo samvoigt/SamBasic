@@ -93,6 +93,66 @@ PRINT "looping"
 GOTO start$
 ```
 
+### Functions
+
+Define reusable functions with `FUNCTION`/`ENDFUNCTION`. Function names are prefixed with `>` and can have a return type suffix:
+
+```
+FUNCTION >add# X a# Y b#
+  RETURN a# + b#
+ENDFUNCTION
+
+result# = >add# 3, 4
+PRINT result#
+```
+
+**Return types:** Append a type suffix to the function name for typed returns (`>name#` returns number, `>name$` returns string, etc.). Omit the suffix for void functions.
+
+**Parameters:** Each parameter has a label (uppercase identifier) and a typed variable. Call with named or positional arguments:
+```
+result# = >add# Y 10 X 5     ' Named arguments (any order)
+result# = >add# 5, 10        ' Positional arguments
+result# = >add# X 5, 10      ' Mixed: X=5, Y=10
+```
+
+**Void functions** (no return type suffix) are called as statements:
+```
+FUNCTION >greet NAME name$
+  PRINT "Hello, " + name$
+ENDFUNCTION
+>greet "World"
+```
+
+**Optional parameters** — use `OPTIONAL` before parameters that have defaults (0 for numbers, "" for strings, empty for arrays/structs):
+```
+FUNCTION >repeat TEXT msg$ OPTIONAL TIMES count#
+  IF count# = 0 THEN
+    count# = 1
+  ENDIF
+  FOR i# GOESFROM 1 TO count#
+    PRINT msg$
+  ENDFOR
+ENDFUNCTION
+>repeat "hi", 3
+>repeat "once"
+```
+
+**Recursion** is supported (max depth 256):
+```
+FUNCTION >fact# N n#
+  IF n# <= 1 THEN
+    RETURN 1
+  ENDIF
+  prev# = >fact# n# - 1
+  RETURN n# * prev#
+ENDFUNCTION
+PRINT >fact# 5   ' wait, can't embed — assign first:
+x# = >fact# 5
+PRINT x#          ' 120
+```
+
+**Scoping:** Functions have their own local variables. Global variables are not visible inside a function. Built-in color constants (e.g., `RED&`) are available in every scope. Labels inside functions are local and don't conflict with global labels.
+
 ### Arrays
 
 ```
