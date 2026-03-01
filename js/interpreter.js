@@ -73,17 +73,17 @@ class Interpreter {
       WHITE:        [255, 255, 255],
     };
     for (const [name, [r, g, b]] of Object.entries(colors)) {
-      this.structVars[name] = { 'red#': r, 'green#': g, 'blue#': b };
+      this.structVars[name] = { 'r#': r, 'g#': g, 'b#': b };
     }
   }
 
   _colorStructToHex(obj, line) {
     if (typeof obj !== 'object' || obj === null) {
-      throw new Error(`SETCOLOR/COLOR requires a color struct with .red#, .green#, .blue# members${line ? ' at line ' + line : ''}`);
+      throw new Error(`SETCOLOR/COLOR requires a color struct with .r#, .g#, .b# members${line ? ' at line ' + line : ''}`);
     }
-    const r = Math.max(0, Math.min(255, Math.floor(obj['red#'] || 0)));
-    const g = Math.max(0, Math.min(255, Math.floor(obj['green#'] || 0)));
-    const b = Math.max(0, Math.min(255, Math.floor(obj['blue#'] || 0)));
+    const r = Math.max(0, Math.min(255, Math.floor(obj['r#'] || 0)));
+    const g = Math.max(0, Math.min(255, Math.floor(obj['g#'] || 0)));
+    const b = Math.max(0, Math.min(255, Math.floor(obj['b#'] || 0)));
     return '#' + r.toString(16).padStart(2, '0') + g.toString(16).padStart(2, '0') + b.toString(16).padStart(2, '0');
   }
 

@@ -54,7 +54,7 @@ FOR r# FROM 1 TO 8
   FOR c# FROM 1 TO 8
     dist# = ABS# r# - 4.5 + ABS# c# - 4.5
     IF dist# < 4 THEN
-      row@[c#] = {.red# = 255, .green# = 85 + r# * 20, .blue# = 85}
+      row@[c#] = {.r# = 255, .g# = 85 + r# * 20, .b# = 85}
     END IF
   END FOR
   spriteRows@[r#] = row@

@@ -370,13 +370,13 @@ SETCOLOR GREEN&                   ' Set global text color
 SETCOLOR COLOR myColor&           ' Named parameter form
 ```
 
-Colors are structs with `.red#`, `.green#`, `.blue#` members (0–255). The 16 EGA colors are built-in:
+Colors are structs with `.r#`, `.g#`, `.b#` members (0–255). The 16 EGA colors are built-in:
 
 `BLACK&`, `BLUE&`, `GREEN&`, `CYAN&`, `RED&`, `MAGENTA&`, `BROWN&`, `LIGHTGRAY&`, `DARKGRAY&`, `LIGHTBLUE&`, `LIGHTGREEN&`, `LIGHTCYAN&`, `LIGHTRED&`, `LIGHTMAGENTA&`, `YELLOW&`, `WHITE&`
 
 You can define custom colors:
 ```
-myColor& = {.red# = 255, .green# = 128, .blue# = 0}
+myColor& = {.r# = 255, .g# = 128, .b# = 0}
 SETCOLOR myColor&
 ```
 
@@ -523,7 +523,7 @@ rows@ = SIZE 4
 FOR r# FROM 1 TO 4
   row@ = SIZE 4
   FOR c# FROM 1 TO 4
-    row@[c#] = {.red# = 255, .green# = 0, .blue# = 0}
+    row@[c#] = {.r# = 255, .g# = 0, .b# = 0}
   END FOR
   rows@[r#] = row@
 END FOR

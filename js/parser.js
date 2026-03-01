@@ -247,7 +247,7 @@ function parse(tokens) {
       return expr;
     }
 
-    // Struct literal as expression: {.red# = 255, .green# = 0, .blue# = 128}
+    // Struct literal as expression: {.r# = 255, .g# = 0, .b# = 128}
     if (t.type === 'LBRACE') {
       advance();
       const members = [];
