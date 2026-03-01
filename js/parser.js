@@ -753,12 +753,12 @@ function parse(tokens) {
     if (voices.length === 0) {
       throw new SyntaxError(`PLAYPOLY requires at least one [voice] at line ${t.line}`);
     }
-    if (wrappedInParens) expect('RPAREN');
     // Parse optional trailing args for BACKGROUND and REPEAT
+    // (may appear inside or outside the paren wrapper)
     let backgroundExpr = null;
     let repeatExpr = null;
     match('COMMA');
-    if (!atLineEnd()) {
+    if (!atLineEnd() && !(wrappedInParens && peek().type === 'RPAREN')) {
       const args = parseKeywordArgs();
       const resolved = resolveBuiltinArgs(args, [
         { name: 'BACKGROUND', required: false },
@@ -767,6 +767,7 @@ function parse(tokens) {
       backgroundExpr = resolved.BACKGROUND || null;
       repeatExpr = resolved.REPEAT || null;
     }
+    if (wrappedInParens) expect('RPAREN');
     return { type: 'playpoly', voices, backgroundExpr, repeatExpr, line: t.line };
   }
 
