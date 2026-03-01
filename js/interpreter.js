@@ -298,6 +298,13 @@ class Interpreter {
       }
       case 'builtin_call':
         return await this.evalBuiltinKeyword(node.keyword, node.params, node.mode, node.line);
+      case 'arr_literal': {
+        const items = [];
+        for (const item of node.items) {
+          items.push(await this.evalExpr(item));
+        }
+        return items;
+      }
       case 'struct_literal': {
         const obj = {};
         for (const m of node.members) {

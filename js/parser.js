@@ -247,6 +247,20 @@ function parse(tokens) {
       return expr;
     }
 
+    // Array literal as expression: [1, 2, 3] or []
+    if (t.type === 'LBRACKET') {
+      advance();
+      const items = [];
+      if (peek().type !== 'RBRACKET') {
+        items.push(parseExpr());
+        while (match('COMMA')) {
+          items.push(parseExpr());
+        }
+      }
+      expect('RBRACKET');
+      return { type: 'arr_literal', items, line: t.line };
+    }
+
     // Struct literal as expression: {.r# = 255, .g# = 0, .b# = 128}
     if (t.type === 'LBRACE') {
       advance();
@@ -1412,9 +1426,11 @@ function parse(tokens) {
         while (peek().type === 'LBRACKET') {
           advance(); // [
           const items = [];
-          items.push(parseExpr());
-          while (match('COMMA')) {
+          if (peek().type !== 'RBRACKET') {
             items.push(parseExpr());
+            while (match('COMMA')) {
+              items.push(parseExpr());
+            }
           }
           expect('RBRACKET');
           dimensions.push(items);
