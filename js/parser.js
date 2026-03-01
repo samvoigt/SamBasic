@@ -584,6 +584,78 @@ function parse(tokens) {
       return { type: 'drawsprite', sprite: resolved.SPRITE, x: resolved.X, y: resolved.Y, line: dt.line };
     }
 
+    // --- 3D Wireframe Statements ---
+
+    if (t.type === 'KEYWORD' && t.value === 'TRANSFORM3D') {
+      const dt = advance();
+      const opToken = peek();
+      if (opToken.type !== 'IDENT') {
+        throw new SyntaxError(`Expected TRANSLATE, ROTATE, or SCALE after TRANSFORM3D at line ${dt.line}`);
+      }
+      const op = advance().value.toUpperCase();
+      if (!['TRANSLATE', 'ROTATE', 'SCALE'].includes(op)) {
+        throw new SyntaxError(`Unknown TRANSFORM3D operation '${op}' at line ${dt.line}. Use TRANSLATE, ROTATE, or SCALE`);
+      }
+      const idExpr = parseExpr();
+      expect('COMMA');
+      const a = parseExpr();
+      if (op === 'SCALE') {
+        return { type: 'transform3d', op, id: idExpr, values: [a], line: dt.line };
+      }
+      expect('COMMA');
+      const b = parseExpr();
+      expect('COMMA');
+      const c = parseExpr();
+      return { type: 'transform3d', op, id: idExpr, values: [a, b, c], line: dt.line };
+    }
+
+    if (t.type === 'KEYWORD' && t.value === 'SETCOLOR3D') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      expect('COMMA');
+      const colorExpr = parseExpr();
+      return { type: 'setcolor3d', id: idExpr, color: colorExpr, line: dt.line };
+    }
+
+    if (t.type === 'KEYWORD' && t.value === 'SHOW3D') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      expect('COMMA');
+      const valueExpr = parseExpr();
+      return { type: 'show3d', id: idExpr, value: valueExpr, line: dt.line };
+    }
+
+    if (t.type === 'KEYWORD' && t.value === 'HIDDENEDGES3D') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      expect('COMMA');
+      const valueExpr = parseExpr();
+      return { type: 'hiddenedges3d', id: idExpr, value: valueExpr, line: dt.line };
+    }
+
+    if (t.type === 'KEYWORD' && t.value === 'RENDER3D') {
+      const dt = advance();
+      return { type: 'render3d', line: dt.line };
+    }
+
+    if (t.type === 'KEYWORD' && t.value === 'DELETE3D') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      return { type: 'delete3d', id: idExpr, line: dt.line };
+    }
+
+    if (t.type === 'KEYWORD' && t.value === 'CLEAR3D') {
+      const dt = advance();
+      return { type: 'clear3d', line: dt.line };
+    }
+
+    // OBJECT3D# as a statement (discard return value, e.g., for grid lines)
+    if (t.type === 'KEYWORD' && t.value === 'OBJECT3D') {
+      const dt = advance();
+      const { shape, params } = parseObject3DBody(dt.line);
+      return { type: 'object3d_stmt', shape, params, line: dt.line };
+    }
+
     // APPEND items@ expr
     if (t.type === 'KEYWORD' && t.value === 'APPEND') {
       advance();
@@ -1142,6 +1214,66 @@ function parse(tokens) {
     };
   }
 
+  // Shared param defs and parser for OBJECT3D# (used by both assignment and statement forms)
+  const OBJECT3D_PARAM_NAMES = new Set([
+    'SIZE', 'RADIUS', 'HEIGHT', 'BASE', 'SEGMENTS', 'WIDTH',
+    'DEPTH', 'DIVISIONS', 'TUBE', 'TUBESEGMENTS',
+    'X1', 'Y1', 'Z1', 'X2', 'Y2', 'Z2',
+  ]);
+  const OBJECT3D_PARAM_DEFS = [...OBJECT3D_PARAM_NAMES].map(name => ({ name, required: false }));
+  const OBJECT3D_VALID_SHAPES = ['CUBE', 'SPHERE', 'CONE', 'CYLINDER', 'PYRAMID', 'PLANE', 'TORUS', 'LINE', 'POINT'];
+
+  // Like parseKeywordArgs but also accepts KEYWORD tokens as labels
+  // when they match an expected param name (e.g., SIZE is a keyword but also a 3D param)
+  function parseKeywordArgsAllowingKeywords(validNames) {
+    const args = [];
+    while (!atLineEnd()) {
+      const p = peek();
+      const isLabel = (p.type === 'IDENT' && !isKnownFunction(p)) ||
+                      (p.type === 'KEYWORD' && validNames.has(p.value));
+      if (isLabel) {
+        const label = advance().value.toUpperCase();
+        const value = parseExpr();
+        args.push({ label, value });
+      } else {
+        const value = parseExpr();
+        args.push({ label: null, value });
+      }
+      if (!match('COMMA')) {
+        const next = peek();
+        if (!atLineEnd() && ((next.type === 'IDENT' && !isKnownFunction(next)) ||
+            (next.type === 'KEYWORD' && validNames.has(next.value)))) continue;
+        break;
+      }
+    }
+    return args;
+  }
+
+  function parseObject3DBody(line) {
+    const shapeToken = peek();
+    if (shapeToken.type !== 'IDENT') {
+      throw new SyntaxError(`Expected shape type after OBJECT3D# at line ${line}`);
+    }
+    const shape = advance().value.toUpperCase();
+    if (!OBJECT3D_VALID_SHAPES.includes(shape)) {
+      throw new SyntaxError(`Unknown 3D shape '${shape}' at line ${line}. Valid shapes: ${OBJECT3D_VALID_SHAPES.join(', ')}`);
+    }
+    match('COMMA');
+    const params = {};
+    if (!atLineEnd()) {
+      const args = parseKeywordArgsAllowingKeywords(OBJECT3D_PARAM_NAMES);
+      const resolved = resolveBuiltinArgs(args, OBJECT3D_PARAM_DEFS, line);
+      for (const key in resolved) params[key] = resolved[key];
+    }
+    return { shape, params };
+  }
+
+  function parseAssignObject3D(varToken, line) {
+    advance(); // consume OBJECT3D keyword
+    const { shape, params } = parseObject3DBody(line);
+    return { type: 'assign_object3d', name: varToken.value, shape, params, line };
+  }
+
   function parseAssignment() {
     const varToken = advance();
     const line = varToken.line;
@@ -1267,6 +1399,10 @@ function parse(tokens) {
       const varTypeMap = { 'NUM_VAR': 'num', 'STR_VAR': 'str', 'BOOL_VAR': 'bool' };
       const call = parseFunctionCall();
       return { type: 'assign_funccall', name: varToken.value, varType: varTypeMap[varToken.type], call, line };
+    }
+    // Check for OBJECT3D# (shape type + varying params)
+    if (peek().type === 'KEYWORD' && peek().value === 'OBJECT3D') {
+      return parseAssignObject3D(varToken, line);
     }
     // Check for builtin keyword
     if (peek().type === 'KEYWORD' && BUILTIN_KEYWORD_PARAMS[peek().value]) {

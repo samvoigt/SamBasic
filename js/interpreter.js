@@ -51,6 +51,7 @@ class Interpreter {
     this.fileHandles = {};
     this.nextFileHandle = 1;
     this.warnedVars = new Set();
+    this.scene3d = null;
   }
 
   _initBuiltinColors() {
@@ -75,6 +76,19 @@ class Interpreter {
     for (const [name, [r, g, b]] of Object.entries(colors)) {
       this.structVars[name] = { 'r#': r, 'g#': g, 'b#': b };
     }
+  }
+
+  _ensureScene3D() {
+    if (!this.scene3d) this.scene3d = new Scene3D();
+    return this.scene3d;
+  }
+
+  async _evalObject3DParams(params, line) {
+    const result = {};
+    for (const key in params) {
+      result[key.toLowerCase()] = Number(await this.evalExpr(params[key]));
+    }
+    return result;
   }
 
   _colorStructToHex(obj, line) {
@@ -745,6 +759,92 @@ class Interpreter {
         const x = Math.floor(await this.evalExpr(stmt.x));
         const y = Math.floor(await this.evalExpr(stmt.y));
         this.screen.drawSprite(spriteId, x, y);
+        break;
+      }
+
+      // --- 3D Wireframe ---
+
+      case 'assign_object3d': {
+        const scene = this._ensureScene3D();
+        const evalParams = await this._evalObject3DParams(stmt.params, stmt.line);
+        const color = this.screen ? this.screen.globalColor : '#00ff00';
+        const id = scene.createObject(stmt.shape, evalParams, color);
+        this.numVars[stmt.name] = id;
+        break;
+      }
+      case 'object3d_stmt': {
+        const scene = this._ensureScene3D();
+        const evalParams = await this._evalObject3DParams(stmt.params, stmt.line);
+        const color = this.screen ? this.screen.globalColor : '#00ff00';
+        scene.createObject(stmt.shape, evalParams, color);
+        break;
+      }
+      case 'transform3d': {
+        const scene = this._ensureScene3D();
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        const obj = scene.getObject(id);
+        const vals = [];
+        for (const v of stmt.values) vals.push(Number(await this.evalExpr(v)));
+        if (stmt.op === 'TRANSLATE') {
+          obj.position = [vals[0], vals[1], vals[2]];
+        } else if (stmt.op === 'ROTATE') {
+          obj.rotation = [vals[0], vals[1], vals[2]];
+        } else if (stmt.op === 'SCALE') {
+          obj.scale = vals[0];
+        }
+        break;
+      }
+      case 'setcolor3d': {
+        const scene = this._ensureScene3D();
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        const obj = scene.getObject(id);
+        const colorVal = await this.evalExpr(stmt.color);
+        obj.color = this._colorStructToHex(colorVal, stmt.line);
+        break;
+      }
+      case 'show3d': {
+        const scene = this._ensureScene3D();
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        const obj = scene.getObject(id);
+        obj.visible = !!(await this.evalExpr(stmt.value));
+        break;
+      }
+      case 'hiddenedges3d': {
+        const scene = this._ensureScene3D();
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        const obj = scene.getObject(id);
+        obj.hiddenEdges = !!(await this.evalExpr(stmt.value));
+        break;
+      }
+      case 'render3d': {
+        const scene = this._ensureScene3D();
+        this.screen._ensureGraphics();
+        scene.render(
+          (x1, y1, x2, y2, color) => {
+            const ctx = this.screen._activeCtx;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x1 + 0.5, y1 + 0.5);
+            ctx.lineTo(x2 + 0.5, y2 + 0.5);
+            ctx.stroke();
+          },
+          (x, y, color) => {
+            const ctx = this.screen._activeCtx;
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, 1, 1);
+          }
+        );
+        break;
+      }
+      case 'delete3d': {
+        const scene = this._ensureScene3D();
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        scene.deleteObject(id);
+        break;
+      }
+      case 'clear3d': {
+        this.scene3d = null;
         break;
       }
       case 'assign_num': {
