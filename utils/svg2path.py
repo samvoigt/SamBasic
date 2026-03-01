@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Convert SVG files into SamBasic 3D PATH3D# blocks.
+"""Convert SVG files into SamBasic path commands.
+
+By default, outputs 2D DRAWPATH commands (640x480 pixel coords).
+Use --3d to output PATH3D# blocks instead.
 
 Usage:
     python utils/svg2path.py input.svg [-o output.sam] [--steps 10] [--scale 0.01]
+    python utils/svg2path.py input.svg --3d [-o output.sam]
 """
 
 import argparse
@@ -602,8 +606,8 @@ def auto_scale(all_paths, target=5.0):
     return target / max_extent, cx, cy
 
 
-def emit_sambasic(all_paths, scale, center_x, center_y, source_name):
-    """Generate SamBasic code from processed paths."""
+def emit_sambasic_3d(all_paths, scale, center_x, center_y, source_name):
+    """Generate SamBasic PATH3D# code from processed paths."""
     lines = []
     lines.append(f"' Converted from: {source_name}")
     lines.append("")
@@ -626,13 +630,59 @@ def emit_sambasic(all_paths, scale, center_x, center_y, source_name):
     return "\n".join(lines)
 
 
+def auto_scale_2d(all_paths, canvas_w=640, canvas_h=480, margin=20):
+    """Compute (scale, offset_x, offset_y) to fit paths within canvas with margin."""
+    min_x, min_y, max_x, max_y = compute_bounds(all_paths)
+    svg_w = max_x - min_x
+    svg_h = max_y - min_y
+    if svg_w == 0 and svg_h == 0:
+        return 1.0, -min_x, -min_y
+    usable_w = canvas_w - 2 * margin
+    usable_h = canvas_h - 2 * margin
+    scale = min(usable_w / max(svg_w, 1e-9), usable_h / max(svg_h, 1e-9))
+    # Center within canvas
+    offset_x = margin + (usable_w - svg_w * scale) / 2 - min_x * scale
+    offset_y = margin + (usable_h - svg_h * scale) / 2 - min_y * scale
+    return scale, offset_x, offset_y
+
+
+def emit_sambasic_2d(all_paths, scale, offset_x, offset_y, source_name):
+    """Generate SamBasic DRAWPATH code from processed paths (640x480 pixel coords)."""
+    lines = []
+    lines.append(f"' Converted from: {source_name}")
+    lines.append("")
+
+    counter = 1
+    for color_rgb, subpaths in all_paths:
+        color_name = nearest_color(*color_rgb)
+        for sp in subpaths:
+            # Check if path is closed (first point ~= last point)
+            closed = len(sp) >= 3 and abs(sp[0][0] - sp[-1][0]) < 0.5 and abs(sp[0][1] - sp[-1][1]) < 0.5
+            # Build point array entries
+            pts = []
+            points_to_emit = sp[:-1] if closed else sp  # drop duplicate close point
+            for x, y in points_to_emit:
+                px = round(x * scale + offset_x)
+                py = round(y * scale + offset_y)
+                pts.append(f"[{px}, {py}]")
+
+            lines.append(f"SETCOLOR {color_name}&")
+            lines.append(f"p{counter}@ = [{', '.join(pts)}]")
+            close_arg = ", CLOSE TRUE" if closed else ""
+            lines.append(f"DRAWPATH POINTS p{counter}@{close_arg}")
+            lines.append("")
+            counter += 1
+
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert SVG files into SamBasic PATH3D# blocks."
+        description="Convert SVG files into SamBasic path commands."
     )
     parser.add_argument("input", help="Input SVG file")
     parser.add_argument("-o", "--output", help="Output .sam file (default: stdout)")
@@ -642,7 +692,11 @@ def main():
     )
     parser.add_argument(
         "--scale", type=float, default=None,
-        help="Scale factor (default: auto-fit to ±5 units)"
+        help="Scale factor (default: auto-fit)"
+    )
+    parser.add_argument(
+        "--3d", dest="three_d", action="store_true",
+        help="Output PATH3D# blocks instead of 2D DRAWPATH commands"
     )
     args = parser.parse_args()
 
@@ -652,14 +706,26 @@ def main():
         print("No paths found in SVG.", file=sys.stderr)
         sys.exit(1)
 
-    if args.scale is not None:
-        _, cx, cy = auto_scale(all_paths)
-        scale = args.scale
-    else:
-        scale, cx, cy = auto_scale(all_paths)
-
     source_name = args.input.rsplit("/", 1)[-1] if "/" in args.input else args.input
-    output = emit_sambasic(all_paths, scale, cx, cy, source_name)
+
+    if args.three_d:
+        if args.scale is not None:
+            _, cx, cy = auto_scale(all_paths)
+            scale = args.scale
+        else:
+            scale, cx, cy = auto_scale(all_paths)
+        output = emit_sambasic_3d(all_paths, scale, cx, cy, source_name)
+    else:
+        if args.scale is not None:
+            scale, ox, oy = auto_scale_2d(all_paths)
+            # Override scale but keep centering
+            min_x, min_y, _, _ = compute_bounds(all_paths)
+            ox = -min_x * args.scale
+            oy = -min_y * args.scale
+            scale = args.scale
+        else:
+            scale, ox, oy = auto_scale_2d(all_paths)
+        output = emit_sambasic_2d(all_paths, scale, ox, oy, source_name)
 
     if args.output:
         with open(args.output, "w") as f:

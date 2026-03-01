@@ -807,6 +807,24 @@ class Interpreter {
         this.screen.drawSprite(spriteId, x, y);
         break;
       }
+      case 'drawpath': {
+        const arr = await this.evalExpr(stmt.points);
+        if (!Array.isArray(arr) || arr.length < 2) {
+          throw new Error(`DRAWPATH requires POINTS array with at least 2 elements at line ${stmt.line}`);
+        }
+        const points = [];
+        for (let i = 0; i < arr.length; i++) {
+          const pt = arr[i];
+          if (!Array.isArray(pt) || pt.length < 2) {
+            throw new Error(`DRAWPATH: each point must be [x, y] at line ${stmt.line}`);
+          }
+          points.push([Math.floor(pt[0]), Math.floor(pt[1])]);
+        }
+        const fill = stmt.fill ? !!(await this.evalExpr(stmt.fill)) : false;
+        const close = stmt.close ? !!(await this.evalExpr(stmt.close)) : false;
+        this.screen.drawPath(points, fill, close);
+        break;
+      }
 
       // --- 3D Wireframe ---
 

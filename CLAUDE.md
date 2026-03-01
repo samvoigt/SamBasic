@@ -10,9 +10,10 @@ SamBasic is a browser-based BASIC/QBASIC-inspired language interpreter. No build
 
 Open `index.html` directly in any modern browser. There is no build step, no package.json, no test runner.
 
-The `utils/svg2path.py` script converts SVG files to SamBasic PATH3D# blocks (Python 3, stdlib only):
+The `utils/svg2path.py` script converts SVG files to SamBasic path commands (Python 3, stdlib only). Defaults to 2D `DRAWPATH` output; use `--3d` for `PATH3D#` blocks:
 ```
 python utils/svg2path.py input.svg [-o output.sam] [--steps 10] [--scale 0.01]
+python utils/svg2path.py input.svg --3d [-o output.sam]
 ```
 
 ## Architecture

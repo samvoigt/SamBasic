@@ -1,0 +1,31 @@
+' DRAWPATH demo — 2D path drawing
+
+BUFFERENABLED YES
+
+' --- Open polyline (wave) ---
+SETCOLOR CYAN&
+wave@ = [[40, 240], [120, 180], [200, 300], [280, 180], [360, 300], [440, 180], [520, 300], [600, 240]]
+DRAWPATH POINTS wave@
+
+' --- Closed triangle outline ---
+SETCOLOR RED&
+tri@ = [[320, 80], [420, 220], [220, 220]]
+DRAWPATH POINTS tri@, CLOSE TRUE
+
+' --- Filled polygon (diamond) ---
+SETCOLOR YELLOW&
+diamond@ = [[320, 280], [380, 360], [320, 440], [260, 360]]
+DRAWPATH POINTS diamond@, FILL TRUE
+
+' --- Filled star ---
+SETCOLOR GREEN&
+DIM star@(10)
+FOR i# = 1 TO 10
+  angle# = i# * 36 - 90
+  r# = 80
+  IF i# MOD 2 = 0 THEN r# = 35
+  star@(i#) = [520 + r# * COS(angle#), 360 + r# * SIN(angle#)]
+NEXT
+DRAWPATH POINTS star@, FILL TRUE
+
+SHOWBUFFER

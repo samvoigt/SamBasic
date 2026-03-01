@@ -587,6 +587,16 @@ function parse(tokens) {
       ], dt.line);
       return { type: 'drawcircle', x: resolved.X, y: resolved.Y, radius: resolved.RADIUS, fill: resolved.FILL || null, line: dt.line };
     }
+    if (t.type === 'KEYWORD' && t.value === 'DRAWPATH') {
+      const dt = advance();
+      const args = parseKeywordArgsAllowingKeywords(new Set(['CLOSE']));
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'POINTS', required: true },
+        { name: 'FILL', required: false },
+        { name: 'CLOSE', required: false },
+      ], dt.line);
+      return { type: 'drawpath', points: resolved.POINTS, fill: resolved.FILL || null, close: resolved.CLOSE || null, line: dt.line };
+    }
     if (t.type === 'KEYWORD' && t.value === 'DRAWSPRITE') {
       const dt = advance();
       const args = parseKeywordArgs();

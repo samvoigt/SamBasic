@@ -341,6 +341,26 @@ class Screen {
     }
   }
 
+  drawPath(points, fill, close) {
+    this._ensureGraphics();
+    const ctx = this._activeCtx;
+    ctx.beginPath();
+    ctx.moveTo(points[0][0] + 0.5, points[0][1] + 0.5);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i][0] + 0.5, points[i][1] + 0.5);
+    }
+    if (fill || close) {
+      ctx.closePath();
+    }
+    if (fill) {
+      ctx.fillStyle = this.globalColor;
+      ctx.fill();
+    }
+    ctx.strokeStyle = this.globalColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
   createSprite(data2D) {
     if (!Array.isArray(data2D) || data2D.length === 0) {
       throw new Error('CREATESPRITE: DATA must be a non-empty 2D array');
