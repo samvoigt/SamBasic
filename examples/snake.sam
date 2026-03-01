@@ -145,6 +145,7 @@ WHILE alive?
     scoreStr$ = TOSTRING$ score#
     SETCOLOR LIGHTGRAY&
     PRINTAT 1, 10, "Score: " + scoreStr$
+    PLAY "T200 O5 L16 E G", BACKGROUND YES, WAVE SQUARE
     ' Speed up
     interval# = interval# - 3
     IF interval# < 50 THEN
@@ -177,7 +178,7 @@ WHILE alive?
 END WHILE
 
 ' ---- Game Over ----
-BEEP
+PLAY "T120 O3 L4 E- R8 L2 D-", BACKGROUND YES, WAVE TRIANGLE
 SETCOLOR RED&
 PRINTAT 12, 34, "GAME OVER!"
 scoreStr$ = TOSTRING$ score#
