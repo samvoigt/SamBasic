@@ -3,7 +3,7 @@
 A BASIC/QBASIC-inspired programming language with a retro CRT monitor interface. Write and run programs directly in your browser — no server required, just open `index.html`.
 
 The output display emulates a classic **VoigtVision** monitor, complete with scanlines, phosphor glow, and a beige bezel.
-It sits on top of a Voigtlectrics Model 9000 Pro, which runs the interpreter and has its own local filesystem.
+It sits on top of a **Voigtlectrics 9000 Pro**, which runs the interpreter and has its own local filesystem.
 
 ## Getting Started
 
