@@ -984,14 +984,7 @@ class Interpreter {
         const arr = this.arrVars[stmt.name];
         if (!arr) throw new Error(`Array ${stmt.name}@ not initialized at line ${stmt.line}`);
         const val = await this.evalExpr(stmt.value);
-        if (Array.isArray(val)) {
-          for (const item of val) {
-            if (Array.isArray(item)) throw new Error(`APPEND only works on 1-dimensional arrays at line ${stmt.line}`);
-            arr.push(item);
-          }
-        } else {
-          arr.push(val);
-        }
+        arr.push(val);
         break;
       }
       case 'arr_insert': {

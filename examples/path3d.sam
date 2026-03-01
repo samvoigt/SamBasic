@@ -34,10 +34,12 @@ ATTACH3D scene#, spiral#
 ATTACH3D scene#, wave#
 
 angle# = 0
-WHILE angle# < 360
-  CLEARSCREEN
+BUFFERENABLED YES
+WHILE GETKEY$ = ""
+  CLEARBUFFER
   TRANSFORM3D ROTATE scene#, 0, angle#, 0
   RENDER3D
   SHOWBUFFER
   angle# = angle# + 2
+  SLEEP 0.016
 END WHILE
