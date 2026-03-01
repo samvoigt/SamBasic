@@ -653,11 +653,17 @@ class Interpreter {
       }
       case 'playpoly': {
         if (this.audio) {
+          const sharedTempo = stmt.tempoExpr ? Number(await this.evalExpr(stmt.tempoExpr)) : null;
           const voices = [];
           for (const v of stmt.voices) {
+            let musicStr = String(await this.evalExpr(v.expr));
+            if (sharedTempo != null) {
+              musicStr = `T${sharedTempo} ` + musicStr;
+            }
             voices.push({
-              musicStr: String(await this.evalExpr(v.expr)),
+              musicStr,
               waveType: v.waveExpr ? String(await this.evalExpr(v.waveExpr)) : null,
+              volume: v.volumeExpr ? Number(await this.evalExpr(v.volumeExpr)) : null,
             });
           }
           const inBackground = stmt.backgroundExpr ? !!(await this.evalExpr(stmt.backgroundExpr)) : false;

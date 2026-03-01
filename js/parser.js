@@ -742,33 +742,58 @@ function parse(tokens) {
       advance(); // [
       const expr = parseExpr();
       let waveExpr = null;
+      let volumeExpr = null;
       // Check for WAVE inside bracket: IDENT "WAVE" followed by expression
       if (peek().type === 'IDENT' && peek().value.toUpperCase() === 'WAVE') {
         advance(); // consume WAVE ident
         waveExpr = parseExpr();
       }
+      // Check for VOLUME inside bracket
+      if (peek().type === 'IDENT' && peek().value.toUpperCase() === 'VOLUME') {
+        advance(); // consume VOLUME ident
+        volumeExpr = parseExpr();
+      }
+      // Catch misplaced BACKGROUND/REPEAT inside voice brackets
+      if (peek().type === 'IDENT' && ['BACKGROUND', 'REPEAT'].includes(peek().value.toUpperCase())) {
+        throw new SyntaxError(`${peek().value.toUpperCase()} goes after the voice brackets, not inside [...] at line ${t.line}`);
+      }
       expect('RBRACKET');
-      voices.push({ expr, waveExpr });
+      voices.push({ expr, waveExpr, volumeExpr });
     }
     if (voices.length === 0) {
       throw new SyntaxError(`PLAYPOLY requires at least one [voice] at line ${t.line}`);
     }
-    // Parse optional trailing args for BACKGROUND and REPEAT
+    // Parse optional trailing args for BACKGROUND, REPEAT, and TEMPO
     // (may appear inside or outside the paren wrapper)
     let backgroundExpr = null;
     let repeatExpr = null;
+    let tempoExpr = null;
+    const trailingArgDefs = [
+      { name: 'BACKGROUND', required: false },
+      { name: 'REPEAT', required: false },
+      { name: 'TEMPO', required: false },
+    ];
     match('COMMA');
     if (!atLineEnd() && !(wrappedInParens && peek().type === 'RPAREN')) {
       const args = parseKeywordArgs();
-      const resolved = resolveBuiltinArgs(args, [
-        { name: 'BACKGROUND', required: false },
-        { name: 'REPEAT', required: false },
-      ], t.line);
+      const resolved = resolveBuiltinArgs(args, trailingArgDefs, t.line);
       backgroundExpr = resolved.BACKGROUND || null;
       repeatExpr = resolved.REPEAT || null;
+      tempoExpr = resolved.TEMPO || null;
     }
     if (wrappedInParens) expect('RPAREN');
-    return { type: 'playpoly', voices, backgroundExpr, repeatExpr, line: t.line };
+    // Also parse trailing args after closing paren (e.g., PLAYPOLY (...) TEMPO 72)
+    if (wrappedInParens && !backgroundExpr && !repeatExpr && !tempoExpr) {
+      match('COMMA');
+      if (!atLineEnd()) {
+        const args = parseKeywordArgs();
+        const resolved = resolveBuiltinArgs(args, trailingArgDefs, t.line);
+        backgroundExpr = resolved.BACKGROUND || null;
+        repeatExpr = resolved.REPEAT || null;
+        tempoExpr = resolved.TEMPO || null;
+      }
+    }
+    return { type: 'playpoly', voices, backgroundExpr, repeatExpr, tempoExpr, line: t.line };
   }
 
   function parseIf() {

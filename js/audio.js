@@ -109,21 +109,34 @@ class SamAudio {
   async playPoly(voices) {
     this.ensureContext();
     const startTime = this.ctx.currentTime;
-    let maxDuration = 0;
-    const gainLevel = 0.3 / voices.length;
+    const baseGain = 0.3 / voices.length;
 
-    for (const voice of voices) {
+    // First pass: parse all voices and compute durations
+    const parsed = voices.map(voice => {
       const notes = this.parseMusicString(voice.musicStr);
-      const waveType = voice.waveType || 'square';
-      let time = startTime;
+      let dur = 0;
+      for (const note of notes) dur += note.duration;
+      return { notes, waveType: voice.waveType || 'square', volume: voice.volume, duration: dur };
+    });
 
-      for (const note of notes) {
-        this.scheduleNote(note, time, waveType, gainLevel);
+    // Validate beat counts
+    const first = parsed[0].duration;
+    for (let i = 1; i < parsed.length; i++) {
+      if (Math.abs(parsed[i].duration - first) > 0.001) {
+        throw new Error(`PLAYPOLY: voice ${i + 1} duration (${parsed[i].duration.toFixed(2)}s) doesn't match voice 1 (${first.toFixed(2)}s) — check beat counts`);
+      }
+    }
+
+    // Second pass: schedule notes
+    let maxDuration = 0;
+    for (const voice of parsed) {
+      const gainLevel = voice.volume != null ? voice.volume * baseGain : baseGain;
+      let time = startTime;
+      for (const note of voice.notes) {
+        this.scheduleNote(note, time, voice.waveType, gainLevel);
         time += note.duration;
       }
-
-      const voiceDuration = time - startTime;
-      if (voiceDuration > maxDuration) maxDuration = voiceDuration;
+      if (voice.duration > maxDuration) maxDuration = voice.duration;
     }
 
     await new Promise(resolve => setTimeout(resolve, maxDuration * 1000));
@@ -273,22 +286,35 @@ class SamAudio {
 
   _scheduleBgPoly(voices) {
     const startTime = this._bgCtx.currentTime;
-    let maxDuration = 0;
-    const gainLevel = 0.3 / voices.length;
+    const baseGain = 0.3 / voices.length;
 
-    for (const voice of voices) {
+    // First pass: parse all voices and compute durations
+    const parsed = voices.map(voice => {
       const notes = this.parseMusicString(voice.musicStr);
-      const waveType = voice.waveType || 'square';
-      let time = startTime;
+      let dur = 0;
+      for (const note of notes) dur += note.duration;
+      return { notes, waveType: voice.waveType || 'square', volume: voice.volume, duration: dur };
+    });
 
-      for (const note of notes) {
-        const node = this.scheduleNote(note, time, waveType, gainLevel, this._bgCtx);
+    // Validate beat counts
+    const first = parsed[0].duration;
+    for (let i = 1; i < parsed.length; i++) {
+      if (Math.abs(parsed[i].duration - first) > 0.001) {
+        throw new Error(`PLAYPOLY: voice ${i + 1} duration (${parsed[i].duration.toFixed(2)}s) doesn't match voice 1 (${first.toFixed(2)}s) — check beat counts`);
+      }
+    }
+
+    // Second pass: schedule notes
+    let maxDuration = 0;
+    for (const voice of parsed) {
+      const gainLevel = voice.volume != null ? voice.volume * baseGain : baseGain;
+      let time = startTime;
+      for (const note of voice.notes) {
+        const node = this.scheduleNote(note, time, voice.waveType, gainLevel, this._bgCtx);
         if (node) this._bgNodes.push(node);
         time += note.duration;
       }
-
-      const voiceDuration = time - startTime;
-      if (voiceDuration > maxDuration) maxDuration = voiceDuration;
+      if (voice.duration > maxDuration) maxDuration = voice.duration;
     }
 
     this._bgStartTime = Date.now();

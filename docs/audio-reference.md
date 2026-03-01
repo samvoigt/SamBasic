@@ -103,12 +103,47 @@ PLAYPOLY ["T130 O4 L4 E E F G" WAVE SQUARE] ["T130 O3 L2 C G E G" WAVE TRIANGLE]
 Each voice is in `[square brackets]` containing:
 1. A music string (string expression)
 2. Optional `WAVE` keyword with waveform type
+3. Optional `VOLUME` keyword with a multiplier (default 1.0)
 
-After the voice brackets, optional `BACKGROUND YES/NO` and `REPEAT YES/NO`.
+After the voice brackets, optional keyword args:
 
-**Important:** All voices must have the **same total beat count** to stay synchronized. The playback duration equals the longest voice.
+| Parameter | Values | Default | Notes |
+|-----------|--------|---------|-------|
+| `BACKGROUND` | `YES` / `NO` | `NO` | Non-blocking playback |
+| `REPEAT` | `YES` / `NO` | `NO` | Loop the music |
+| `TEMPO` | BPM number | — | Shared tempo for all voices (per-voice `T` in the music string overrides) |
 
-Gain is automatically divided by the number of voices (0.3 / voiceCount) to prevent clipping.
+**Beat-count validation:** All voices must have the **same total duration**. If durations don't match, you'll get an error identifying which voices mismatch and their durations.
+
+**Volume:** `VOLUME` inside a voice bracket scales that voice's gain relative to the default. `VOLUME 1.0` = normal, `VOLUME 0.5` = half volume, `VOLUME 1.5` = louder. Gain is automatically divided by voice count to prevent clipping, and VOLUME scales on top of that.
+
+**Note:** `BACKGROUND` and `REPEAT` go *after* the voice brackets, not inside `[...]`.
+
+### Shared TEMPO
+
+Instead of repeating the tempo in every voice string, use the `TEMPO` keyword:
+
+```
+PLAYPOLY (
+  ["O5 L4 D D D" WAVE SINE]
+  ["O4 L4 G G B" WAVE TRIANGLE]
+  ["O4 L4 D D D" WAVE SQUARE]
+  ["O3 L4 G G G" WAVE SAWTOOTH]
+) TEMPO 72
+```
+
+A per-voice `T` command in the music string overrides the shared TEMPO for that voice.
+
+### Per-voice VOLUME
+
+```
+PLAYPOLY (
+  ["O5 L4 D D D" WAVE SINE VOLUME 1.2]
+  ["O4 L4 G G B" WAVE TRIANGLE VOLUME 0.5]
+  ["O4 L4 D D D" WAVE SQUARE]
+  ["O3 L4 G G G" WAVE SAWTOOTH VOLUME 0.8]
+) TEMPO 72
+```
 
 ### Multi-voice example (4 voices)
 
@@ -148,8 +183,8 @@ STOPPLAY        ' stop and discard background music
 
 ## Tips for Multi-Voice Arrangements
 
-1. **Match beat counts.** Count the total beats in each voice — they must be equal or voices will desync.
-2. **Use the same tempo** in all voices (`T72` in every string).
+1. **Match beat counts.** All voices must have equal total duration — mismatches now produce a clear error showing which voices differ.
+2. **Use shared TEMPO.** `PLAYPOLY [...] [...] TEMPO 72` applies to all voices, no need to repeat `T72` in every string.
 3. **Use rests to pad.** If one voice has fewer notes, add `R` to fill time.
 4. **Octave placement:** Separate voices by octave for clarity (e.g., melody O4, bass O3).
 5. **Waveform contrast:** Use different waveforms so voices are distinguishable.

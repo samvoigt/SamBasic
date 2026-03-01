@@ -390,11 +390,15 @@ PLAY "C D E", BACKGROUND YES              ' Play in background (non-blocking)
 PLAY "C D E", BACKGROUND YES, REPEAT YES  ' Loop in background
 ```
 
-**Polyphonic playback** — play multiple voices simultaneously with `PLAYPOLY`. Each voice is a bracketed group with its own note string and optional `WAVE`:
+**Polyphonic playback** — play multiple voices simultaneously with `PLAYPOLY`. Each voice is a bracketed group with its own note string, optional `WAVE`, and optional `VOLUME` (default 1.0). Use `TEMPO` after the voices to set a shared tempo:
 ```
-PLAYPOLY ["O4 L4 C E G" WAVE SINE] ["O3 L2 C G" WAVE TRIANGLE]
+PLAYPOLY (
+  ["O4 L4 C E G" WAVE SINE VOLUME 1.2]
+  ["O3 L2 C G" WAVE TRIANGLE VOLUME 0.8]
+) TEMPO 120
 PLAYPOLY ["C E G"] ["C G"], BACKGROUND YES, REPEAT YES
 ```
+All voices must have the same total duration or you'll get a helpful error identifying the mismatch.
 
 **Playback control** — control background audio:
 ```
