@@ -389,14 +389,15 @@ html, body {
 
 .monitor-screen {
   position: relative;
-  width: 700px;
-  height: calc(25 * (14px * 1.3) + 24px);
+  width: 640px;
+  height: 480px;
   background: var(--screen-bg);
   border-radius: 8px;
   overflow: hidden;
   font-family: 'Courier New', 'Consolas', monospace;
-  font-size: 14px;
-  line-height: 1.3;
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: -0.1px;
   box-shadow:
     inset 0 0 60px rgba(10, 60, 10, 0.15),
     0 0 8px rgba(50, 255, 50, 0.05);
@@ -426,8 +427,9 @@ html, body {
   height: 100%;
   padding: 12px;
   font-family: 'Courier New', 'Consolas', monospace;
-  font-size: 14px;
-  line-height: 1.3;
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: -0.1px;
   color: #AAAAAA;
   text-shadow:
     0 0 4px rgba(170, 170, 170, 0.4),
