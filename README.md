@@ -538,6 +538,78 @@ DRAWSPRITE SPRITE id#, X 100, Y 50   ' Draw sprite at pixel position
 
 **Reset behavior:** When a program starts (or `CLEARSCREEN` is called), all graphics state is reset — the canvas is hidden, buffering is disabled, and sprites are cleared.
 
+### 3D Wireframe Graphics
+
+SamBasic includes a retained-mode 3D wireframe engine that projects onto the same 640×480 canvas. Coordinates are right-handed Y-up (X right, Y up, Z toward viewer). Perspective projection with fixed 60° FOV.
+
+**Create objects** — returns a numeric ID:
+```
+cube# = OBJECT3D# CUBE, SIZE 2
+sphere# = OBJECT3D# SPHERE, RADIUS 1, SEGMENTS 12
+cone# = OBJECT3D# CONE, RADIUS 1, HEIGHT 2, SEGMENTS 8
+cylinder# = OBJECT3D# CYLINDER, RADIUS 1, HEIGHT 2, SEGMENTS 8
+pyramid# = OBJECT3D# PYRAMID, BASE 2, HEIGHT 3
+plane# = OBJECT3D# PLANE, WIDTH 5, DEPTH 5, DIVISIONS 4
+torus# = OBJECT3D# TORUS, RADIUS 2, TUBE 0.5, SEGMENTS 16, TUBESEGMENTS 8
+line# = OBJECT3D# LINE, X1 0, Y1 0, Z1 0, X2 1, Y2 1, Z2 1
+pt# = OBJECT3D# POINT, SIZE 2
+```
+
+Objects inherit the current `SETCOLOR` at creation time. Shape params are fixed — delete and recreate to change geometry.
+
+**Transform objects** — all values are absolute, not incremental:
+```
+TRANSFORM3D TRANSLATE cube#, 1, 2, 0
+TRANSFORM3D ROTATE cube#, 45, 30, 0            ' degrees, applied X→Y→Z
+TRANSFORM3D SCALE cube#, 1.5                    ' uniform scale
+```
+
+**Object properties:**
+```
+SETCOLOR3D cube#, RED&                          ' change wireframe color
+SHOW3D cube#, NO                                ' hide (skip during RENDER3D)
+HIDDENEDGES3D cube#, YES                        ' back-face culling (solid look)
+```
+
+**Render and cleanup:**
+```
+RENDER3D                                        ' project and draw all visible objects
+DELETE3D cube#                                   ' remove one object
+CLEAR3D                                          ' remove all objects, reset scene
+```
+
+`RENDER3D` does not clear the canvas — use `CLEARBUFFER` before it. Works with double buffering.
+
+**Groups** — compose objects into hierarchies with relative transforms:
+```
+figure# = GROUP3D#
+ATTACH3D figure#, head#                         ' add child to group
+ATTACH3D figure#, body#
+TRANSFORM3D ROTATE figure#, 0, 45, 0            ' rotates entire group
+TRANSFORM3D ROTATE head#, 15, 0, 0              ' head tilts independently
+DETACH3D head#                                   ' remove from group
+```
+
+Groups can be nested (group within group) for articulated models. `DELETE3D` on a group recursively deletes all children. `SHOW3D NO` on a group hides the entire subtree.
+
+**Spinning cube example:**
+```
+SETCOLOR CYAN&
+cube# = OBJECT3D# CUBE, SIZE 2
+angle# = 0
+BUFFERENABLED YES
+WHILE GETKEY$ = ""
+  CLEARBUFFER
+  TRANSFORM3D ROTATE cube#, angle# * 0.3, angle#, 0
+  RENDER3D
+  angle# = angle# + 2
+  SHOWBUFFER
+  SLEEP 0.016
+END WHILE
+```
+
+See `docs/3d-reference.md` for the full reference.
+
 ### Screen
 
 The screen is 80 columns by 25 rows. Printing past line 25 scrolls the screen up.
