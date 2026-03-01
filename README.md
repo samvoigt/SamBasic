@@ -411,6 +411,7 @@ x# = RANDOM# 100                  ' Random int between 0 and 100
 x# = RANDOM# MAX 50               ' Named parameter form
 SLEEP 2                            ' Pause execution for 2 seconds
 SLEEP 0.5                          ' Pause for 500ms (fractional seconds)
+t# = RUNNINGTIME#                  ' Milliseconds since program started
 ```
 
 ### File I/O

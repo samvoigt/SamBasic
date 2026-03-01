@@ -575,7 +575,7 @@ function parse(tokens) {
         ABS: '#', SQRT: '#', ROUND: '#', FLOOR: '#', CEIL: '#',
         MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
         OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?',
-        TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$',
+        TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$', RUNNINGTIME: '#',
       };
       if (TYPED_KW_SUFFIXES[upper]) {
         throw new SyntaxError(`Did you mean '${upper}${TYPED_KW_SUFFIXES[upper]}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -983,6 +983,7 @@ function parse(tokens) {
     TOSTRING: [{ name: 'VALUE', required: true }],
     INDEXOF: [{ name: 'TEXT', required: true }, { name: 'FIND', required: true }],
     TRIM: [{ name: 'TEXT', required: true }],
+    RUNNINGTIME: [],
   };
 
   function parseAssignBuiltinKeyword(varToken, line) {

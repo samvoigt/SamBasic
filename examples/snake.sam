@@ -60,7 +60,7 @@ PRINTAT 13, 40, "O"
 score# = 0
 dx# = 1
 dy# = 0
-speed# = 0.15
+interval# = 150
 alive? = YES
 foodX# = 0
 foodY# = 0
@@ -71,7 +71,6 @@ PRINTAT 20, 27, "Press any key to start..."
 k$ = ""
 WHILE k$ = ""
   k$ = GETKEY$
-  SLEEP 0.05
 END WHILE
 PRINTAT 20, 27, "                          "
 
@@ -79,10 +78,11 @@ PRINTAT 20, 27, "                          "
 placeFood
 
 ' ---- Main Game Loop ----
+lastMove# = RUNNINGTIME#
 WHILE alive?
   k$ = GETKEY$
 
-  ' Update direction (prevent 180-degree reverse)
+  ' Update direction immediately (prevent 180-degree reverse)
   IF k$ = "ArrowRight" OR k$ = "d" OR k$ = "D" THEN
     IF dx# <> -1 THEN
       dx# = 1
@@ -107,6 +107,13 @@ WHILE alive?
       dy# = 1
     END IF
   END IF
+
+  ' Only advance the snake when enough time has passed
+  now# = RUNNINGTIME#
+  IF now# - lastMove# < interval# THEN
+    CONTINUE
+  END IF
+  lastMove# = now#
 
   ' Calculate new head position
   len# = LENGTH# snakeX@
@@ -139,9 +146,9 @@ WHILE alive?
     SETCOLOR LIGHTGRAY&
     PRINTAT 1, 10, "Score: " + scoreStr$
     ' Speed up
-    speed# = speed# - 0.003
-    IF speed# < 0.05 THEN
-      speed# = 0.05
+    interval# = interval# - 3
+    IF interval# < 50 THEN
+      interval# = 50
     END IF
   END IF
 
@@ -167,8 +174,6 @@ WHILE alive?
   IF ate? THEN
     placeFood
   END IF
-
-  SLEEP speed#
 END WHILE
 
 ' ---- Game Over ----

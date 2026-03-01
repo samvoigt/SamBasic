@@ -100,6 +100,7 @@ class Interpreter {
     this.screen.clear();
     this.pc = 0;
     this._stmtCount = 0;
+    this._startTime = performance.now();
 
     try {
       while (this.running && this.pc < this.ast.length) {
@@ -405,6 +406,8 @@ class Interpreter {
         if (mode === 'RIGHT') return text.trimEnd();
         return text.trim();
       }
+      case 'RUNNINGTIME':
+        return Math.floor(performance.now() - this._startTime);
       default:
         throw new Error(`Unknown builtin keyword '${keyword}' at line ${line}`);
     }
