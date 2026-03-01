@@ -179,8 +179,127 @@ END WHILE
 
 ' ---- Game Over ----
 PLAY "T120 O3 L4 E- R8 L2 D-", BACKGROUND YES, WAVE TRIANGLE
+
+' ---- Initialize high score arrays ----
+hiScores@ = SIZE 10
+hiNames@ = SIZE 10
+FOR i# FROM 1 TO 10
+  hiNames@[i#] = "---"
+END FOR
+
+' ---- Load scores from file ----
+IF FILEEXISTS? "snake_scores.txt" THEN
+  f# = OPEN# FILE "snake_scores.txt" MODE READ
+  idx# = 0
+  WHILE NOT (ENDOFFILE? f#)
+    IF idx# = 10 THEN
+      BREAK
+    END IF
+    idx# = idx# + 1
+    scoreLine$ = READFILELINE$ FILE f#
+    hiScores@[idx#] = TONUMBER# scoreLine$
+    IF NOT (ENDOFFILE? f#) THEN
+      hiNames@[idx#] = READFILELINE$ FILE f#
+    END IF
+  END WHILE
+  CLOSE f#
+END IF
+
+' ---- Determine rank ----
+rank# = 0
+FOR i# FROM 1 TO 10
+  IF score# > hiScores@[i#] THEN
+    rank# = i#
+    BREAK
+  END IF
+END FOR
+' Check for empty slot if score didn't beat anyone
+IF rank# = 0 THEN
+  FOR i# FROM 1 TO 10
+    IF hiScores@[i#] = 0 AND hiNames@[i#] = "---" THEN
+      rank# = i#
+      BREAK
+    END IF
+  END FOR
+END IF
+
+' ---- Shift entries down if ranked ----
+IF rank# > 0 THEN
+  i# = 10
+  WHILE i# > rank#
+    prev# = i# - 1
+    hiScores@[i#] = hiScores@[prev#]
+    hiNames@[i#] = hiNames@[prev#]
+    i# = i# - 1
+  END WHILE
+END IF
+
+' ---- Clear play area ----
+blank$ = ""
+FOR j# FROM 1 TO 78
+  blank$ = blank$ + " "
+END FOR
+FOR r# FROM 3 TO 24
+  PRINTAT r#, 2, blank$
+END FOR
+
+' ---- Display Game Over header ----
 SETCOLOR RED&
-PRINTAT 12, 34, "GAME OVER!"
+PRINTAT 4, 35, "GAME OVER!"
 scoreStr$ = TOSTRING$ score#
 SETCOLOR YELLOW&
-PRINTAT 14, 33, "Score: " + scoreStr$
+PRINTAT 5, 35, "Score: " + scoreStr$
+
+' ---- Prompt for initials if ranked ----
+IF rank# > 0 THEN
+  SETCOLOR WHITE&
+  MOVECURSOR 7, 28
+  initials$ = INPUT$ "Enter your initials: "
+
+  IF LENGTH# initials$ > 3 THEN
+    initials$ = SUBSTRING$ initials$, 1, 3
+  END IF
+  initials$ = UPPERCASE$ initials$
+  IF initials$ = "" THEN
+    initials$ = "???"
+  END IF
+
+  hiScores@[rank#] = score#
+  hiNames@[rank#] = initials$
+
+  ' Save scores to file
+  f# = OPEN# FILE "snake_scores.txt" MODE WRITE
+  FOR i# FROM 1 TO 10
+    temp$ = TOSTRING$ hiScores@[i#]
+    WRITEFILELINE FILE f# LINE temp$
+    WRITEFILELINE FILE f# LINE hiNames@[i#]
+  END FOR
+  CLOSE f#
+END IF
+
+' ---- Display high score table ----
+SETCOLOR YELLOW&
+PRINTAT 9, 35, "HIGH SCORES"
+
+FOR i# FROM 1 TO 10
+  row# = 10 + i#
+
+  IF i# = rank# THEN
+    SETCOLOR YELLOW&
+  ELSE
+    SETCOLOR LIGHTGRAY&
+  END IF
+
+  IF i# < 10 THEN
+    rankStr$ = " " + TOSTRING$ i#
+  ELSE
+    rankStr$ = TOSTRING$ i#
+  END IF
+
+  PRINTAT row#, 25, rankStr$ + ".  " + hiNames@[i#]
+
+  scoreStr$ = TOSTRING$ hiScores@[i#]
+  scoreLen# = LENGTH# scoreStr$
+  scoreCol# = 56 - scoreLen#
+  PRINTAT row#, scoreCol#, scoreStr$
+END FOR
