@@ -418,6 +418,11 @@ t# = RUNNINGTIME#                  ' Milliseconds since program started
 
 Files are stored in `localStorage` and persist across sessions.
 
+**Check if a file exists:**
+```
+exists? = FILEEXISTS? "data.txt"           ' YES if file exists, NO if not
+```
+
 **Open a file:**
 ```
 f# = OPEN# FILE "data.txt" MODE READ       ' Open for reading (file must exist)

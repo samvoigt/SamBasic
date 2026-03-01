@@ -22,7 +22,7 @@ const TYPED_KEYWORDS = {
   ABS: '#', SQRT: '#', ROUND: '#', FLOOR: '#', CEIL: '#',
   MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
   OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?',
-  TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$', RUNNINGTIME: '#',
+  TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$', RUNNINGTIME: '#', FILEEXISTS: '?',
 };
 
 

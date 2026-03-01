@@ -408,6 +408,10 @@ class Interpreter {
       }
       case 'RUNNINGTIME':
         return Math.floor(performance.now() - this._startTime);
+      case 'FILEEXISTS': {
+        const fileName = String(await this.evalExpr(params.FILE));
+        return localStorage.getItem('sambasic_file:' + fileName) !== null ? 1 : 0;
+      }
       default:
         throw new Error(`Unknown builtin keyword '${keyword}' at line ${line}`);
     }
