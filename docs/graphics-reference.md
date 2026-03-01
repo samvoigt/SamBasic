@@ -80,7 +80,29 @@ Sprites are small images created from 2D arrays of color data.
 
 ### Creating a Sprite
 
-Build a 2D array where each cell is either `0` (transparent) or a struct with `.r#`, `.g#`, `.b#` members (0-255):
+Build a 2D array where each cell is one of:
+
+- `0` — transparent pixel
+- A **palette index** (integer 1-256) — looked up in the VGA palette (see [color-reference.md](color-reference.md))
+- A **color struct** with `.r#`, `.g#`, `.b#` members (0-255)
+
+You can mix palette indices and color structs in the same sprite.
+
+#### Using palette indices (recommended)
+
+```
+' A small 4x4 sprite using palette indices
+' 5 = red, 15 = yellow, 16 = white, 0 = transparent
+data@ = ([0,  5,  5,  0]
+         [5, 15, 15,  5]
+         [5, 15, 15,  5]
+         [0,  5,  5,  0])
+id# = CREATESPRITE# data@
+```
+
+Palette indices are 1-based: `1` = black, `2` = blue, ..., `16` = white, `17`-`256` = extended colors. See [color-reference.md](color-reference.md) for the full palette table.
+
+#### Using color structs
 
 ```
 rows@ = SIZE 4
@@ -96,8 +118,6 @@ id# = CREATESPRITE# rows@
 ```
 
 `CREATESPRITE#` returns a numeric sprite ID. Each sprite is rasterized once to an internal canvas.
-
-**Note:** Sprite color structs use short keys `.r#`, `.g#`, `.b#` — not `.r#`, `.g#`, `.b#` (which are used by `SETCOLOR`). This is a quirk of the implementation.
 
 ### Drawing a Sprite
 

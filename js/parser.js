@@ -735,6 +735,8 @@ function parse(tokens) {
 
   function parsePlayPoly() {
     const t = advance(); // PLAYPOLY
+    let wrappedInParens = false;
+    if (peek().type === 'LPAREN') { advance(); wrappedInParens = true; }
     const voices = [];
     while (peek().type === 'LBRACKET') {
       advance(); // [
@@ -751,6 +753,7 @@ function parse(tokens) {
     if (voices.length === 0) {
       throw new SyntaxError(`PLAYPOLY requires at least one [voice] at line ${t.line}`);
     }
+    if (wrappedInParens) expect('RPAREN');
     // Parse optional trailing args for BACKGROUND and REPEAT
     let backgroundExpr = null;
     let repeatExpr = null;
@@ -1193,6 +1196,12 @@ function parse(tokens) {
       }
 
       // Array literal: [1,2,3] or [1,2,3][4,5,6]
+      // Also supports paren-wrapped multi-line: ([1,2,3]\n[4,5,6])
+      let wrappedInParens = false;
+      if (peek().type === 'LPAREN' && tokens[pos + 1] && tokens[pos + 1].type === 'LBRACKET') {
+        advance(); // consume (
+        wrappedInParens = true;
+      }
       if (peek().type === 'LBRACKET') {
         const dimensions = [];
         while (peek().type === 'LBRACKET') {
@@ -1205,6 +1214,7 @@ function parse(tokens) {
           expect('RBRACKET');
           dimensions.push(items);
         }
+        if (wrappedInParens) expect('RPAREN');
         if (dimensions.length === 1) {
           return { type: 'assign_arr_literal', name: varToken.value, items: dimensions[0], line };
         } else {

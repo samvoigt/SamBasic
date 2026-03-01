@@ -113,10 +113,19 @@ Gain is automatically divided by the number of voices (0.3 / voiceCount) to prev
 ### Multi-voice example (4 voices)
 
 ```
-PLAYPOLY ["T72 O5 L4 D D D" WAVE SINE] ["T72 O4 L4 G G B" WAVE TRIANGLE] ["T72 O4 L4 D D D" WAVE SQUARE] ["T72 O3 L4 G G G" WAVE SAWTOOTH]
+PLAYPOLY (
+  ["T72 O5 L4 D D D" WAVE SINE]
+  ["T72 O4 L4 G G B" WAVE TRIANGLE]
+  ["T72 O4 L4 D D D" WAVE SQUARE]
+  ["T72 O3 L4 G G G" WAVE SAWTOOTH]
+)
 ```
 
-Each PLAYPOLY must be on a **single line** (SamBasic is one-statement-per-line).
+Wrapping in `()` allows voices to span multiple lines. Single-line syntax still works:
+
+```
+PLAYPOLY ["T72 O5 L4 D D D" WAVE SINE] ["T72 O4 L4 G G B" WAVE TRIANGLE]
+```
 
 ## Playback Control
 

@@ -176,8 +176,13 @@ PLAY "T140 O3 L4 C E G >C <G E C R", BACKGROUND YES, WAVE TRIANGLE
 ## Multi-Voice Music
 
 ```
-PLAYPOLY ["T130 O4 L4 E E F G G F E D" WAVE SQUARE] ["T130 O3 L2 C G E G" WAVE TRIANGLE]
+PLAYPOLY (
+  ["T130 O4 L4 E E F G G F E D" WAVE SQUARE]
+  ["T130 O3 L2 C G E G" WAVE TRIANGLE]
+)
 ```
+
+Single-line also works: `PLAYPOLY ["..." WAVE SQUARE] ["..." WAVE TRIANGLE]`
 
 Voices must have equal total beat counts to stay in sync.
 
@@ -240,26 +245,31 @@ END WHILE
 
 ## Creating and Drawing a Sprite
 
+Using palette indices (see [color-reference.md](color-reference.md)):
+
 ```
 BUFFERENABLED YES
 
-' Build a 6x6 sprite
-data@ = SIZE 6
-FOR r# FROM 1 TO 6
-  row@ = SIZE 6
-  FOR c# FROM 1 TO 6
-    IF (r# + c#) % 2 = 0 THEN
-      row@[c#] = {.r# = 255, .g# = 255, .b# = 0}
-    ELSE
-      row@[c#] = {.r# = 255, .g# = 0, .b# = 0}
-    END IF
-  END FOR
-  data@[r#] = row@
-END FOR
+' Build a 6x6 checkerboard sprite
+' 15 = yellow, 5 = red, 0 = transparent
+data@ = ([15,  5, 15,  5, 15,  5]
+         [ 5, 15,  5, 15,  5, 15]
+         [15,  5, 15,  5, 15,  5]
+         [ 5, 15,  5, 15,  5, 15]
+         [15,  5, 15,  5, 15,  5]
+         [ 5, 15,  5, 15,  5, 15])
 
 id# = CREATESPRITE# data@
 DRAWSPRITE SPRITE id#, X 100, Y 100
 SHOWBUFFER
+```
+
+Color structs also work — you can mix both in the same sprite:
+
+```
+data@ = ([{.r# = 255, .g# = 0, .b# = 0}, 15]
+         [15, {.r# = 0, .g# = 255, .b# = 0}])
+id# = CREATESPRITE# data@
 ```
 
 ## Bouncing Ball

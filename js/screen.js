@@ -1,5 +1,30 @@
 const DEFAULT_COLOR = '#AAAAAA';
 
+// xterm-256 palette: 16 CGA colors + 6x6x6 color cube + 24-step grayscale
+const VGA_PALETTE = (() => {
+  const p = [];
+  // 0-15: CGA colors (matching SamBasic's built-in color constants)
+  const cga = [
+    [0,0,0], [0,0,170], [0,170,0], [0,170,170],
+    [170,0,0], [170,0,170], [170,85,0], [170,170,170],
+    [85,85,85], [85,85,255], [85,255,85], [85,255,255],
+    [255,85,85], [255,85,255], [255,255,85], [255,255,255],
+  ];
+  for (const c of cga) p.push(c);
+  // 16-231: 6x6x6 color cube
+  const levels = [0, 51, 102, 153, 204, 255];
+  for (let r = 0; r < 6; r++)
+    for (let g = 0; g < 6; g++)
+      for (let b = 0; b < 6; b++)
+        p.push([levels[r], levels[g], levels[b]]);
+  // 232-255: 24-step grayscale ramp (8 to 238 in steps of 10)
+  for (let i = 0; i < 24; i++) {
+    const v = 8 + i * 10;
+    p.push([v, v, v]);
+  }
+  return p;
+})();
+
 const COLS = 80;
 const ROWS = 25;
 
@@ -337,7 +362,17 @@ class Screen {
       for (let c = 0; c < row.length; c++) {
         const cell = row[c];
         if (cell === 0 || cell === null || cell === undefined) continue;
-        // cell should be a color struct with r#, g#, b# keys
+        // Numeric palette index (1-256): look up VGA_PALETTE
+        if (typeof cell === 'number') {
+          const idx = Math.round(cell) - 1;
+          if (idx >= 0 && idx < VGA_PALETTE.length) {
+            const [pr, pg, pb] = VGA_PALETTE[idx];
+            ctx.fillStyle = `rgb(${pr},${pg},${pb})`;
+            ctx.fillRect(c, r, 1, 1);
+          }
+          continue;
+        }
+        // Color struct with r#, g#, b# keys
         if (typeof cell === 'object' && cell !== null) {
           const red = cell['r#'] !== undefined ? cell['r#'] : (cell['R#'] !== undefined ? cell['R#'] : 0);
           const green = cell['g#'] !== undefined ? cell['g#'] : (cell['G#'] !== undefined ? cell['G#'] : 0);

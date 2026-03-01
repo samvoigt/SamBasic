@@ -94,10 +94,48 @@ CLEARBUFFER COLOR RED&              ' clear to red
 
 ## Sprite Colors
 
-Sprites use the same `.r#`, `.g#`, `.b#` struct format. Use `0` for transparent pixels:
+Sprites accept either color structs or **palette indices** (integers 1-256). Use `0` for transparent pixels.
+
+### Color struct method
 
 ```
 pixel& = {.r# = 255, .g# = 0, .b# = 128}
+```
+
+### Palette index method (recommended for sprites)
+
+Palette indices are 1-based and follow the xterm-256 color palette:
+
+| Index | Color | RGB |
+|-------|-------|-----|
+| 1 | Black | 0, 0, 0 |
+| 2 | Blue | 0, 0, 170 |
+| 3 | Green | 0, 170, 0 |
+| 4 | Cyan | 0, 170, 170 |
+| 5 | Red | 170, 0, 0 |
+| 6 | Magenta | 170, 0, 170 |
+| 7 | Brown | 170, 85, 0 |
+| 8 | Light Gray | 170, 170, 170 |
+| 9 | Dark Gray | 85, 85, 85 |
+| 10 | Light Blue | 85, 85, 255 |
+| 11 | Light Green | 85, 255, 85 |
+| 12 | Light Cyan | 85, 255, 255 |
+| 13 | Light Red | 255, 85, 85 |
+| 14 | Light Magenta | 255, 85, 255 |
+| 15 | Yellow | 255, 255, 85 |
+| 16 | White | 255, 255, 255 |
+| 17-232 | 6x6x6 color cube | R/G/B levels: 0, 51, 102, 153, 204, 255 |
+| 233-256 | Grayscale ramp | 24 shades from near-black (8) to near-white (238) |
+
+Indices 1-16 match the built-in CGA color constants (`BLACK&` through `WHITE&`).
+
+```
+' A sprite using palette indices
+sprite@ = ([0,  5,  5,  0]
+           [5, 15, 15,  5]
+           [5, 15, 15,  5]
+           [0,  5,  5,  0])
+id# = CREATESPRITE# sprite@
 ```
 
 See [graphics-reference.md](graphics-reference.md) for full sprite details.

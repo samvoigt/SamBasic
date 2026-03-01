@@ -108,9 +108,31 @@ grid@ = SIZE 10, 5      ' 2D array: 10 rows x 5 cols
 ' 2D access
 grid@[3][2] = 42
 
-' Multi-dimensional literal
+' Multi-dimensional literal (single line)
 matrix@ = [1, 2, 3][4, 5, 6][7, 8, 9]
+
+' Multi-dimensional literal (multi-line with parens)
+matrix@ = ([1, 2, 3]
+           [4, 5, 6]
+           [7, 8, 9])
 ```
+
+### Multi-line Syntax
+
+Wrapping code in `()` suppresses newlines, allowing array literals and `PLAYPOLY` voices to span multiple lines. This only works for array literal assignments and `PLAYPOLY` — the opening `(` must come immediately before `[`.
+
+```
+grid@ = ([1, 0, 1]
+         [0, 1, 0]
+         [1, 0, 1])
+
+PLAYPOLY (
+  ["T72 O5 L4 D D D" WAVE SINE]
+  ["T72 O4 L4 G G B" WAVE TRIANGLE]
+)
+```
+
+Single-line syntax continues to work unchanged.
 
 **Array operations:**
 
