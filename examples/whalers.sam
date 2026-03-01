@@ -1,303 +1,282 @@
-  ' === Hartford Whalers Logo ===
+' Converted from: Hartford_Whalers_1992.svg
 
-  logo# = GROUP3D#
+SETCOLOR LIGHTGRAY&
+p1# = PATH3D#
+  0.01, 3.66, 0
+  -0.07, 3.71, 0
+  -0.14, 3.76, 0
+  -0.22, 3.8, 0
+  -0.3, 3.84, 0
+  -0.37, 3.88, 0
+  -0.46, 3.91, 0
+  -0.54, 3.93, 0
+  -0.63, 3.95, 0
+  -0.72, 3.96, 0
+  -0.81, 3.97, 0
+  -3.28, 3.97, 0
+  -3.32, 3.97, 0
+  -3.36, 3.98, 0
+  -3.39, 3.99, 0
+  -3.42, 4.01, 0
+  -3.44, 4.03, 0
+  -3.46, 4.06, 0
+  -3.47, 4.09, 0
+  -3.48, 4.12, 0
+  -3.49, 4.16, 0
+  -3.49, 4.2, 0
+  -3.49, 4.73, 0
+  -3.73, 4.66, 0
+  -3.96, 4.56, 0
+  -4.18, 4.45, 0
+  -4.37, 4.32, 0
+  -4.55, 4.17, 0
+  -4.7, 4.01, 0
+  -4.83, 3.83, 0
+  -4.92, 3.63, 0
+  -4.98, 3.42, 0
+  -5.0, 3.19, 0
+  -5.0, -1.88, 0
+  -4.96, -2.27, 0
+  -4.85, -2.67, 0
+  -4.67, -3.06, 0
+  -4.42, -3.44, 0
+  -4.12, -3.78, 0
+  -3.76, -4.1, 0
+  -3.35, -4.36, 0
+  -2.9, -4.56, 0
+  -2.4, -4.69, 0
+  -1.87, -4.73, 0
+  -1.68, -4.73, 0
+  -1.48, -4.7, 0
+  -1.28, -4.67, 0
+  -1.09, -4.62, 0
+  -0.9, -4.56, 0
+  -0.71, -4.5, 0
+  -0.52, -4.42, 0
+  -0.34, -4.35, 0
+  -0.17, -4.27, 0
+  -0.0, -4.19, 0
+  0.18, -4.28, 0
+  0.37, -4.37, 0
+  0.55, -4.45, 0
+  0.74, -4.52, 0
+  0.92, -4.58, 0
+  1.11, -4.63, 0
+  1.3, -4.68, 0
+  1.48, -4.71, 0
+  1.68, -4.73, 0
+  1.87, -4.73, 0
+  2.4, -4.69, 0
+  2.9, -4.56, 0
+  3.35, -4.36, 0
+  3.76, -4.1, 0
+  4.12, -3.78, 0
+  4.42, -3.44, 0
+  4.67, -3.06, 0
+  4.85, -2.67, 0
+  4.96, -2.27, 0
+  5.0, -1.88, 0
+  5.0, 3.19, 0
+  4.98, 3.42, 0
+  4.92, 3.63, 0
+  4.83, 3.83, 0
+  4.7, 4.01, 0
+  4.55, 4.17, 0
+  4.38, 4.32, 0
+  4.18, 4.45, 0
+  3.96, 4.56, 0
+  3.73, 4.66, 0
+  3.49, 4.73, 0
+  3.49, 4.2, 0
+  3.49, 4.16, 0
+  3.48, 4.12, 0
+  3.47, 4.09, 0
+  3.46, 4.06, 0
+  3.44, 4.03, 0
+  3.42, 4.01, 0
+  3.39, 3.99, 0
+  3.36, 3.98, 0
+  3.32, 3.97, 0
+  3.28, 3.97, 0
+  0.81, 3.97, 0
+  0.72, 3.96, 0
+  0.63, 3.95, 0
+  0.54, 3.93, 0
+  0.46, 3.91, 0
+  0.37, 3.88, 0
+  0.29, 3.84, 0
+  0.22, 3.8, 0
+  0.14, 3.76, 0
+  0.07, 3.71, 0
+  -0.01, 3.66, 0
+END PATH3D
 
-  ' Gray outline
-  SETCOLOR DARKGRAY&
-  l# = OBJECT3D# LINE, X1 0.03, Y1 3.78, Z1 0, X2 -0.16, Y2 3.9, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.16, Y1 3.9, Z1 0, X2 -0.36, Y2 4.0, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.36, Y1 4.0, Z1 0, X2 -0.58, Y2 4.07, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.58, Y1 4.07, Z1 0, X2 -0.82, Y2 4.09, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.82, Y1 4.09, Z1 0, X2 -3.36, Y2 4.09, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.36, Y1 4.09, Z1 0, X2 -3.49, Y2 4.12, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.49, Y1 4.12, Z1 0, X2 -3.56, Y2 4.21, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.56, Y1 4.21, Z1 0, X2 -3.58, Y2 4.34, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.58, Y1 4.34, Z1 0, X2 -3.58, Y2 4.89, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.58, Y1 4.89, Z1 0, X2 -4.07, Y2 4.71, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.07, Y1 4.71, Z1 0, X2 -4.49, Y2 4.46, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.49, Y1 4.46, Z1 0, X2 -4.83, Y2 4.13, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.83, Y1 4.13, Z1 0, X2 -5.06, Y2 3.74, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -5.06, Y1 3.74, Z1 0, X2 -5.14, Y2 3.29, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -5.14, Y1 3.29, Z1 0, X2 -5.14, Y2 -1.95, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -5.14, Y1 -1.95, Z1 0, X2 -5.03, Y2 -2.62, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -5.03, Y1 -2.62, Z1 0, X2 -4.72, Y2 -3.29, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.72, Y1 -3.29, Z1 0, X2 -4.23, Y2 -3.91, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.23, Y1 -3.91, Z1 0, X2 -3.58, Y2 -4.42, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.58, Y1 -4.42, Z1 0, X2 -2.8, Y2 -4.77, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -2.8, Y1 -4.77, Z1 0, X2 -1.91, Y2 -4.89, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -1.91, Y1 -4.89, Z1 0, X2 -1.4, Y2 -4.84, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -1.4, Y1 -4.84, Z1 0, X2 -0.9, Y2 -4.71, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.9, Y1 -4.71, Z1 0, X2 -0.42, Y2 -4.53, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.42, Y1 -4.53, Z1 0, X2 0.02, Y2 -4.34, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.02, Y1 -4.34, Z1 0, X2 0.5, Y2 -4.56, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.5, Y1 -4.56, Z1 0, X2 0.98, Y2 -4.73, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.98, Y1 -4.73, Z1 0, X2 1.46, Y2 -4.85, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 1.46, Y1 -4.85, Z1 0, X2 1.96, Y2 -4.89, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 1.96, Y1 -4.89, Z1 0, X2 2.85, Y2 -4.77, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 2.85, Y1 -4.77, Z1 0, X2 3.63, Y2 -4.42, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.63, Y1 -4.42, Z1 0, X2 4.28, Y2 -3.91, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.28, Y1 -3.91, Z1 0, X2 4.77, Y2 -3.29, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.77, Y1 -3.29, Z1 0, X2 5.08, Y2 -2.62, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 5.08, Y1 -2.62, Z1 0, X2 5.19, Y2 -1.95, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 5.19, Y1 -1.95, Z1 0, X2 5.19, Y2 3.29, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 5.19, Y1 3.29, Z1 0, X2 5.11, Y2 3.74, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 5.11, Y1 3.74, Z1 0, X2 4.88, Y2 4.13, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.88, Y1 4.13, Z1 0, X2 4.54, Y2 4.46, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.54, Y1 4.46, Z1 0, X2 4.11, Y2 4.71, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.11, Y1 4.71, Z1 0, X2 3.63, Y2 4.89, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.63, Y1 4.89, Z1 0, X2 3.63, Y2 4.34, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.63, Y1 4.34, Z1 0, X2 3.61, Y2 4.21, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.61, Y1 4.21, Z1 0, X2 3.54, Y2 4.12, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.54, Y1 4.12, Z1 0, X2 3.41, Y2 4.09, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.41, Y1 4.09, Z1 0, X2 0.86, Y2 4.09, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.86, Y1 4.09, Z1 0, X2 0.63, Y2 4.07, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.63, Y1 4.07, Z1 0, X2 0.41, Y2 4.0, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.41, Y1 4.0, Z1 0, X2 0.21, Y2 3.9, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.21, Y1 3.9, Z1 0, X2 0.01, Y2 3.78, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.01, Y1 3.78, Z1 0, X2 0.03, Y2 3.78, Z2 0
-  ATTACH3D logo#, l#
+SETCOLOR BLUE&
+p2# = PATH3D#
+  -3.97, 3.85, 0
+  -4.04, 3.84, 0
+  -4.11, 3.81, 0
+  -4.18, 3.77, 0
+  -4.25, 3.71, 0
+  -4.3, 3.65, 0
+  -4.35, 3.58, 0
+  -4.39, 3.51, 0
+  -4.42, 3.43, 0
+  -4.44, 3.36, 0
+  -4.45, 3.28, 0
+  -4.35, 2.81, 0
+  -4.09, 2.47, 0
+  -3.69, 2.22, 0
+  -3.22, 2.04, 0
+  -2.7, 1.9, 0
+  -2.18, 1.75, 0
+  -1.7, 1.57, 0
+  -1.31, 1.32, 0
+  -1.04, 0.97, 0
+  -0.94, 0.48, 0
+  -0.01, 0.48, 0
+  0.02, 0.48, 0
+  0.95, 0.48, 0
+  1.05, 0.97, 0
+  1.31, 1.32, 0
+  1.71, 1.57, 0
+  2.18, 1.75, 0
+  2.7, 1.9, 0
+  3.22, 2.04, 0
+  3.7, 2.22, 0
+  4.09, 2.47, 0
+  4.36, 2.81, 0
+  4.46, 3.28, 0
+  4.45, 3.36, 0
+  4.43, 3.43, 0
+  4.4, 3.51, 0
+  4.36, 3.58, 0
+  4.31, 3.65, 0
+  4.25, 3.71, 0
+  4.19, 3.77, 0
+  4.12, 3.81, 0
+  4.05, 3.84, 0
+  3.97, 3.85, 0
+  3.97, 3.81, 0
+  3.96, 3.76, 0
+  3.95, 3.71, 0
+  3.93, 3.66, 0
+  3.9, 3.62, 0
+  3.87, 3.57, 0
+  3.82, 3.54, 0
+  3.77, 3.51, 0
+  3.72, 3.49, 0
+  3.65, 3.48, 0
+  1.04, 3.48, 0
+  0.87, 3.47, 0
+  0.72, 3.43, 0
+  0.57, 3.36, 0
+  0.43, 3.29, 0
+  0.31, 3.21, 0
+  0.21, 3.13, 0
+  0.13, 3.05, 0
+  0.06, 2.99, 0
+  0.02, 2.95, 0
+  0.01, 2.93, 0
+  -0.01, 2.95, 0
+  -0.05, 2.99, 0
+  -0.11, 3.05, 0
+  -0.2, 3.13, 0
+  -0.3, 3.21, 0
+  -0.42, 3.29, 0
+  -0.56, 3.36, 0
+  -0.71, 3.43, 0
+  -0.87, 3.47, 0
+  -1.04, 3.48, 0
+  -3.64, 3.48, 0
+  -3.71, 3.49, 0
+  -3.77, 3.51, 0
+  -3.82, 3.54, 0
+  -3.86, 3.57, 0
+  -3.89, 3.62, 0
+  -3.92, 3.66, 0
+  -3.94, 3.71, 0
+  -3.96, 3.76, 0
+  -3.96, 3.81, 0
+  -3.97, 3.85, 0
+  -3.97, 3.85, 0
+END PATH3D
 
-  ' Blue whale tail
-  SETCOLOR BLUE&
-  l# = OBJECT3D# LINE, X1 -4.07, Y1 3.97, Z1 0, X2 -4.26, Y2 3.91, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.26, Y1 3.91, Z1 0, X2 -4.42, Y2 3.77, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.42, Y1 3.77, Z1 0, X2 -4.53, Y2 3.58, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.53, Y1 3.58, Z1 0, X2 -4.57, Y2 3.39, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.57, Y1 3.39, Z1 0, X2 -4.42, Y2 2.8, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.42, Y1 2.8, Z1 0, X2 -4.01, Y2 2.41, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.01, Y1 2.41, Z1 0, X2 -3.43, Y2 2.15, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.43, Y1 2.15, Z1 0, X2 -2.76, Y2 1.96, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -2.76, Y1 1.96, Z1 0, X2 -2.1, Y2 1.76, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -2.1, Y1 1.76, Z1 0, X2 -1.52, Y2 1.5, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -1.52, Y1 1.5, Z1 0, X2 -1.11, Y2 1.1, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -1.11, Y1 1.1, Z1 0, X2 -0.95, Y2 0.49, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.95, Y1 0.49, Z1 0, X2 0.01, Y2 0.49, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.01, Y1 0.49, Z1 0, X2 0.04, Y2 0.49, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.04, Y1 0.49, Z1 0, X2 1.0, Y2 0.49, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 1.0, Y1 0.49, Z1 0, X2 1.16, Y2 1.1, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 1.16, Y1 1.1, Z1 0, X2 1.57, Y2 1.5, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 1.57, Y1 1.5, Z1 0, X2 2.15, Y2 1.76, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 2.15, Y1 1.76, Z1 0, X2 2.82, Y2 1.96, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 2.82, Y1 1.96, Z1 0, X2 3.48, Y2 2.15, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.48, Y1 2.15, Z1 0, X2 4.06, Y2 2.41, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.06, Y1 2.41, Z1 0, X2 4.47, Y2 2.8, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.47, Y1 2.8, Z1 0, X2 4.63, Y2 3.39, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.63, Y1 3.39, Z1 0, X2 4.59, Y2 3.58, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.59, Y1 3.58, Z1 0, X2 4.47, Y2 3.77, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.47, Y1 3.77, Z1 0, X2 4.32, Y2 3.91, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.32, Y1 3.91, Z1 0, X2 4.13, Y2 3.97, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.13, Y1 3.97, Z1 0, X2 4.09, Y2 3.81, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.09, Y1 3.81, Z1 0, X2 3.99, Y2 3.66, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.99, Y1 3.66, Z1 0, X2 3.79, Y2 3.59, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.79, Y1 3.59, Z1 0, X2 1.1, Y2 3.59, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 1.1, Y1 3.59, Z1 0, X2 0.76, Y2 3.53, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.76, Y1 3.53, Z1 0, X2 0.47, Y2 3.39, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.47, Y1 3.39, Z1 0, X2 0.24, Y2 3.23, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.24, Y1 3.23, Z1 0, X2 0.09, Y2 3.08, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.09, Y1 3.08, Z1 0, X2 0.03, Y2 3.03, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.03, Y1 3.03, Z1 0, X2 -0.03, Y2 3.08, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.03, Y1 3.08, Z1 0, X2 -0.18, Y2 3.23, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.18, Y1 3.23, Z1 0, X2 -0.41, Y2 3.39, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.41, Y1 3.39, Z1 0, X2 -0.71, Y2 3.53, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.71, Y1 3.53, Z1 0, X2 -1.05, Y2 3.59, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -1.05, Y1 3.59, Z1 0, X2 -3.74, Y2 3.59, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.74, Y1 3.59, Z1 0, X2 -3.93, Y2 3.66, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.93, Y1 3.66, Z1 0, X2 -4.04, Y2 3.81, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.04, Y1 3.81, Z1 0, X2 -4.07, Y2 3.97, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.07, Y1 3.97, Z1 0, X2 -4.07, Y2 3.97, Z2 0
-  ATTACH3D logo#, l#
+SETCOLOR GREEN&
+p3# = PATH3D#
+  -4.49, 1.8, 0
+  -4.49, -1.7, 0
+  -4.46, -2.08, 0
+  -4.35, -2.46, 0
+  -4.19, -2.82, 0
+  -3.97, -3.15, 0
+  -3.7, -3.44, 0
+  -3.39, -3.7, 0
+  -3.04, -3.91, 0
+  -2.67, -4.07, 0
+  -2.28, -4.17, 0
+  -1.87, -4.21, 0
+  -1.62, -4.19, 0
+  -1.38, -4.16, 0
+  -1.15, -4.1, 0
+  -0.93, -4.04, 0
+  -0.73, -3.96, 0
+  -0.55, -3.87, 0
+  -0.39, -3.78, 0
+  -0.25, -3.7, 0
+  -0.14, -3.62, 0
+  -0.07, -3.55, 0
+  0.0, -3.48, 0
+  0.07, -3.55, 0
+  0.15, -3.62, 0
+  0.26, -3.7, 0
+  0.39, -3.78, 0
+  0.55, -3.87, 0
+  0.74, -3.96, 0
+  0.94, -4.04, 0
+  1.16, -4.1, 0
+  1.39, -4.16, 0
+  1.63, -4.19, 0
+  1.88, -4.21, 0
+  2.28, -4.17, 0
+  2.68, -4.07, 0
+  3.05, -3.91, 0
+  3.39, -3.7, 0
+  3.7, -3.44, 0
+  3.97, -3.15, 0
+  4.19, -2.82, 0
+  4.36, -2.46, 0
+  4.46, -2.08, 0
+  4.5, -1.7, 0
+  4.5, 1.8, 0
+  4.45, 1.68, 0
+  4.32, 1.58, 0
+  4.13, 1.49, 0
+  3.9, 1.41, 0
+  3.66, 1.32, 0
+  3.42, 1.23, 0
+  3.2, 1.12, 0
+  3.02, 0.99, 0
+  2.89, 0.84, 0
+  2.85, 0.65, 0
+  2.85, -2.42, 0
+  0.97, -2.42, 0
+  0.97, -0.28, 0
+  0.63, -0.28, 0
+  -0.63, -0.28, 0
+  -0.96, -0.28, 0
+  -0.96, -2.42, 0
+  -2.84, -2.42, 0
+  -2.84, 0.65, 0
+  -2.89, 0.84, 0
+  -3.01, 0.99, 0
+  -3.19, 1.12, 0
+  -3.42, 1.23, 0
+  -3.66, 1.32, 0
+  -3.9, 1.41, 0
+  -4.12, 1.49, 0
+  -4.31, 1.58, 0
+  -4.44, 1.68, 0
+  -4.49, 1.8, 0
+END PATH3D
 
-  ' Green W
-  SETCOLOR GREEN&
-  l# = OBJECT3D# LINE, X1 -4.62, Y1 1.85, Z1 0, X2 -4.62, Y2 -1.76, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.62, Y1 -1.76, Z1 0, X2 -4.52, Y2 -2.42, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.52, Y1 -2.42, Z1 0, X2 -4.23, Y2 -3.03, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.23, Y1 -3.03, Z1 0, X2 -3.79, Y2 -3.56, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.79, Y1 -3.56, Z1 0, X2 -3.24, Y2 -3.98, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.24, Y1 -3.98, Z1 0, X2 -2.6, Y2 -4.25, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -2.6, Y1 -4.25, Z1 0, X2 -1.91, Y2 -4.35, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -1.91, Y1 -4.35, Z1 0, X2 -1.28, Y2 -4.27, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -1.28, Y1 -4.27, Z1 0, X2 -0.73, Y2 -4.09, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.73, Y1 -4.09, Z1 0, X2 -0.3, Y2 -3.87, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.3, Y1 -3.87, Z1 0, X2 -0.05, Y2 -3.67, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.05, Y1 -3.67, Z1 0, X2 0.03, Y2 -3.6, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.03, Y1 -3.6, Z1 0, X2 0.1, Y2 -3.67, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.1, Y1 -3.67, Z1 0, X2 0.36, Y2 -3.87, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.36, Y1 -3.87, Z1 0, X2 0.79, Y2 -4.09, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.79, Y1 -4.09, Z1 0, X2 1.34, Y2 -4.27, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 1.34, Y1 -4.27, Z1 0, X2 1.96, Y2 -4.35, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 1.96, Y1 -4.35, Z1 0, X2 2.65, Y2 -4.25, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 2.65, Y1 -4.25, Z1 0, X2 3.29, Y2 -3.98, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.29, Y1 -3.98, Z1 0, X2 3.85, Y2 -3.56, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.85, Y1 -3.56, Z1 0, X2 4.28, Y2 -3.03, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.28, Y1 -3.03, Z1 0, X2 4.57, Y2 -2.42, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.57, Y1 -2.42, Z1 0, X2 4.67, Y2 -1.76, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.67, Y1 -1.76, Z1 0, X2 4.67, Y2 1.85, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.67, Y1 1.85, Z1 0, X2 4.48, Y2 1.63, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.48, Y1 1.63, Z1 0, X2 4.06, Y2 1.45, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 4.06, Y1 1.45, Z1 0, X2 3.56, Y2 1.27, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.56, Y1 1.27, Z1 0, X2 3.14, Y2 1.02, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 3.14, Y1 1.02, Z1 0, X2 2.96, Y2 0.67, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 2.96, Y1 0.67, Z1 0, X2 2.96, Y2 -2.5, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 2.96, Y1 -2.5, Z1 0, X2 1.02, Y2 -2.5, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 1.02, Y1 -2.5, Z1 0, X2 1.02, Y2 -0.29, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 1.02, Y1 -0.29, Z1 0, X2 0.68, Y2 -0.29, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 0.68, Y1 -0.29, Z1 0, X2 -0.63, Y2 -0.29, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.63, Y1 -0.29, Z1 0, X2 -0.97, Y2 -0.29, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.97, Y1 -0.29, Z1 0, X2 -0.97, Y2 -2.5, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -0.97, Y1 -2.5, Z1 0, X2 -2.91, Y2 -2.5, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -2.91, Y1 -2.5, Z1 0, X2 -2.91, Y2 0.67, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -2.91, Y1 0.67, Z1 0, X2 -3.09, Y2 1.02, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.09, Y1 1.02, Z1 0, X2 -3.5, Y2 1.27, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -3.5, Y1 1.27, Z1 0, X2 -4.0, Y2 1.45, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.0, Y1 1.45, Z1 0, X2 -4.43, Y2 1.63, Z2 0
-  ATTACH3D logo#, l#
-  l# = OBJECT3D# LINE, X1 -4.43, Y1 1.63, Z1 0, X2 -4.62, Y2 1.85, Z2 0
-  ATTACH3D logo#, l#
-
-  ' Animate rotation
-  angle# = 0
-  BUFFERENABLED YES
-  WHILE GETKEY$ = ""
-    CLEARBUFFER
-    TRANSFORM3D ROTATE logo#, 0, angle#, 0
-    angle# = angle# + 2
-    SHOWBUFFER
-    SLEEP 0.016
-  END WHILE
