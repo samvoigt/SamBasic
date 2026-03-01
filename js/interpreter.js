@@ -270,6 +270,13 @@ class Interpreter {
       }
       case 'builtin_call':
         return await this.evalBuiltinKeyword(node.keyword, node.params, node.mode, node.line);
+      case 'struct_literal': {
+        const obj = {};
+        for (const m of node.members) {
+          obj[m.name + m.suffix] = await this.evalExpr(m.value);
+        }
+        return obj;
+      }
       default:
         throw new Error(`Unknown expression type: ${node.type}`);
     }
@@ -411,6 +418,11 @@ class Interpreter {
       case 'FILEEXISTS': {
         const fileName = String(await this.evalExpr(params.FILE));
         return localStorage.getItem('sambasic_file:' + fileName) !== null ? 1 : 0;
+      }
+      case 'CREATESPRITE': {
+        const data = await this.evalExpr(params.DATA);
+        if (!Array.isArray(data)) throw new Error(`CREATESPRITE: DATA must be a 2D array at line ${line}`);
+        return this.screen.createSprite(data);
       }
       default:
         throw new Error(`Unknown builtin keyword '${keyword}' at line ${line}`);
@@ -672,6 +684,61 @@ class Interpreter {
       }
       case 'stopplay': {
         if (this.audio) this.audio.stopBackground();
+        break;
+      }
+      case 'bufferenabled': {
+        const val = await this.evalExpr(stmt.value);
+        this.screen.setBufferEnabled(!!val);
+        break;
+      }
+      case 'showbuffer': {
+        this.screen.showBuffer();
+        break;
+      }
+      case 'clearbuffer': {
+        let colorHex = null;
+        if (stmt.color) {
+          colorHex = this._colorStructToHex(await this.evalExpr(stmt.color), stmt.line);
+        }
+        this.screen.clearBuffer(colorHex);
+        break;
+      }
+      case 'drawpixel': {
+        const x = Math.floor(await this.evalExpr(stmt.x));
+        const y = Math.floor(await this.evalExpr(stmt.y));
+        this.screen.drawPixel(x, y);
+        break;
+      }
+      case 'drawline': {
+        const x1 = Math.floor(await this.evalExpr(stmt.x1));
+        const y1 = Math.floor(await this.evalExpr(stmt.y1));
+        const x2 = Math.floor(await this.evalExpr(stmt.x2));
+        const y2 = Math.floor(await this.evalExpr(stmt.y2));
+        this.screen.drawLine(x1, y1, x2, y2);
+        break;
+      }
+      case 'drawbox': {
+        const x1 = Math.floor(await this.evalExpr(stmt.x1));
+        const y1 = Math.floor(await this.evalExpr(stmt.y1));
+        const x2 = Math.floor(await this.evalExpr(stmt.x2));
+        const y2 = Math.floor(await this.evalExpr(stmt.y2));
+        const fill = stmt.fill ? !!(await this.evalExpr(stmt.fill)) : false;
+        this.screen.drawBox(x1, y1, x2, y2, fill);
+        break;
+      }
+      case 'drawcircle': {
+        const x = Math.floor(await this.evalExpr(stmt.x));
+        const y = Math.floor(await this.evalExpr(stmt.y));
+        const r = Math.floor(await this.evalExpr(stmt.radius));
+        const fill = stmt.fill ? !!(await this.evalExpr(stmt.fill)) : false;
+        this.screen.drawCircle(x, y, r, fill);
+        break;
+      }
+      case 'drawsprite': {
+        const spriteId = Math.floor(await this.evalExpr(stmt.sprite));
+        const x = Math.floor(await this.evalExpr(stmt.x));
+        const y = Math.floor(await this.evalExpr(stmt.y));
+        this.screen.drawSprite(spriteId, x, y);
         break;
       }
       case 'assign_num': {

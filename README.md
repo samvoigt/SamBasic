@@ -470,6 +470,70 @@ CLOSE out#
 ' This is a comment
 ```
 
+### Graphics
+
+SamBasic includes a pixel-level graphics canvas (640×480) that sits behind the text display. The canvas is automatically created the first time you use a draw command or enable buffering.
+
+**Drawing primitives** use 0-based pixel coordinates (0,0 = top-left) and the current `SETCOLOR`:
+```
+SETCOLOR RED&
+DRAWPIXEL 100, 200                    ' Single pixel
+DRAWLINE 0, 0, 639, 479              ' Line between two points
+DRAWBOX 10, 10, 100, 80, YES         ' Filled rectangle (FILL YES/NO)
+DRAWBOX 10, 10, 100, 80              ' Outline only (FILL defaults to NO)
+DRAWCIRCLE 320, 240, 50, YES         ' Filled circle (X, Y, RADIUS, FILL)
+DRAWCIRCLE 320, 240, 50              ' Outline only
+```
+
+All draw commands support named parameters:
+```
+DRAWLINE X1 0, Y1 0, X2 100, Y2 100
+DRAWCIRCLE X 320, Y 240, RADIUS 50, FILL YES
+```
+
+**Double buffering** eliminates flicker for animation. When enabled, all drawing and text commands write to an invisible back buffer. Nothing appears on screen until you call `SHOWBUFFER`:
+```
+BUFFERENABLED YES                     ' Turn on buffering
+CLEARBUFFER                           ' Clear the back buffer (default: black)
+CLEARBUFFER RED&                      ' Clear to a specific color
+
+SETCOLOR WHITE&
+DRAWBOX 10, 10, 100, 100, YES        ' Draws to back buffer (invisible)
+PRINTAT 1, 1, "Hello"                ' Text also buffered
+
+SHOWBUFFER                            ' Copy back buffer to screen (now visible)
+BUFFERENABLED NO                      ' Return to immediate drawing mode
+```
+
+**Typical animation loop:**
+```
+BUFFERENABLED YES
+WHILE GETKEY$ = ""
+  CLEARBUFFER
+  ' draw your frame here
+  SHOWBUFFER
+  SLEEP 0.016
+END WHILE
+```
+
+**Sprites** are created from 2D arrays of color structs. A value of `0` is transparent:
+```
+' Create a 4x4 sprite
+rows@ = SIZE 4
+FOR r# FROM 1 TO 4
+  row@ = SIZE 4
+  FOR c# FROM 1 TO 4
+    row@[c#] = {.red# = 255, .green# = 0, .blue# = 0}
+  END FOR
+  rows@[r#] = row@
+END FOR
+id# = CREATESPRITE# rows@
+
+DRAWSPRITE SPRITE id#, X 100, Y 50   ' Draw sprite at pixel position
+```
+
+**Reset behavior:** When a program starts (or `CLEARSCREEN` is called), all graphics state is reset — the canvas is hidden, buffering is disabled, and sprites are cleared.
+
 ### Screen
 
 The screen is 80 columns by 25 rows. Printing past line 25 scrolls the screen up.

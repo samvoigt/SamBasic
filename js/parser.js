@@ -247,6 +247,26 @@ function parse(tokens) {
       return expr;
     }
 
+    // Struct literal as expression: {.red# = 255, .green# = 0, .blue# = 128}
+    if (t.type === 'LBRACE') {
+      advance();
+      const members = [];
+      if (peek().type !== 'RBRACE') {
+        do {
+          expect('DOT');
+          const memToken = advance();
+          const suffixMap = { 'NUM_VAR': '#', 'STR_VAR': '$', 'ARR_VAR': '@', 'STRUCT_VAR': '&', 'BOOL_VAR': '?' };
+          const suffix = suffixMap[memToken.type];
+          if (!suffix) throw new SyntaxError(`Expected typed member after '.' at line ${t.line}`);
+          expect('COMPARE', '=');
+          const value = parseExpr();
+          members.push({ name: memToken.value, suffix, value });
+        } while (match('COMMA'));
+      }
+      expect('RBRACE');
+      return { type: 'struct_literal', members, line: t.line };
+    }
+
     throw new SyntaxError(`Unexpected token ${t.type} '${t.value}' at line ${t.line}`);
   }
 
@@ -489,6 +509,81 @@ function parse(tokens) {
       }
       return { type: 'global_decl', vars, line: t.line };
     }
+    // --- Graphics / Buffer commands ---
+    if (t.type === 'KEYWORD' && t.value === 'SHOWBUFFER') {
+      advance();
+      return { type: 'showbuffer', line: t.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'BUFFERENABLED') {
+      const bt = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'VALUE', required: true },
+      ], bt.line);
+      return { type: 'bufferenabled', value: resolved.VALUE, line: bt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'CLEARBUFFER') {
+      const ct = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'COLOR', required: false },
+      ], ct.line);
+      return { type: 'clearbuffer', color: resolved.COLOR || null, line: ct.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'DRAWPIXEL') {
+      const dt = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'X', required: true },
+        { name: 'Y', required: true },
+      ], dt.line);
+      return { type: 'drawpixel', x: resolved.X, y: resolved.Y, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'DRAWLINE') {
+      const dt = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'X1', required: true },
+        { name: 'Y1', required: true },
+        { name: 'X2', required: true },
+        { name: 'Y2', required: true },
+      ], dt.line);
+      return { type: 'drawline', x1: resolved.X1, y1: resolved.Y1, x2: resolved.X2, y2: resolved.Y2, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'DRAWBOX') {
+      const dt = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'X1', required: true },
+        { name: 'Y1', required: true },
+        { name: 'X2', required: true },
+        { name: 'Y2', required: true },
+        { name: 'FILL', required: false },
+      ], dt.line);
+      return { type: 'drawbox', x1: resolved.X1, y1: resolved.Y1, x2: resolved.X2, y2: resolved.Y2, fill: resolved.FILL || null, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'DRAWCIRCLE') {
+      const dt = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'X', required: true },
+        { name: 'Y', required: true },
+        { name: 'RADIUS', required: true },
+        { name: 'FILL', required: false },
+      ], dt.line);
+      return { type: 'drawcircle', x: resolved.X, y: resolved.Y, radius: resolved.RADIUS, fill: resolved.FILL || null, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'DRAWSPRITE') {
+      const dt = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'SPRITE', required: true },
+        { name: 'X', required: true },
+        { name: 'Y', required: true },
+      ], dt.line);
+      return { type: 'drawsprite', sprite: resolved.SPRITE, x: resolved.X, y: resolved.Y, line: dt.line };
+    }
+
     // APPEND items@ expr
     if (t.type === 'KEYWORD' && t.value === 'APPEND') {
       advance();
@@ -565,6 +660,8 @@ function parse(tokens) {
         'CLOSE', 'WRITEFILELINE', 'WRITEFILECHARACTER',
         'READ', 'WRITE', 'APPEND',
         'SORT', 'INSERT', 'REMOVE',
+        'BUFFERENABLED', 'SHOWBUFFER', 'CLEARBUFFER',
+        'DRAWPIXEL', 'DRAWLINE', 'DRAWBOX', 'DRAWCIRCLE', 'DRAWSPRITE',
       ]);
       if (KEYWORDS.has(upper)) {
         throw new SyntaxError(`Did you mean '${upper}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -576,6 +673,7 @@ function parse(tokens) {
         MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
         OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?',
         TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$', RUNNINGTIME: '#', FILEEXISTS: '?',
+        CREATESPRITE: '#',
       };
       if (TYPED_KW_SUFFIXES[upper]) {
         throw new SyntaxError(`Did you mean '${upper}${TYPED_KW_SUFFIXES[upper]}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -985,6 +1083,7 @@ function parse(tokens) {
     TRIM: [{ name: 'TEXT', required: true }],
     RUNNINGTIME: [],
     FILEEXISTS: [{ name: 'FILE', required: true }],
+    CREATESPRITE: [{ name: 'DATA', required: true }],
   };
 
   function parseAssignBuiltinKeyword(varToken, line) {

@@ -14,6 +14,8 @@ const KEYWORDS = new Set([
   'SLEEP', 'SIZE',
   'READ', 'WRITE', 'APPEND',
   'SORT', 'INSERT', 'REMOVE',
+  'BUFFERENABLED', 'SHOWBUFFER', 'CLEARBUFFER',
+  'DRAWPIXEL', 'DRAWLINE', 'DRAWBOX', 'DRAWCIRCLE', 'DRAWSPRITE',
 ]);
 
 const TYPED_KEYWORDS = {
@@ -23,6 +25,7 @@ const TYPED_KEYWORDS = {
   MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
   OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?',
   TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$', RUNNINGTIME: '#', FILEEXISTS: '?',
+  CREATESPRITE: '#',
 };
 
 
