@@ -268,13 +268,34 @@ html, body {
   white-space: pre;
 }
 
+.code-highlight {
+  position: absolute;
+  top: 0;
+  left: 48px;
+  right: 0;
+  bottom: 0;
+  padding: 12px;
+  margin: 0;
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #CDD6F4;
+  background: transparent;
+  border: none;
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
 #code-editor {
   flex: 1;
   padding: 12px;
   font-family: 'Courier New', 'Consolas', monospace;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--editor-text);
+  color: transparent;
+  caret-color: #CDD6F4;
   background: transparent;
   border: none;
   outline: none;
@@ -283,7 +304,18 @@ html, body {
   white-space: pre;
   overflow-wrap: normal;
   overflow-x: auto;
+  position: relative;
+  z-index: 2;
 }
+
+.hl-keyword { color: #B4BEFE; }
+.hl-typedkw { color: #CBA6F7; }
+.hl-string { color: #A6E3A1; }
+.hl-number { color: #FAB387; }
+.hl-comment { color: #6C7086; font-style: italic; }
+.hl-operator { color: #94E2D5; }
+.hl-variable { color: #F2CDCD; }
+.hl-punct { color: #9399B2; }
 
 #code-editor::placeholder {
   color: #585B70;

@@ -190,3 +190,117 @@ function tokenize(source) {
   merged.push({ type: 'EOF', value: null, line: lines.length, col: 0 });
   return merged;
 }
+
+function tokenizeForHighlight(source) {
+  const tokens = [];
+  const lines = source.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+
+  for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+    const line = lines[lineNum];
+    let i = 0;
+
+    try {
+      while (i < line.length) {
+        if (line[i] === ' ' || line[i] === '\t') {
+          i++;
+          continue;
+        }
+
+        // comment — emit as token instead of skipping
+        if (line[i] === "'") {
+          tokens.push({ type: 'COMMENT', value: line.slice(i), line: lineNum + 1, col: i, end: line.length });
+          i = line.length;
+          break;
+        }
+
+        const startCol = i;
+
+        // string literal
+        if (line[i] === '"') {
+          i++;
+          while (i < line.length && line[i] !== '"') {
+            if (line[i] === '\\' && i + 1 < line.length) { i += 2; continue; }
+            i++;
+          }
+          if (i < line.length) i++; // closing quote
+          tokens.push({ type: 'STRING_LIT', value: line.slice(startCol, i), line: lineNum + 1, col: startCol, end: i });
+          continue;
+        }
+
+        // number literal
+        if (/\d/.test(line[i]) || (line[i] === '.' && i + 1 < line.length && /\d/.test(line[i + 1]))) {
+          while (i < line.length && /[\d.]/.test(line[i])) i++;
+          tokens.push({ type: 'NUMBER_LIT', value: line.slice(startCol, i), line: lineNum + 1, col: startCol, end: i });
+          continue;
+        }
+
+        // comparison operators
+        if (line[i] === '<') {
+          if (line[i + 1] === '>' || line[i + 1] === '=') { i += 2; } else { i++; }
+          tokens.push({ type: 'COMPARE', value: line.slice(startCol, i), line: lineNum + 1, col: startCol, end: i });
+          continue;
+        }
+        if (line[i] === '>') {
+          if (line[i + 1] === '=') { i += 2; } else { i++; }
+          tokens.push({ type: 'COMPARE', value: line.slice(startCol, i), line: lineNum + 1, col: startCol, end: i });
+          continue;
+        }
+
+        // single-char tokens
+        if (line[i] === '(') { tokens.push({ type: 'LPAREN', value: '(', line: lineNum + 1, col: startCol, end: i + 1 }); i++; continue; }
+        if (line[i] === ')') { tokens.push({ type: 'RPAREN', value: ')', line: lineNum + 1, col: startCol, end: i + 1 }); i++; continue; }
+        if (line[i] === '[') { tokens.push({ type: 'LBRACKET', value: '[', line: lineNum + 1, col: startCol, end: i + 1 }); i++; continue; }
+        if (line[i] === ']') { tokens.push({ type: 'RBRACKET', value: ']', line: lineNum + 1, col: startCol, end: i + 1 }); i++; continue; }
+        if (line[i] === ',') { tokens.push({ type: 'COMMA', value: ',', line: lineNum + 1, col: startCol, end: i + 1 }); i++; continue; }
+        if (line[i] === '=') { tokens.push({ type: 'COMPARE', value: '=', line: lineNum + 1, col: startCol, end: i + 1 }); i++; continue; }
+        if (line[i] === '{') { tokens.push({ type: 'LBRACE', value: '{', line: lineNum + 1, col: startCol, end: i + 1 }); i++; continue; }
+        if (line[i] === '}') { tokens.push({ type: 'RBRACE', value: '}', line: lineNum + 1, col: startCol, end: i + 1 }); i++; continue; }
+        if (line[i] === '.') { tokens.push({ type: 'DOT', value: '.', line: lineNum + 1, col: startCol, end: i + 1 }); i++; continue; }
+
+        // operators
+        if ('+-*/^%'.includes(line[i])) {
+          tokens.push({ type: 'OP', value: line[i], line: lineNum + 1, col: startCol, end: i + 1 });
+          i++;
+          continue;
+        }
+
+        // identifiers, keywords, variables
+        if (/[a-zA-Z_]/.test(line[i])) {
+          while (i < line.length && /[a-zA-Z0-9_]/.test(line[i])) i++;
+          // Check for variable suffix
+          if (i < line.length && '#$@&?'.includes(line[i])) {
+            const suffix = line[i];
+            i++;
+            const word = line.slice(startCol, i - 1);
+            const upper = word.toUpperCase();
+            if (TYPED_KEYWORDS[upper] !== undefined) {
+              tokens.push({ type: 'TYPED_KW', value: line.slice(startCol, i), line: lineNum + 1, col: startCol, end: i });
+            } else {
+              const typeMap = { '#': 'NUM_VAR', '$': 'STR_VAR', '@': 'ARR_VAR', '&': 'STRUCT_VAR', '?': 'BOOL_VAR' };
+              tokens.push({ type: typeMap[suffix], value: line.slice(startCol, i), line: lineNum + 1, col: startCol, end: i });
+            }
+            continue;
+          }
+          const word = line.slice(startCol, i);
+          const upper = word.toUpperCase();
+          if (KEYWORDS.has(upper)) {
+            tokens.push({ type: 'KEYWORD', value: word, line: lineNum + 1, col: startCol, end: i });
+          } else {
+            tokens.push({ type: 'IDENT', value: word, line: lineNum + 1, col: startCol, end: i });
+          }
+          continue;
+        }
+
+        // unknown char — skip it
+        i++;
+      }
+    } catch (_) {
+      // On error, emit remainder of line as plain text
+      if (i < line.length) {
+        tokens.push({ type: 'TEXT', value: line.slice(i), line: lineNum + 1, col: i, end: line.length });
+      }
+    }
+  }
+
+  return tokens;
+}

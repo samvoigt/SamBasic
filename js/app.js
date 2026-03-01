@@ -23,11 +23,13 @@ let selectedFile = null;
 let powerPausedInterpreter = false;
 let currentRunId = 0;
 
+const codeHighlight = document.getElementById('code-highlight');
+
 // Initialize
 const crtScreen = new Screen(screenOutput);
 const audio = new SamAudio();
 const interpreter = new Interpreter(crtScreen, audio);
-setupEditor(codeEditor, lineNumbers);
+setupEditor(codeEditor, lineNumbers, codeHighlight);
 
 // Button state management
 function setRunning(isRunning) {
