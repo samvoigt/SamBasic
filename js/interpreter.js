@@ -438,6 +438,9 @@ class Interpreter {
         if (!Array.isArray(data)) throw new Error(`CREATESPRITE: DATA must be a 2D array at line ${line}`);
         return this.screen.createSprite(data);
       }
+      case 'GROUP3D': {
+        return this._ensureScene3D().createGroup();
+      }
       default:
         throw new Error(`Unknown builtin keyword '${keyword}' at line ${line}`);
     }
@@ -845,6 +848,19 @@ class Interpreter {
       }
       case 'clear3d': {
         this.scene3d = null;
+        break;
+      }
+      case 'attach3d': {
+        const scene = this._ensureScene3D();
+        const parentId = Math.floor(await this.evalExpr(stmt.parent));
+        const childId = Math.floor(await this.evalExpr(stmt.child));
+        scene.attach(parentId, childId);
+        break;
+      }
+      case 'detach3d': {
+        const scene = this._ensureScene3D();
+        const childId = Math.floor(await this.evalExpr(stmt.child));
+        scene.detach(childId);
         break;
       }
       case 'assign_num': {

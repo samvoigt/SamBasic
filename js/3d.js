@@ -28,6 +28,7 @@ class Scene3D {
     const id = this.nextId++;
     const mesh = Scene3D.generateMesh(shapeType, params);
     this.objects[id] = {
+      id,
       mesh,
       shapeType,
       color: color || '#00ff00',
@@ -36,12 +37,81 @@ class Scene3D {
       scale: 1,
       visible: true,
       hiddenEdges: false,
+      parent: null,
+      children: [],
     };
     return id;
   }
 
+  createGroup() {
+    const id = this.nextId++;
+    this.objects[id] = {
+      id,
+      mesh: null,
+      shapeType: 'GROUP',
+      color: null,
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      scale: 1,
+      visible: true,
+      hiddenEdges: false,
+      parent: null,
+      children: [],
+    };
+    return id;
+  }
+
+  attach(parentId, childId) {
+    const parent = this.getObject(parentId);
+    const child = this.getObject(childId);
+    if (parent.shapeType !== 'GROUP') {
+      throw new Error(`ATTACH3D: object ${parentId} is not a group`);
+    }
+    // Prevent cycles: walk up from parent to make sure child isn't an ancestor
+    let node = parent;
+    while (node.parent !== null) {
+      if (node.parent === childId) {
+        throw new Error(`ATTACH3D: cannot attach object ${childId} to ${parentId} — would create a cycle`);
+      }
+      node = this.objects[node.parent];
+    }
+    // Detach from previous parent if any
+    if (child.parent !== null) {
+      const oldParent = this.objects[child.parent];
+      if (oldParent) {
+        oldParent.children = oldParent.children.filter(cid => cid !== childId);
+      }
+    }
+    child.parent = parentId;
+    if (!parent.children.includes(childId)) {
+      parent.children.push(childId);
+    }
+  }
+
+  detach(childId) {
+    const child = this.getObject(childId);
+    if (child.parent === null) return;
+    const parent = this.objects[child.parent];
+    if (parent) {
+      parent.children = parent.children.filter(cid => cid !== childId);
+    }
+    child.parent = null;
+  }
+
   deleteObject(id) {
-    if (!this.objects[id]) throw new Error(`DELETE3D: object ${id} not found`);
+    const obj = this.objects[id];
+    if (!obj) throw new Error(`DELETE3D: object ${id} not found`);
+    // Recursively delete children
+    for (const childId of [...obj.children]) {
+      this.deleteObject(childId);
+    }
+    // Detach from parent
+    if (obj.parent !== null) {
+      const parent = this.objects[obj.parent];
+      if (parent) {
+        parent.children = parent.children.filter(cid => cid !== id);
+      }
+    }
     delete this.objects[id];
   }
 
@@ -61,29 +131,26 @@ class Scene3D {
     const hw = this.width / 2;
     const hh = this.height / 2;
 
-    // Collect objects with their distance from camera for depth sorting
-    const sorted = [];
+    // Collect renderable primitives by walking the scene graph depth-first
+    const renderList = [];
+    const identity = Scene3D.mat4Identity();
+
+    // Only start from root objects (no parent)
     for (const id in this.objects) {
       const obj = this.objects[id];
-      if (!obj.visible) continue;
-      const model = Scene3D.buildModelMatrix(obj.position, obj.rotation, obj.scale);
-      const mvp = Scene3D.mat4Mul(vp, model);
-      // Distance from eye to object center (transformed)
-      const center = Scene3D.mat4MulVec(model, [0, 0, 0, 1]);
-      const dx = center[0] - this.eye[0];
-      const dy = center[1] - this.eye[1];
-      const dz = center[2] - this.eye[2];
-      const dist = dx * dx + dy * dy + dz * dz;
-      sorted.push({ obj, mvp, model, dist, view });
+      if (obj.parent === null) {
+        this._collectRenderables(obj, identity, view, vp, hw, hh, renderList);
+      }
     }
-    // Back-to-front
-    sorted.sort((a, b) => b.dist - a.dist);
 
-    for (const { obj, mvp, model } of sorted) {
+    // Depth sort back-to-front
+    renderList.sort((a, b) => b.dist - a.dist);
+
+    // Draw
+    for (const { obj, mvp, model } of renderList) {
       const mesh = obj.mesh;
 
       if (obj.shapeType === 'POINT') {
-        // Project the single vertex and draw a cross
         const v = mesh.vertices[0];
         const p = this._projectVertex(mvp, v, hw, hh);
         if (p) {
@@ -94,25 +161,17 @@ class Scene3D {
         continue;
       }
 
-      // Project all vertices
       const projected = mesh.vertices.map(v => this._projectVertex(mvp, v, hw, hh));
 
       if (obj.hiddenEdges && mesh.faces) {
-        // Back-face culling: only draw edges belonging to at least one front-facing face
         const visibleEdges = new Set();
         const modelView = Scene3D.mat4Mul(view, model);
         for (const face of mesh.faces) {
-          // Transform face vertices to view space to determine facing
           const vs = face.map(i => Scene3D.mat4MulVec(modelView, [...mesh.vertices[i], 1]));
-          // Compute face normal via cross product of two edges
           const e1 = [vs[1][0] - vs[0][0], vs[1][1] - vs[0][1], vs[1][2] - vs[0][2]];
           const e2 = [vs[2][0] - vs[0][0], vs[2][1] - vs[0][1], vs[2][2] - vs[0][2]];
-          const nx = e1[1] * e2[2] - e1[2] * e2[1];
-          const ny = e1[2] * e2[0] - e1[0] * e2[2];
           const nz = e1[0] * e2[1] - e1[1] * e2[0];
-          // In view space, camera looks down -Z, so face is front-facing if normal.z > 0
           if (nz > 0) {
-            // Mark all edges of this face as visible
             for (let j = 0; j < face.length; j++) {
               const a = face[j];
               const b = face[(j + 1) % face.length];
@@ -120,7 +179,6 @@ class Scene3D {
             }
           }
         }
-        // Draw only visible edges
         for (const [a, b] of mesh.edges) {
           const key = a < b ? `${a}_${b}` : `${b}_${a}`;
           if (!visibleEdges.has(key)) continue;
@@ -129,13 +187,36 @@ class Scene3D {
           if (pa && pb) drawLine(pa[0], pa[1], pb[0], pb[1], obj.color);
         }
       } else {
-        // Draw all edges
         for (const [a, b] of mesh.edges) {
           const pa = projected[a];
           const pb = projected[b];
           if (pa && pb) drawLine(pa[0], pa[1], pb[0], pb[1], obj.color);
         }
       }
+    }
+  }
+
+  _collectRenderables(obj, parentModel, view, vp, hw, hh, renderList) {
+    if (!obj.visible) return;
+
+    const localModel = Scene3D.buildModelMatrix(obj.position, obj.rotation, obj.scale);
+    const worldModel = Scene3D.mat4Mul(parentModel, localModel);
+
+    // If this is a primitive (has mesh), add to render list
+    if (obj.mesh) {
+      const mvp = Scene3D.mat4Mul(vp, worldModel);
+      const center = Scene3D.mat4MulVec(worldModel, [0, 0, 0, 1]);
+      const dx = center[0] - this.eye[0];
+      const dy = center[1] - this.eye[1];
+      const dz = center[2] - this.eye[2];
+      const dist = dx * dx + dy * dy + dz * dz;
+      renderList.push({ obj, mvp, model: worldModel, dist });
+    }
+
+    // Recurse into children
+    for (const childId of obj.children) {
+      const child = this.objects[childId];
+      if (child) this._collectRenderables(child, worldModel, view, vp, hw, hh, renderList);
     }
   }
 

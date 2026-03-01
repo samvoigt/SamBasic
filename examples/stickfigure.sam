@@ -1,0 +1,86 @@
+' =============================================
+'   3D Stick Figure Demo
+'   GROUP3D hierarchy with animation
+' =============================================
+
+CLEARSCREEN
+SETCOLOR YELLOW&
+PRINT "  Stick Figure Demo"
+SETCOLOR LIGHTGRAY&
+PRINT "  Press any key to exit"
+PRINT ""
+
+' Build the figure hierarchy
+figure# = GROUP3D#
+
+' Body
+SETCOLOR CYAN&
+body# = OBJECT3D# LINE, X1 0, Y1 0, Z1 0, X2 0, Y2 2, Z2 0
+ATTACH3D figure#, body#
+
+' Head
+head# = OBJECT3D# SPHERE, RADIUS 0.4, SEGMENTS 8
+TRANSFORM3D TRANSLATE head#, 0, 2.4, 0
+ATTACH3D figure#, head#
+
+' Left arm group (shoulder at top of body)
+leftArmGroup# = GROUP3D#
+TRANSFORM3D TRANSLATE leftArmGroup#, 0, 2, 0
+ATTACH3D figure#, leftArmGroup#
+
+leftArm# = OBJECT3D# LINE, X1 0, Y1 0, Z1 0, X2 -1, Y2 -1, Z2 0
+ATTACH3D leftArmGroup#, leftArm#
+
+' Right arm group (shoulder at top of body)
+rightArmGroup# = GROUP3D#
+TRANSFORM3D TRANSLATE rightArmGroup#, 0, 2, 0
+ATTACH3D figure#, rightArmGroup#
+
+rightArm# = OBJECT3D# LINE, X1 0, Y1 0, Z1 0, X2 1, Y2 -1, Z2 0
+ATTACH3D rightArmGroup#, rightArm#
+
+' Left leg group (hip at bottom of body)
+leftLegGroup# = GROUP3D#
+ATTACH3D figure#, leftLegGroup#
+
+leftLeg# = OBJECT3D# LINE, X1 0, Y1 0, Z1 0, X2 -0.5, Y2 -1.5, Z2 0
+ATTACH3D leftLegGroup#, leftLeg#
+
+' Right leg group (hip at bottom of body)
+rightLegGroup# = GROUP3D#
+ATTACH3D figure#, rightLegGroup#
+
+rightLeg# = OBJECT3D# LINE, X1 0, Y1 0, Z1 0, X2 0.5, Y2 -1.5, Z2 0
+ATTACH3D rightLegGroup#, rightLeg#
+
+' Ground reference line
+SETCOLOR DARKGRAY&
+OBJECT3D# LINE, X1 -4, Y1 -1.5, Z1 0, X2 4, Y2 -1.5, Z2 0
+
+' Animate: rotate figure, swing arms and legs
+angle# = 0
+BUFFERENABLED YES
+WHILE GETKEY$ = ""
+  CLEARBUFFER
+
+  ' Slowly rotate the whole figure
+  TRANSFORM3D ROTATE figure#, 0, angle# * 0.5, 0
+
+  ' Swing arms back and forth
+  swing# = (SIN# angle# * 0.05) * 30
+  TRANSFORM3D ROTATE leftArmGroup#, swing#, 0, 0
+  TRANSFORM3D ROTATE rightArmGroup#, 0 - swing#, 0, 0
+
+  ' Swing legs opposite to arms
+  TRANSFORM3D ROTATE leftLegGroup#, 0 - swing# * 0.7, 0, 0
+  TRANSFORM3D ROTATE rightLegGroup#, swing# * 0.7, 0, 0
+
+  RENDER3D
+
+  angle# = angle# + 2
+  SHOWBUFFER
+  SLEEP 0.016
+END WHILE
+
+SETCOLOR GREEN&
+PRINT "Done!"

@@ -649,6 +649,20 @@ function parse(tokens) {
       return { type: 'clear3d', line: dt.line };
     }
 
+    if (t.type === 'KEYWORD' && t.value === 'ATTACH3D') {
+      const dt = advance();
+      const parentExpr = parseExpr();
+      expect('COMMA');
+      const childExpr = parseExpr();
+      return { type: 'attach3d', parent: parentExpr, child: childExpr, line: dt.line };
+    }
+
+    if (t.type === 'KEYWORD' && t.value === 'DETACH3D') {
+      const dt = advance();
+      const childExpr = parseExpr();
+      return { type: 'detach3d', child: childExpr, line: dt.line };
+    }
+
     // OBJECT3D# as a statement (discard return value, e.g., for grid lines)
     if (t.type === 'KEYWORD' && t.value === 'OBJECT3D') {
       const dt = advance();
@@ -1185,6 +1199,7 @@ function parse(tokens) {
     RUNNINGTIME: [],
     FILEEXISTS: [{ name: 'FILE', required: true }],
     CREATESPRITE: [{ name: 'DATA', required: true }],
+    GROUP3D: [],
   };
 
   function parseAssignBuiltinKeyword(varToken, line) {
