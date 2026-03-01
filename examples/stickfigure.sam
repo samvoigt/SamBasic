@@ -75,8 +75,6 @@ WHILE GETKEY$ = ""
   TRANSFORM3D ROTATE leftLegGroup#, 0 - swing# * 0.7, 0, 0
   TRANSFORM3D ROTATE rightLegGroup#, swing# * 0.7, 0, 0
 
-  RENDER3D
-
   angle# = angle# + 2
   SHOWBUFFER
   SLEEP 0.016

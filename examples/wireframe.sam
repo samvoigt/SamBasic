@@ -49,8 +49,6 @@ WHILE GETKEY$ = ""
   TRANSFORM3D ROTATE pyramid#, 0, angle# * 0.7, 0
   TRANSFORM3D TRANSLATE pyramid#, 3, 0, 0
 
-  RENDER3D
-
   angle# = angle# + 2
   SHOWBUFFER
   SLEEP 0.016

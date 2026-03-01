@@ -573,12 +573,12 @@ HIDDENEDGES3D cube#, YES                        ' back-face culling (solid look)
 
 **Render and cleanup:**
 ```
-RENDER3D                                        ' project and draw all visible objects
+RENDER3D                                        ' manually project and draw all visible objects
 DELETE3D cube#                                   ' remove one object
 CLEAR3D                                          ' remove all objects, reset scene
 ```
 
-`RENDER3D` does not clear the canvas — use `CLEARBUFFER` before it. Works with double buffering.
+`SHOWBUFFER` automatically renders the 3D scene before flipping, so most programs don't need an explicit `RENDER3D`. Use `RENDER3D` when drawing without double buffering or when layering 2D on top of 3D before flipping.
 
 **Groups** — compose objects into hierarchies with relative transforms:
 ```
@@ -592,6 +592,24 @@ DETACH3D head#                                   ' remove from group
 
 Groups can be nested (group within group) for articulated models. `DELETE3D` on a group recursively deletes all children. `SHOW3D NO` on a group hides the entire subtree.
 
+**Paths** — create connected line segments through a series of 3D points:
+```
+' Block form — literal coordinates only
+trail# = PATH3D#
+  -2, 0, -2
+  -1, 1, -1
+  0, 2, 0
+  1, 3, 1
+  2, 4, 2
+END PATH3D
+
+' Array form — supports variables and computed points
+pts@ = [[0, 0, 0], [1, 2, 1], [3, 0, -1]]
+trail# = OBJECT3D# PATH, POINTS pts@
+```
+
+`PATH3D#` requires at least 2 points and only accepts literal numbers (no variables). Use `OBJECT3D# PATH` when building paths dynamically.
+
 **Spinning cube example:**
 ```
 SETCOLOR CYAN&
@@ -601,7 +619,6 @@ BUFFERENABLED YES
 WHILE GETKEY$ = ""
   CLEARBUFFER
   TRANSFORM3D ROTATE cube#, angle# * 0.3, angle#, 0
-  RENDER3D
   angle# = angle# + 2
   SHOWBUFFER
   SLEEP 0.016

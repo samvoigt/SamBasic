@@ -83,6 +83,27 @@ class Interpreter {
     return this.scene3d;
   }
 
+  _renderScene3D() {
+    if (!this.scene3d) return;
+    this.screen._ensureGraphics();
+    this.scene3d.render(
+      (x1, y1, x2, y2, color) => {
+        const ctx = this.screen._activeCtx;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x1 + 0.5, y1 + 0.5);
+        ctx.lineTo(x2 + 0.5, y2 + 0.5);
+        ctx.stroke();
+      },
+      (x, y, color) => {
+        const ctx = this.screen._activeCtx;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    );
+  }
+
   async _evalObject3DParams(params, line) {
     const result = {};
     for (const key in params) {
@@ -736,6 +757,7 @@ class Interpreter {
         break;
       }
       case 'showbuffer': {
+        this._renderScene3D();
         this.screen.showBuffer();
         break;
       }
@@ -859,24 +881,8 @@ class Interpreter {
         break;
       }
       case 'render3d': {
-        const scene = this._ensureScene3D();
-        this.screen._ensureGraphics();
-        scene.render(
-          (x1, y1, x2, y2, color) => {
-            const ctx = this.screen._activeCtx;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(x1 + 0.5, y1 + 0.5);
-            ctx.lineTo(x2 + 0.5, y2 + 0.5);
-            ctx.stroke();
-          },
-          (x, y, color) => {
-            const ctx = this.screen._activeCtx;
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, 1, 1);
-          }
-        );
+        this._ensureScene3D();
+        this._renderScene3D();
         break;
       }
       case 'delete3d': {

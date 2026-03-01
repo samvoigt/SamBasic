@@ -297,7 +297,6 @@
   WHILE GETKEY$ = ""
     CLEARBUFFER
     TRANSFORM3D ROTATE logo#, 0, angle#, 0
-    RENDER3D
     angle# = angle# + 2
     SHOWBUFFER
     SLEEP 0.016

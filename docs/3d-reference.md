@@ -186,11 +186,15 @@ TRANSFORM3D ROTATE forearm#, 45, 0, 0            ' bend elbow — moves forearm 
 
 ## Rendering
 
+`SHOWBUFFER` automatically renders the 3D scene (if any 3D objects exist) before flipping the buffer. In most programs, this is all you need — no explicit render call required.
+
+For advanced use, `RENDER3D` is available to manually trigger a 3D render pass without flipping:
+
 ```
 RENDER3D
 ```
 
-Walks the scene graph depth-first, accumulates parent/child transforms, projects all visible primitives with perspective, and draws wireframe lines onto the active canvas context (front canvas or back buffer).
+This is useful when drawing without double buffering, or when you need to draw 2D elements *on top of* the 3D scene before calling `SHOWBUFFER`.
 
 **Does not clear the canvas** — use `CLEARBUFFER` or `CLEARSCREEN` before rendering. This lets you mix 2D and 3D drawing in the same frame.
 
@@ -216,7 +220,6 @@ BUFFERENABLED YES
 WHILE GETKEY$ = ""
   CLEARBUFFER
   TRANSFORM3D ROTATE cube#, angle# * 0.3, angle#, 0
-  RENDER3D
   angle# = angle# + 2
   SHOWBUFFER
   SLEEP 0.016
@@ -248,7 +251,7 @@ SETCOLOR LIGHTBLUE&
 sphere# = OBJECT3D# SPHERE, RADIUS 1, SEGMENTS 16
 TRANSFORM3D TRANSLATE sphere#, 0, 1, 2
 
-RENDER3D
+SHOWBUFFER
 ```
 
 ### Animated Stick Figure (Groups)
@@ -284,7 +287,6 @@ WHILE GETKEY$ = ""
   swing# = (SIN# angle# * 0.05) * 30
   TRANSFORM3D ROTATE leftArmGroup#, swing#, 0, 0
   TRANSFORM3D ROTATE rightArmGroup#, 0 - swing#, 0, 0
-  RENDER3D
   angle# = angle# + 2
   SHOWBUFFER
   SLEEP 0.016
@@ -307,6 +309,6 @@ END WHILE
 | `HIDDENEDGES3D id#, YES/NO` | Statement | Toggle back-face culling |
 | `ATTACH3D parentId#, childId#` | Statement | Add child to group |
 | `DETACH3D childId#` | Statement | Remove child from parent |
-| `RENDER3D` | Statement | Project and draw all visible objects |
+| `RENDER3D` | Statement | Manually project and draw all visible objects (called automatically by `SHOWBUFFER`) |
 | `DELETE3D id#` | Statement | Remove object (recursive for groups) |
 | `CLEAR3D` | Statement | Remove all objects, reset scene |
