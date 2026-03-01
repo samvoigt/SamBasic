@@ -67,6 +67,8 @@ PRINT TEXT "alert!", COLOR RED&           ' Print with color (named params)
 PRINT "alert!", COLOR RED&               ' Positional text + named color
 PRINTAT 1, 1, "top-left"                 ' Print at screen position (1-indexed)
 PRINTAT ROW 5, COL 10, TEXT "hi", COLOR GREEN&
+MOVECURSOR 5, 10                          ' Move cursor (next PRINT starts here)
+MOVECURSOR ROW 5, COL 10                  ' Named parameter form
 CLEARSCREEN                               ' Clear the screen
 ```
 

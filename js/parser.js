@@ -351,6 +351,15 @@ function parse(tokens) {
     if (t.type === 'KEYWORD' && t.value === 'PRINTAT') {
       return parsePrintAt();
     }
+    if (t.type === 'KEYWORD' && t.value === 'MOVECURSOR') {
+      const mt = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'ROW', required: true },
+        { name: 'COL', required: true },
+      ], mt.line);
+      return { type: 'movecursor', row: resolved.ROW, col: resolved.COL, line: mt.line };
+    }
     if (t.type === 'KEYWORD' && t.value === 'CLEARSCREEN') {
       advance();
       return { type: 'clearscreen', line: t.line };
@@ -545,7 +554,7 @@ function parse(tokens) {
     if (t.type === 'IDENT') {
       const upper = t.value.toUpperCase();
       const KEYWORDS = new Set([
-        'PRINT', 'PRINTAT', 'CLEARSCREEN',
+        'PRINT', 'PRINTAT', 'MOVECURSOR', 'CLEARSCREEN',
         'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'END',
         'FOR', 'FROM', 'TO', 'STEP',
         'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',

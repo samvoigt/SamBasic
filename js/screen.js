@@ -91,6 +91,13 @@ class Screen {
     }
   }
 
+  moveCursor(row, col) {
+    const r = row - 1;
+    const c = col - 1;
+    if (r >= 0 && r < this.rows) this.cursorRow = r;
+    if (c >= 0 && c < this.cols) this.cursorCol = c;
+  }
+
   printAt(row, col, text, color) {
     // 1-based to 0-based
     const r = row - 1;

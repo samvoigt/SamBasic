@@ -1,5 +1,5 @@
 const KEYWORDS = new Set([
-  'PRINT', 'PRINTAT', 'CLEARSCREEN',
+  'PRINT', 'PRINTAT', 'MOVECURSOR', 'CLEARSCREEN',
   'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'END',
   'FOR', 'FROM', 'TO', 'STEP',
   'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',

@@ -475,6 +475,12 @@ class Interpreter {
         this.screen.render();
         break;
       }
+      case 'movecursor': {
+        const row = Math.floor(await this.evalExpr(stmt.row));
+        const col = Math.floor(await this.evalExpr(stmt.col));
+        this.screen.moveCursor(row, col);
+        break;
+      }
       case 'printat': {
         const row = Math.floor(await this.evalExpr(stmt.row));
         const col = Math.floor(await this.evalExpr(stmt.col));
