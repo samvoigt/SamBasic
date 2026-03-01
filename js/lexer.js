@@ -18,6 +18,7 @@ const KEYWORDS = new Set([
   'DRAWPIXEL', 'DRAWLINE', 'DRAWBOX', 'DRAWCIRCLE', 'DRAWSPRITE',
   'TRANSFORM3D', 'SETCOLOR3D', 'SHOW3D', 'HIDDENEDGES3D', 'RENDER3D', 'DELETE3D', 'CLEAR3D',
   'ATTACH3D', 'DETACH3D',
+  'PATH3D',
 ]);
 
 const TYPED_KEYWORDS = {
@@ -30,6 +31,7 @@ const TYPED_KEYWORDS = {
   CREATESPRITE: '#',
   OBJECT3D: '#',
   GROUP3D: '#',
+  PATH3D: '#',
 };
 
 
@@ -179,7 +181,7 @@ function tokenize(source) {
   }
 
   // Merge END + block keyword pairs into single tokens
-  const END_BLOCKS = new Set(['IF', 'FOR', 'WHILE', 'STRUCT', 'FUNCTION']);
+  const END_BLOCKS = new Set(['IF', 'FOR', 'WHILE', 'STRUCT', 'FUNCTION', 'PATH3D']);
   const merged = [];
   for (let j = 0; j < tokens.length; j++) {
     const tok = tokens[j];

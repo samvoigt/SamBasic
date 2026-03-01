@@ -389,6 +389,7 @@ class Scene3D {
       case 'TORUS': return Scene3D.genTorus(params.radius || 2, params.tube || 0.5, params.segments || 16, params.tubeSegments || 8);
       case 'LINE': return Scene3D.genLine(params.x1||0, params.y1||0, params.z1||0, params.x2||0, params.y2||0, params.z2||0);
       case 'POINT': return Scene3D.genPoint(params.size || 2);
+      case 'PATH': return Scene3D.genPath(params.points || []);
       default: throw new Error(`Unknown 3D shape: ${shapeType}`);
     }
   }
@@ -628,5 +629,14 @@ class Scene3D {
       edges: [],
       pointSize: size,
     };
+  }
+
+  static genPath(points) {
+    const vertices = points.map(p => [p[0], p[1], p[2]]);
+    const edges = [];
+    for (let i = 0; i < vertices.length - 1; i++) {
+      edges.push([i, i + 1]);
+    }
+    return { vertices, edges };
   }
 }

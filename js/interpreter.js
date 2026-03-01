@@ -91,6 +91,20 @@ class Interpreter {
     return result;
   }
 
+  async _evalPathPoints(params, line) {
+    const pointsExpr = params.POINTS;
+    if (!pointsExpr) throw new Error(`PATH requires POINTS parameter at line ${line}`);
+    const pointsArr = await this.evalExpr(pointsExpr);
+    if (!Array.isArray(pointsArr)) throw new Error(`PATH POINTS must be an array at line ${line}`);
+    if (pointsArr.length < 2) throw new Error(`PATH requires at least 2 points at line ${line}`);
+    return pointsArr.map((p, i) => {
+      if (!Array.isArray(p) || p.length < 3) {
+        throw new Error(`PATH point ${i + 1} must be [x, y, z] at line ${line}`);
+      }
+      return [Number(p[0]), Number(p[1]), Number(p[2])];
+    });
+  }
+
   _colorStructToHex(obj, line) {
     if (typeof obj !== 'object' || obj === null) {
       throw new Error(`SETCOLOR/COLOR requires a color struct with .r#, .g#, .b# members${line ? ' at line ' + line : ''}`);
@@ -769,17 +783,35 @@ class Interpreter {
 
       case 'assign_object3d': {
         const scene = this._ensureScene3D();
-        const evalParams = await this._evalObject3DParams(stmt.params, stmt.line);
         const color = this.screen ? this.screen.globalColor : '#00ff00';
-        const id = scene.createObject(stmt.shape, evalParams, color);
-        this.numVars[stmt.name] = id;
+        if (stmt.shape === 'PATH') {
+          const points = await this._evalPathPoints(stmt.params, stmt.line);
+          const id = scene.createObject('PATH', { points }, color);
+          this.numVars[stmt.name] = id;
+        } else {
+          const evalParams = await this._evalObject3DParams(stmt.params, stmt.line);
+          const id = scene.createObject(stmt.shape, evalParams, color);
+          this.numVars[stmt.name] = id;
+        }
         break;
       }
       case 'object3d_stmt': {
         const scene = this._ensureScene3D();
-        const evalParams = await this._evalObject3DParams(stmt.params, stmt.line);
         const color = this.screen ? this.screen.globalColor : '#00ff00';
-        scene.createObject(stmt.shape, evalParams, color);
+        if (stmt.shape === 'PATH') {
+          const points = await this._evalPathPoints(stmt.params, stmt.line);
+          scene.createObject('PATH', { points }, color);
+        } else {
+          const evalParams = await this._evalObject3DParams(stmt.params, stmt.line);
+          scene.createObject(stmt.shape, evalParams, color);
+        }
+        break;
+      }
+      case 'assign_path3d': {
+        const scene = this._ensureScene3D();
+        const color = this.screen ? this.screen.globalColor : '#00ff00';
+        const id = scene.createObject('PATH', { points: stmt.points }, color);
+        this.numVars[stmt.name] = id;
         break;
       }
       case 'transform3d': {

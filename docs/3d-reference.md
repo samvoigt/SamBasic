@@ -34,6 +34,7 @@ id# = OBJECT3D# PLANE, WIDTH 5, DEPTH 5, DIVISIONS 4
 id# = OBJECT3D# TORUS, RADIUS 2, TUBE 0.5, SEGMENTS 16, TUBESEGMENTS 8
 id# = OBJECT3D# LINE, X1 0, Y1 0, Z1 0, X2 1, Y2 1, Z2 1
 id# = OBJECT3D# POINT, SIZE 2
+id# = OBJECT3D# PATH, POINTS myPoints@
 ```
 
 When the return value isn't needed (e.g., for grid lines), you can omit the assignment:
@@ -55,8 +56,37 @@ OBJECT3D# LINE, X1 -5, Y1 0, Z1 0, X2 5, Y2 0, Z2 0
 | `TORUS` | `RADIUS`, `TUBE`, `SEGMENTS` (default 16), `TUBESEGMENTS` (default 8) | Donut on the XZ plane, centered on origin |
 | `LINE` | `X1 Y1 Z1 X2 Y2 Z2` | Single line segment in local space |
 | `POINT` | `SIZE` (pixel radius, default 2) | Rendered as a small cross |
+| `PATH` | `POINTS` (array of [x, y, z]) | Connected line segments through points |
 
 `SEGMENTS` controls tessellation for curved surfaces. Higher values = smoother wireframe, more lines to draw.
+
+### Paths
+
+Paths draw connected line segments through an arbitrary number of 3D points. There are two ways to create them:
+
+**Array form** — pass an array of `[x, y, z]` triples via `OBJECT3D#`:
+
+```
+pts@ = [[0, 0, 0], [1, 2, 1], [3, 0, -1]]
+id# = OBJECT3D# PATH, POINTS pts@
+```
+
+This form supports dynamic/computed paths (built in loops, using variables, etc.).
+
+**Block form** — `PATH3D#` with literal coordinates:
+
+```
+id# = PATH3D#
+  0, 0, 0
+  1, 2, 1
+  3, 0, -1
+  5, 2, 0
+END PATH3D
+```
+
+Each line is one `x, y, z` point (literal numbers only, no variables or expressions). The block requires at least 2 points.
+
+Both forms create the same kind of 3D object — fully transformable, colorable, attachable to groups. Paths are always open; to close a path, repeat the first point at the end.
 
 ## Transforming Objects
 
@@ -266,6 +296,8 @@ END WHILE
 | Statement | Type | Description |
 |-----------|------|-------------|
 | `OBJECT3D# shape, params...` | Expression (returns ID) | Create a 3D primitive |
+| `OBJECT3D# PATH, POINTS arr@` | Expression (returns ID) | Create a path from array |
+| `PATH3D# ... END PATH3D` | Expression (returns ID) | Create a path from literal points |
 | `GROUP3D#` | Expression (returns ID) | Create an empty group |
 | `TRANSFORM3D TRANSLATE id#, x, y, z` | Statement | Set position |
 | `TRANSFORM3D ROTATE id#, rx, ry, rz` | Statement | Set rotation (degrees) |

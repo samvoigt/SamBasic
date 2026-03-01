@@ -1,0 +1,43 @@
+' PATH3D Demo — two ways to create 3D paths
+
+' === Form 1: Block syntax (literal coordinates) ===
+' A simple helix-like spiral
+spiral# = PATH3D#
+  -2, 0, -2
+  -1, 1, -1
+  0, 2, 0
+  1, 3, 1
+  2, 4, 2
+  3, 3, 3
+  4, 2, 2
+  5, 1, 1
+END PATH3D
+SETCOLOR3D spiral#, CYAN&
+
+' === Form 2: Array-based (dynamic, via OBJECT3D#) ===
+' Generate a sine wave path
+pts@ = []
+FOR i# FROM 0 TO 30
+  x# = (i# - 15) * 0.3
+  y# = SIN#(i# * 30) * 2
+  z# = 0
+  APPEND pts@ [x#, y#, z#]
+END FOR
+
+wave# = OBJECT3D# PATH, POINTS pts@
+TRANSFORM3D TRANSLATE wave#, 0, -2, 0
+SETCOLOR3D wave#, MAGENTA&
+
+' Group both and rotate
+scene# = GROUP3D#
+ATTACH3D scene#, spiral#
+ATTACH3D scene#, wave#
+
+angle# = 0
+WHILE angle# < 360
+  CLEARSCREEN
+  TRANSFORM3D ROTATE scene#, 0, angle#, 0
+  RENDER3D
+  SHOWBUFFER
+  angle# = angle# + 2
+END WHILE

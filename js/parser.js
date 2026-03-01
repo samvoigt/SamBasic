@@ -760,6 +760,7 @@ function parse(tokens) {
         OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?',
         TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$', RUNNINGTIME: '#', FILEEXISTS: '?',
         CREATESPRITE: '#',
+        OBJECT3D: '#', GROUP3D: '#', PATH3D: '#',
       };
       if (TYPED_KW_SUFFIXES[upper]) {
         throw new SyntaxError(`Did you mean '${upper}${TYPED_KW_SUFFIXES[upper]}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -1234,9 +1235,10 @@ function parse(tokens) {
     'SIZE', 'RADIUS', 'HEIGHT', 'BASE', 'SEGMENTS', 'WIDTH',
     'DEPTH', 'DIVISIONS', 'TUBE', 'TUBESEGMENTS',
     'X1', 'Y1', 'Z1', 'X2', 'Y2', 'Z2',
+    'POINTS',
   ]);
   const OBJECT3D_PARAM_DEFS = [...OBJECT3D_PARAM_NAMES].map(name => ({ name, required: false }));
-  const OBJECT3D_VALID_SHAPES = ['CUBE', 'SPHERE', 'CONE', 'CYLINDER', 'PYRAMID', 'PLANE', 'TORUS', 'LINE', 'POINT'];
+  const OBJECT3D_VALID_SHAPES = ['CUBE', 'SPHERE', 'CONE', 'CYLINDER', 'PYRAMID', 'PLANE', 'TORUS', 'LINE', 'POINT', 'PATH'];
 
   // Like parseKeywordArgs but also accepts KEYWORD tokens as labels
   // when they match an expected param name (e.g., SIZE is a keyword but also a 3D param)
@@ -1287,6 +1289,36 @@ function parse(tokens) {
     advance(); // consume OBJECT3D keyword
     const { shape, params } = parseObject3DBody(line);
     return { type: 'assign_object3d', name: varToken.value, shape, params, line };
+  }
+
+  function parseAssignPath3D(varToken, line) {
+    advance(); // consume PATH3D keyword
+    skipNewlines();
+    const points = [];
+    while (!atEnd()) {
+      skipNewlines();
+      if (peek().type === 'KEYWORD' && peek().value === 'END_PATH3D') {
+        advance();
+        break;
+      }
+      // Each line: x, y, z (literals only, optional negative sign)
+      const coords = [];
+      for (let i = 0; i < 3; i++) {
+        let neg = false;
+        if (peek().type === 'OP' && peek().value === '-') {
+          advance();
+          neg = true;
+        }
+        const numToken = expect('NUMBER_LIT');
+        coords.push(neg ? -numToken.value : numToken.value);
+        if (i < 2) expect('COMMA');
+      }
+      points.push(coords);
+    }
+    if (points.length < 2) {
+      throw new SyntaxError(`PATH3D# requires at least 2 points at line ${line}`);
+    }
+    return { type: 'assign_path3d', name: varToken.value, points, line };
   }
 
   function parseAssignment() {
@@ -1418,6 +1450,10 @@ function parse(tokens) {
     // Check for OBJECT3D# (shape type + varying params)
     if (peek().type === 'KEYWORD' && peek().value === 'OBJECT3D') {
       return parseAssignObject3D(varToken, line);
+    }
+    // Check for PATH3D# (block syntax with literal points)
+    if (peek().type === 'KEYWORD' && peek().value === 'PATH3D') {
+      return parseAssignPath3D(varToken, line);
     }
     // Check for builtin keyword
     if (peek().type === 'KEYWORD' && BUILTIN_KEYWORD_PARAMS[peek().value]) {
