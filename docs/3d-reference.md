@@ -121,7 +121,7 @@ SHOW3D id#, NO                                   ' hide object
 SHOW3D id#, YES                                  ' show object (default)
 ```
 
-Hidden objects are skipped by `RENDER3D`. On a group, hides the entire subtree.
+Hidden objects are skipped during rendering. On a group, hides the entire subtree.
 
 ### Hidden Edge Removal
 
@@ -186,15 +186,7 @@ TRANSFORM3D ROTATE forearm#, 45, 0, 0            ' bend elbow — moves forearm 
 
 ## Rendering
 
-`SHOWBUFFER` automatically renders the 3D scene (if any 3D objects exist) before flipping the buffer. In most programs, this is all you need — no explicit render call required.
-
-For advanced use, `RENDER3D` is available to manually trigger a 3D render pass without flipping:
-
-```
-RENDER3D
-```
-
-This is useful when drawing without double buffering, or when you need to draw 2D elements *on top of* the 3D scene before calling `SHOWBUFFER`.
+`SHOWBUFFER` automatically renders the 3D scene (if any 3D objects exist) before flipping the buffer.
 
 **Does not clear the canvas** — use `CLEARBUFFER` or `CLEARSCREEN` before rendering. This lets you mix 2D and 3D drawing in the same frame.
 
@@ -309,6 +301,5 @@ END WHILE
 | `HIDDENEDGES3D id#, YES/NO` | Statement | Toggle back-face culling |
 | `ATTACH3D parentId#, childId#` | Statement | Add child to group |
 | `DETACH3D childId#` | Statement | Remove child from parent |
-| `RENDER3D` | Statement | Manually project and draw all visible objects (called automatically by `SHOWBUFFER`) |
 | `DELETE3D id#` | Statement | Remove object (recursive for groups) |
 | `CLEAR3D` | Statement | Remove all objects, reset scene |

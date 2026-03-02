@@ -657,11 +657,6 @@ function parse(tokens) {
       return { type: 'hiddenedges3d', id: idExpr, value: valueExpr, line: dt.line };
     }
 
-    if (t.type === 'KEYWORD' && t.value === 'RENDER3D') {
-      const dt = advance();
-      return { type: 'render3d', line: dt.line };
-    }
-
     if (t.type === 'KEYWORD' && t.value === 'DELETE3D') {
       const dt = advance();
       const idExpr = parseExpr();

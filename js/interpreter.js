@@ -898,11 +898,6 @@ class Interpreter {
         obj.hiddenEdges = !!(await this.evalExpr(stmt.value));
         break;
       }
-      case 'render3d': {
-        this._ensureScene3D();
-        this._renderScene3D();
-        break;
-      }
       case 'delete3d': {
         const scene = this._ensureScene3D();
         const id = Math.floor(await this.evalExpr(stmt.id));

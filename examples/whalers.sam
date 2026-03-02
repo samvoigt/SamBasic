@@ -280,3 +280,18 @@ p3# = PATH3D#
   -4.49, 1.8, 0
 END PATH3D
 
+logo# = GROUP3D#
+ATTACH3D logo#, p1# 
+ATTACH3D logo#, p2# 
+ATTACH3D logo#, p3# 
+
+BUFFERENABLED YES
+angle# = 0
+
+WHILE GETKEY$ = ""
+  CLEARBUFFER
+  TRANSFORM3D ROTATE logo#, 0, angle#, 0
+  angle# = angle# + 1
+  SHOWBUFFER
+  SLEEP 0.016
+END WHILE

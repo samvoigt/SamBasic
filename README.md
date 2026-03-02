@@ -567,18 +567,17 @@ TRANSFORM3D SCALE cube#, 1.5                    ' uniform scale
 **Object properties:**
 ```
 SETCOLOR3D cube#, RED&                          ' change wireframe color
-SHOW3D cube#, NO                                ' hide (skip during RENDER3D)
+SHOW3D cube#, NO                                ' hide (skip during render)
 HIDDENEDGES3D cube#, YES                        ' back-face culling (solid look)
 ```
 
-**Render and cleanup:**
+**Cleanup:**
 ```
-RENDER3D                                        ' manually project and draw all visible objects
 DELETE3D cube#                                   ' remove one object
 CLEAR3D                                          ' remove all objects, reset scene
 ```
 
-`SHOWBUFFER` automatically renders the 3D scene before flipping, so most programs don't need an explicit `RENDER3D`. Use `RENDER3D` when drawing without double buffering or when layering 2D on top of 3D before flipping.
+`SHOWBUFFER` automatically renders the 3D scene before flipping the buffer.
 
 **Groups** — compose objects into hierarchies with relative transforms:
 ```
