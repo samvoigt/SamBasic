@@ -566,6 +566,40 @@ html, body {
   color: #FF5555;
 }
 
+/* === Examples Dropdown === */
+.examples-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 6px;
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border-light);
+  border-radius: 4px;
+  min-width: 160px;
+  z-index: 100;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+}
+
+.examples-item {
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--editor-text);
+  white-space: nowrap;
+}
+
+.examples-item:hover {
+  background: var(--btn-hover);
+}
+
+.examples-item:first-child {
+  border-radius: 4px 4px 0 0;
+}
+
+.examples-item:last-child {
+  border-radius: 0 0 4px 4px;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .main-area {

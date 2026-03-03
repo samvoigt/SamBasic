@@ -237,3 +237,43 @@ btnRemove.addEventListener('click', () => {
 });
 
 refreshFileList();
+
+// === Examples Dropdown ===
+
+const btnExamples = document.getElementById('btn-examples');
+const examplesMenu = document.getElementById('examples-menu');
+
+if (window.location.protocol === 'file:') {
+  btnExamples.parentElement.style.display = 'none';
+} else {
+  btnExamples.addEventListener('click', () => {
+    examplesMenu.hidden = !examplesMenu.hidden;
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!btnExamples.contains(e.target) && !examplesMenu.contains(e.target)) {
+      examplesMenu.hidden = true;
+    }
+  });
+
+  examplesMenu.addEventListener('click', async (e) => {
+    const item = e.target.closest('.examples-item');
+    if (!item) return;
+
+    if (codeEditor.value.trim() && !confirm('Replace current code with example?')) {
+      examplesMenu.hidden = true;
+      return;
+    }
+
+    const filename = item.dataset.file;
+    try {
+      const resp = await fetch('examples/' + filename);
+      if (!resp.ok) throw new Error('Failed to load');
+      codeEditor.value = await resp.text();
+      codeEditor.dispatchEvent(new Event('input'));
+    } catch (err) {
+      alert('Could not load example: ' + err.message);
+    }
+    examplesMenu.hidden = true;
+  });
+}
