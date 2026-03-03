@@ -248,7 +248,8 @@ const examplesMenu = document.getElementById('examples-menu');
 if (window.location.protocol === 'file:') {
   btnExamples.parentElement.style.display = 'none';
 } else {
-  btnExamples.addEventListener('click', () => {
+  btnExamples.addEventListener('click', (e) => {
+    e.stopPropagation();
     examplesMenu.hidden = !examplesMenu.hidden;
   });
 
