@@ -45,10 +45,26 @@ One beat = `60 / tempo` seconds. At T120, a quarter note = 0.5s. At T72, a quart
 
 Octave persists until changed. Middle C is `O4 C`.
 
+### Velocity
+
+`V` followed by a number 0–127 sets per-note gain. `V127` = full volume (default), `V0` = silent. Persists until changed.
+
+```
+"V127 C4 V64 E4 V32 G4"
+```
+
+Each note plays at the velocity that was active when it was parsed. Useful for dynamics — accents, crescendo, fade-outs.
+
 ### Rests and Percussion
 
 - `R` — rest (silence). Optional length: `R4`, `R8`, `R2.`
-- `P` — percussion (white noise burst). Optional length: `P4`, `P8.`
+- `P` — generic percussion (white noise burst). Optional length: `P4`, `P8.`
+- `PK` — kick drum (sine sweep, punchy low). Optional length: `PK4`, `PK8`
+- `PS` — snare (noise + tone mix). Optional length: `PS8`, `PS16`
+- `PH` — hi-hat (highpass filtered noise, very short). Optional length: `PH16`
+- `PC` — cymbal (bandpass filtered noise, longer decay). Optional length: `PC2`
+
+All percussion types support optional length numbers and dots, just like notes and rests.
 
 ### Full Example
 
@@ -113,7 +129,7 @@ After the voice brackets, optional keyword args:
 | `REPEAT` | `YES` / `NO` | `NO` | Loop the music |
 | `TEMPO` | BPM number | — | Shared tempo for all voices (per-voice `T` in the music string overrides) |
 
-**Beat-count validation:** All voices must have the **same total duration**. If durations don't match, you'll get an error identifying which voices mismatch and their durations.
+Voices don't need to have the same duration — shorter voices simply finish with silence while longer ones continue. Playback completes when the longest voice ends.
 
 **Volume:** `VOLUME` inside a voice bracket scales that voice's gain relative to the default. `VOLUME 1.0` = normal, `VOLUME 0.5` = half volume, `VOLUME 1.5` = louder. Gain is automatically divided by voice count to prevent clipping, and VOLUME scales on top of that.
 
@@ -183,7 +199,7 @@ STOPPLAY        ' stop and discard background music
 
 ## Tips for Multi-Voice Arrangements
 
-1. **Match beat counts.** All voices must have equal total duration — mismatches now produce a clear error showing which voices differ.
+1. **Match beat counts when possible.** Voices with equal durations stay in sync across sections. Mismatched durations are allowed — shorter voices finish with silence.
 2. **Use shared TEMPO.** `PLAYPOLY [...] [...] TEMPO 72` applies to all voices, no need to repeat `T72` in every string.
 3. **Use rests to pad.** If one voice has fewer notes, add `R` to fill time.
 4. **Octave placement:** Separate voices by octave for clarity (e.g., melody O4, bass O3).

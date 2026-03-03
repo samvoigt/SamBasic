@@ -398,7 +398,7 @@ PLAYPOLY (
 ) TEMPO 120
 PLAYPOLY ["C E G"] ["C G"], BACKGROUND YES, REPEAT YES
 ```
-All voices must have the same total duration or you'll get a helpful error identifying the mismatch.
+Voices don't need to have the same duration — shorter voices simply finish with silence while longer ones continue.
 
 **Playback control** — control background audio:
 ```

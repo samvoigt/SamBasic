@@ -184,7 +184,7 @@ PLAYPOLY (
 
 Single-line also works: `PLAYPOLY ["..." WAVE SQUARE] ["..." WAVE TRIANGLE]`
 
-Voices must have equal total beat counts to stay in sync.
+For best results, keep voices at equal total beat counts so they stay in sync. Mismatched durations are allowed — shorter voices finish with silence.
 
 ## File Save/Load
 

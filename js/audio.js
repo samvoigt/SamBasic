@@ -53,37 +53,118 @@ class SamAudio {
     await new Promise(resolve => setTimeout(resolve, 200));
   }
 
+  _makeNoise(ctx, duration) {
+    const sampleRate = ctx.sampleRate;
+    const len = Math.floor(sampleRate * duration);
+    const buffer = ctx.createBuffer(1, len, sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let j = 0; j < len; j++) {
+      data[j] = Math.random() * 2 - 1;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    return src;
+  }
+
+  _schedulePercussion(note, time, noteGain, ctx) {
+    const dur = note.duration;
+    const percType = note.percType || '';
+    const nodes = [];
+
+    if (percType === 'K') {
+      // Kick: sine sweep 150→40 Hz with fast decay
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(150, time);
+      osc.frequency.exponentialRampToValueAtTime(40, time + Math.min(0.1, dur));
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(noteGain * 1.5, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + Math.min(dur, 0.3));
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(time);
+      osc.stop(time + dur);
+      nodes.push(osc);
+    } else if (percType === 'S') {
+      // Snare: noise + sine 200 Hz mix
+      const noise = this._makeNoise(ctx, dur);
+      const nGain = ctx.createGain();
+      nGain.gain.setValueAtTime(noteGain * 0.8, time);
+      nGain.gain.exponentialRampToValueAtTime(0.01, time + Math.min(dur, 0.15));
+      noise.connect(nGain);
+      nGain.connect(ctx.destination);
+      noise.start(time);
+      nodes.push(noise);
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 200;
+      const oGain = ctx.createGain();
+      oGain.gain.setValueAtTime(noteGain * 0.6, time);
+      oGain.gain.exponentialRampToValueAtTime(0.01, time + Math.min(dur, 0.1));
+      osc.connect(oGain);
+      oGain.connect(ctx.destination);
+      osc.start(time);
+      osc.stop(time + dur);
+      nodes.push(osc);
+    } else if (percType === 'H') {
+      // Hi-hat: highpass filtered noise, very short
+      const noise = this._makeNoise(ctx, dur);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 8000;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(noteGain * 0.6, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + Math.min(dur, 0.05));
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(time);
+      nodes.push(noise);
+    } else if (percType === 'C') {
+      // Cymbal: bandpass filtered noise, longer decay
+      const noise = this._makeNoise(ctx, dur);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 6000;
+      filter.Q.value = 0.5;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(noteGain * 0.7, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + dur - 0.01);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(time);
+      nodes.push(noise);
+    } else {
+      // Generic white noise (default P)
+      const noise = this._makeNoise(ctx, dur);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(noteGain, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + dur - 0.01);
+      noise.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(time);
+      nodes.push(noise);
+    }
+
+    return nodes[0] || null;
+  }
+
   scheduleNote(note, time, waveType, gainLevel, ctx) {
     if (!ctx) ctx = this.ctx;
+    const noteGain = gainLevel * (note.velocity != null ? note.velocity / 127 : 1);
     if (note.freq === -1) {
-      // White noise percussion
-      const sampleRate = ctx.sampleRate;
-      const len = Math.floor(sampleRate * note.duration);
-      const buffer = ctx.createBuffer(1, len, sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let j = 0; j < len; j++) {
-        data[j] = Math.random() * 2 - 1;
-      }
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-      const gain = ctx.createGain();
-      gain.gain.value = gainLevel;
-      src.connect(gain);
-      gain.connect(ctx.destination);
-      src.start(time);
-      gain.gain.setValueAtTime(gainLevel, time);
-      gain.gain.exponentialRampToValueAtTime(0.01, time + note.duration - 0.01);
-      return src;
+      return this._schedulePercussion(note, time, noteGain, ctx);
     } else if (note.freq > 0) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = waveType;
       osc.frequency.value = note.freq;
-      gain.gain.value = gainLevel;
+      gain.gain.value = noteGain;
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(time);
-      gain.gain.setValueAtTime(gainLevel, time);
+      gain.gain.setValueAtTime(noteGain, time);
       gain.gain.exponentialRampToValueAtTime(0.01, time + note.duration - 0.01);
       osc.stop(time + note.duration);
       return osc;
@@ -119,15 +200,7 @@ class SamAudio {
       return { notes, waveType: voice.waveType || 'square', volume: voice.volume, duration: dur };
     });
 
-    // Validate beat counts
-    const first = parsed[0].duration;
-    for (let i = 1; i < parsed.length; i++) {
-      if (Math.abs(parsed[i].duration - first) > 0.001) {
-        throw new Error(`PLAYPOLY: voice ${i + 1} duration (${parsed[i].duration.toFixed(2)}s) doesn't match voice 1 (${first.toFixed(2)}s) — check beat counts`);
-      }
-    }
-
-    // Second pass: schedule notes
+    // Schedule notes
     let maxDuration = 0;
     for (const voice of parsed) {
       const gainLevel = voice.volume != null ? voice.volume * baseGain : baseGain;
@@ -296,15 +369,7 @@ class SamAudio {
       return { notes, waveType: voice.waveType || 'square', volume: voice.volume, duration: dur };
     });
 
-    // Validate beat counts
-    const first = parsed[0].duration;
-    for (let i = 1; i < parsed.length; i++) {
-      if (Math.abs(parsed[i].duration - first) > 0.001) {
-        throw new Error(`PLAYPOLY: voice ${i + 1} duration (${parsed[i].duration.toFixed(2)}s) doesn't match voice 1 (${first.toFixed(2)}s) — check beat counts`);
-      }
-    }
-
-    // Second pass: schedule notes
+    // Schedule notes
     let maxDuration = 0;
     for (const voice of parsed) {
       const gainLevel = voice.volume != null ? voice.volume * baseGain : baseGain;
@@ -327,6 +392,7 @@ class SamAudio {
     let octave = 4;
     let defaultLength = 4; // quarter note
     let tempo = 120; // BPM
+    let velocity = 127; // V0-V127, scales note gain
 
     // Note frequencies for octave 0 (will be shifted by octave)
     const noteFreqs = {
@@ -377,7 +443,7 @@ class SamAudio {
         const beatDuration = 60 / tempo;
         const duration = (4 / length) * beatDuration * dotMultiplier;
 
-        notes.push({ freq, duration });
+        notes.push({ freq, duration, velocity });
         continue;
       }
 
@@ -418,9 +484,25 @@ class SamAudio {
         continue;
       }
 
-      // Percussion (white noise)
+      // Velocity (per-note volume)
+      if (ch === 'V') {
+        i++;
+        const numStr = this.readNumber(s, i);
+        if (numStr) {
+          velocity = Math.min(127, Math.max(0, parseInt(numStr)));
+          i += numStr.length;
+        }
+        continue;
+      }
+
+      // Percussion: P (generic), PK (kick), PS (snare), PH (hi-hat), PC (cymbal)
       if (ch === 'P') {
         i++;
+        let percType = '';
+        if (i < s.length && 'KSHC'.includes(s[i])) {
+          percType = s[i];
+          i++;
+        }
         let length = defaultLength;
         const numStr = this.readNumber(s, i);
         if (numStr) {
@@ -434,7 +516,7 @@ class SamAudio {
         }
         const beatDuration = 60 / tempo;
         const duration = (4 / length) * beatDuration * dotMultiplier;
-        notes.push({ freq: -1, duration });
+        notes.push({ freq: -1, duration, velocity, percType });
         continue;
       }
 
