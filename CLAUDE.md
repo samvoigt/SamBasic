@@ -16,6 +16,13 @@ python utils/svg2path.py input.svg [-o output.sam] [--steps 10] [--scale 0.01]
 python utils/svg2path.py input.svg --3d [-o output.sam]
 ```
 
+The `utils/abc2play.py` script is a bidirectional ABC ↔ SamBasic converter (Python 3, stdlib only). Direction is auto-detected from the `-i` file extension. ABC→SAM supports key signatures, repeats, ties, chords, tuplets, dynamics, and multiple voices:
+```
+python utils/abc2play.py -i input.abc -o output.sam [--wave SQUARE] [--transpose N]
+python utils/abc2play.py -i input.abc --info
+python utils/abc2play.py -i input.sam -o output.abc
+```
+
 ## Architecture
 
 ### Interpreter Pipeline: Source → Tokens → AST → Execution
