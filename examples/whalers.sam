@@ -1,5 +1,3 @@
-' Converted from: Hartford_Whalers_1992.svg
-
 SETCOLOR LIGHTGRAY&
 p1# = PATH3D#
   0.01, 3.66, 0
