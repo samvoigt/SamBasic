@@ -69,6 +69,11 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
     }
 
     highlightEl.innerHTML = html;
+    // Textareas allow scrolling the last line to near the top of the
+    // view; <pre> stops when content ends.  Add bottom padding so the
+    // pre's scrollable range matches the textarea's.
+    highlightEl.style.paddingBottom = highlightEl.clientHeight + 'px';
+    syncScroll();
   }
 
   updateLineNumbers();

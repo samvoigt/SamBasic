@@ -283,6 +283,7 @@ html, body {
   background: transparent;
   border: none;
   white-space: pre;
+  tab-size: 4;
   overflow: auto;
   pointer-events: none;
   z-index: 1;
