@@ -307,15 +307,23 @@ def build_length_table(quantize):
     base = quantize  # grids per whole note = quantize
     candidates = []
     for divisor, token, dotted in [
-        (1,  'L1',  False),
-        (1,  'L2.', True),   # dotted half = 3/4 whole
-        (2,  'L2',  False),
-        (2,  'L4.', True),   # dotted quarter = 3/8 whole
-        (4,  'L4',  False),
-        (4,  'L8.', True),   # dotted eighth = 3/16 whole
-        (8,  'L8',  False),
-        (8,  'L16.', True),  # dotted sixteenth
-        (16, 'L16', False),
+        (1,   'L1',    False),
+        (1,   'L2.',   True),
+        (2,   'L2',    False),
+        (2,   'L4.',   True),
+        (4,   'L4',    False),
+        (4,   'L8.',   True),
+        (8,   'L8',    False),
+        (8,   'L16.',  True),
+        (16,  'L16',   False),
+        (16,  'L32.',  True),
+        (32,  'L32',   False),
+        (32,  'L64.',  True),
+        (64,  'L64',   False),
+        (64,  'L128.', True),
+        (128, 'L128',  False),
+        (128, 'L256.', True),
+        (256, 'L256',  False),
     ]:
         if dotted:
             grids = base * 3 // (divisor * 4)
@@ -621,8 +629,8 @@ def main():
     parser.add_argument("input", help="Input MIDI file (.mid)")
     parser.add_argument("-o", "--output", help="Output .sam file (default: stdout)")
     parser.add_argument(
-        "--quantize", type=int, default=16,
-        help="Smallest note subdivision (default: 16 = sixteenth notes)"
+        "--quantize", type=int, default=128,
+        help="Smallest note subdivision (default: 128 = 128th notes)"
     )
     parser.add_argument(
         "--tempo", type=int, default=None,
