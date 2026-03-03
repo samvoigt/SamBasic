@@ -33,10 +33,11 @@ setupEditor(codeEditor, lineNumbers, codeHighlight);
 
 // Button state management
 function setRunning(isRunning) {
+  const bgMusic = audio._bgPlaying;
   btnRun.disabled = isRunning;
-  btnPause.disabled = !isRunning;
+  btnPause.disabled = !isRunning && !bgMusic;
   btnStep.disabled = !isRunning;
-  btnStop.disabled = !isRunning;
+  btnStop.disabled = !isRunning && !bgMusic;
   codeEditor.readOnly = isRunning;
 }
 
@@ -69,12 +70,13 @@ btnRun.addEventListener('click', async () => {
 
 // Pause
 btnPause.addEventListener('click', () => {
-  if (interpreter.paused) {
-    interpreter.resume();
+  if (interpreter.paused || audio._bgPaused) {
+    if (interpreter.running) interpreter.resume();
+    audio.resumeBackground();
     btnPause.innerHTML = '<span class="btn-icon">&#9646;&#9646;</span> Pause';
   } else {
-    interpreter.pause();
-    audio.stopBackground();
+    if (interpreter.running) interpreter.pause();
+    audio.pauseBackground();
     btnPause.innerHTML = '<span class="btn-icon">&#9654;</span> Resume';
   }
 });

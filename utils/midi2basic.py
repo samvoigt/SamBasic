@@ -476,7 +476,6 @@ def generate_output(channel_notes, bpm, quantize, wave_override,
     if tempo_map is None:
         tempo_map = []
     grids_per_beat = quantize // 4
-    section_grids = section_beats * grids_per_beat
 
     # Separate percussion (channel 9 = MIDI channel 10, 0-indexed)
     perc_voices = []
@@ -521,6 +520,8 @@ def generate_output(channel_notes, bpm, quantize, wave_override,
     for notes, _, _ in voices:
         for n in notes:
             max_grid = max(max_grid, n[0] + n[1])
+
+    section_grids = section_beats * grids_per_beat if section_beats else max_grid
 
     # Generate sections
     lines = [f"' Converted from: {source_name}", '']
@@ -632,8 +633,8 @@ def main():
         help="Force waveform for all voices (default: auto-assign)"
     )
     parser.add_argument(
-        "--section-beats", type=int, default=16,
-        help="Beats per PLAYPOLY section before splitting (default: 16)"
+        "--section-beats", type=int, default=None,
+        help="Beats per PLAYPOLY section before splitting (default: no splitting)"
     )
     parser.add_argument(
         "--no-percussion", action="store_true",
