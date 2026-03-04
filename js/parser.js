@@ -1,4 +1,4 @@
-function parse(tokens) {
+function parse(tokens, existingFunctions) {
   let pos = 0;
   const ast = [];
   const labels = {};
@@ -41,6 +41,14 @@ function parse(tokens) {
 
   // Pre-pass: collect all function names for forward references
   const knownFunctions = {};
+  // Seed with previously defined functions (for REPL)
+  if (existingFunctions) {
+    const returnTypeToSuffix = { num: '#', str: '$', arr: '@', struct: '&', bool: '?', void: '' };
+    for (const name in existingFunctions) {
+      const fn = existingFunctions[name];
+      knownFunctions[name] = returnTypeToSuffix[fn.returnType] || '';
+    }
+  }
   for (let i = 0; i < tokens.length; i++) {
     if (tokens[i].type === 'KEYWORD' && tokens[i].value === 'FUNCTION') {
       const next = tokens[i + 1];

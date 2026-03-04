@@ -199,6 +199,60 @@ class Interpreter {
     this.running = false;
   }
 
+  async execRepl(ast, labels, functions) {
+    const savedAst = this.ast;
+    const savedLabels = this.labels;
+    const savedPc = this.pc;
+
+    // Merge new functions into persistent state
+    if (functions) {
+      Object.assign(this.functions, functions);
+    }
+
+    this.ast = ast;
+    this.labels = labels;
+    this.pc = 0;
+    this.running = true;
+    this._stmtCount = 0;
+
+    try {
+      while (this.running && this.pc < this.ast.length) {
+        const stmt = this.ast[this.pc];
+        this.pc++;
+
+        try {
+          await this.execStmt(stmt);
+        } catch (e) {
+          if (e instanceof GotoSignal) {
+            const target = this.labels[e.label];
+            if (target === undefined) {
+              throw new Error(`Undefined label '${e.label}' at line ${stmt.line}`);
+            }
+            this.pc = target;
+            continue;
+          }
+          if (e instanceof BreakSignal) {
+            throw new Error(`BREAK used outside of a loop at line ${stmt.line}`);
+          }
+          if (e instanceof ContinueSignal) {
+            throw new Error(`CONTINUE used outside of a loop at line ${stmt.line}`);
+          }
+          throw e;
+        }
+
+        this._stmtCount++;
+        if (this._stmtCount % 100 === 0) {
+          await this.yieldToEventLoop();
+        }
+      }
+    } finally {
+      this.ast = savedAst;
+      this.labels = savedLabels;
+      this.pc = savedPc;
+      this.running = false;
+    }
+  }
+
   pause() {
     this.paused = true;
   }

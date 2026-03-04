@@ -29,6 +29,7 @@ const codeHighlight = document.getElementById('code-highlight');
 const crtScreen = new Screen(screenOutput);
 const audio = new SamAudio();
 const interpreter = new Interpreter(crtScreen, audio);
+const repl = new Repl(crtScreen, interpreter);
 setupEditor(codeEditor, lineNumbers, codeHighlight);
 
 // Button state management
@@ -37,7 +38,7 @@ function setRunning(isRunning) {
   btnRun.disabled = isRunning;
   btnPause.disabled = !isRunning && !bgMusic;
   btnStep.disabled = !isRunning;
-  btnStop.disabled = !isRunning && !bgMusic;
+  btnStop.disabled = !isRunning && !bgMusic && !repl.executing;
   codeEditor.readOnly = isRunning;
 }
 
@@ -47,10 +48,15 @@ btnRun.addEventListener('click', async () => {
   const source = codeEditor.value;
   if (!source.trim()) return;
 
+  if (repl.hasState) {
+    if (!confirm('Running a program will clear REPL state. Continue?')) return;
+  }
+
   if (interpreter.running) {
     interpreter.stop();
   }
 
+  repl.deactivate();
   const runId = ++currentRunId;
   try {
     const tokens = tokenize(source);
@@ -65,6 +71,8 @@ btnRun.addEventListener('click', async () => {
       setRunning(false);
     }
     refreshFileList();
+    repl.resetState();
+    repl.activate();
   }
 });
 
@@ -88,10 +96,17 @@ btnStep.addEventListener('click', () => {
 
 // Stop
 btnStop.addEventListener('click', () => {
+  if (repl.executing) {
+    // Stop REPL execution but keep REPL state
+    interpreter.stop();
+    return;
+  }
   interpreter.stop();
   setRunning(false);
   btnPause.innerHTML = '<span class="btn-icon">&#9646;&#9646;</span> Pause';
   refreshFileList();
+  repl.resetState();
+  repl.activate();
 });
 
 // Save
@@ -127,6 +142,7 @@ fileInput.addEventListener('change', (e) => {
 btnPower.addEventListener('click', () => {
   if (monitorOn) {
     // Turn off: pause program and all audio, black out screen
+    repl.deactivate();
     if (interpreter.running && !interpreter.paused) {
       interpreter.pause();
       powerPausedInterpreter = true;
@@ -144,6 +160,8 @@ btnPower.addEventListener('click', () => {
     if (powerPausedInterpreter) {
       interpreter.resume();
       powerPausedInterpreter = false;
+    } else {
+      repl.activate();
     }
     crtScreen.render();
   }
@@ -239,6 +257,26 @@ btnRemove.addEventListener('click', () => {
 });
 
 refreshFileList();
+
+// === REPL Focus Wiring ===
+monitorScreen.setAttribute('tabindex', '0');
+monitorScreen.addEventListener('click', () => {
+  if (!monitorOn || !repl.active) return;
+  monitorScreen.focus();
+  repl.onMonitorFocus();
+});
+
+codeEditor.addEventListener('focus', () => {
+  repl.onEditorFocus();
+});
+
+// Enable/disable STOP button when REPL starts/stops executing
+repl.onExecutingChange = (executing) => {
+  btnStop.disabled = !executing;
+};
+
+// Start REPL on load (active but unfocused — click monitor to type)
+repl.activate();
 
 // === Examples Dropdown ===
 
