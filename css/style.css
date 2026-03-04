@@ -408,39 +408,47 @@ html, body {
 }
 
 .power-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
   border: none;
-  background: #2A2A2A;
-  color: #55FF55;
-  font-size: 10px;
+  background: linear-gradient(145deg, var(--bezel-light), var(--bezel-dark));
+  color: transparent;
+  font-size: 0;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-top: 1px solid #444;
-  border-left: 1px solid #444;
-  border-bottom: 2px solid #111;
-  border-right: 2px solid #111;
-  box-shadow: 0 0 6px rgba(85, 255, 85, 0.3);
+  border-top: 2px solid var(--bezel-light);
+  border-left: 2px solid var(--bezel-light);
+  border-bottom: 2px solid var(--bezel-dark);
+  border-right: 2px solid var(--bezel-dark);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.3);
   transition: box-shadow 0.2s;
 }
 
 .power-btn:hover {
-  box-shadow: 0 0 10px rgba(85, 255, 85, 0.5);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.2),
+    0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .power-btn:active {
-  border-top: 2px solid #111;
-  border-left: 2px solid #111;
-  border-bottom: 1px solid #444;
-  border-right: 1px solid #444;
+  border-top: 2px solid var(--bezel-dark);
+  border-left: 2px solid var(--bezel-dark);
+  border-bottom: 2px solid var(--bezel-light);
+  border-right: 2px solid var(--bezel-light);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.3),
+    0 0 1px rgba(0, 0, 0, 0.2);
 }
 
 .power-btn.off {
-  color: #555;
-  box-shadow: none;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .monitor-screen-frame {
@@ -456,14 +464,14 @@ html, body {
 
 .monitor-screen {
   position: relative;
-  width: 640px;
-  height: 480px;
+  width: fit-content;
+  height: fit-content;
   background: var(--screen-bg);
   border-radius: 8px;
   overflow: hidden;
   font-family: 'Courier New', 'Consolas', monospace;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.0;
   letter-spacing: -0.1px;
   box-shadow:
     inset 0 0 60px rgba(10, 60, 10, 0.15);
@@ -535,12 +543,10 @@ html, body {
 .screen-content {
   position: relative;
   z-index: 1;
-  width: 100%;
-  height: 100%;
-  padding: 12px;
+  padding: 6px;
   font-family: 'Courier New', 'Consolas', monospace;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.0;
   letter-spacing: -0.1px;
   color: #33FF33;
   text-shadow:

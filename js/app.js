@@ -363,7 +363,7 @@ async function runBootSequence() {
     if (bootSkipped) return;
 
     crtScreen.print('', GREEN);
-    crtScreen.printInline('CPU: Voigt V90 Processor 66MHz', GREEN);
+    crtScreen.printInline('CPU: Voigt V83 Processor 33MHz', GREEN);
     crtScreen.render();
     const dots = 12;
     for (let i = 0; i < dots; i++) {
