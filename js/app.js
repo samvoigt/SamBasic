@@ -17,6 +17,7 @@ const btnUpload = document.getElementById('btn-upload');
 const btnDownload = document.getElementById('btn-download');
 const btnRemove = document.getElementById('btn-remove');
 const fileInputUpload = document.getElementById('file-input-upload');
+const btnReset = document.getElementById('btn-reset');
 
 let monitorOn = true;
 let selectedFile = null;
@@ -107,6 +108,48 @@ btnStop.addEventListener('click', () => {
   refreshFileList();
   repl.resetState();
   repl.activate();
+});
+
+// Reset
+btnReset.addEventListener('click', async () => {
+  if (!monitorOn) return;
+
+  if (interpreter.running && !repl.executing) {
+    // Program running: stop and re-run
+    interpreter.stop();
+    audio.stopBackground();
+    repl.deactivate();
+    const source = codeEditor.value;
+    const runId = ++currentRunId;
+    try {
+      const tokens = tokenize(source);
+      const { ast, labels, functions } = parse(tokens);
+      interpreter.load(ast, labels, functions);
+      setRunning(true);
+      await interpreter.run();
+    } catch (e) {
+      crtScreen.showError(`ERROR: ${e.message}`);
+    } finally {
+      if (runId === currentRunId) {
+        setRunning(false);
+      }
+      refreshFileList();
+      repl.resetState();
+      repl.activate();
+    }
+  } else {
+    // REPL idle or executing: stop, clear, fresh prompt
+    if (repl.executing) {
+      interpreter.stop();
+    }
+    audio.stopBackground();
+    crtScreen.clear();
+    repl.deactivate();
+    repl.resetState();
+    setRunning(false);
+    btnPause.innerHTML = '<span class="btn-icon">&#9646;&#9646;</span> Pause';
+    repl.activate();
+  }
 });
 
 // Save
