@@ -318,8 +318,130 @@ repl.onExecutingChange = (executing) => {
   btnStop.disabled = !executing;
 };
 
-// Start REPL on load (active but unfocused — click monitor to type)
-repl.activate();
+// === Boot Sequence ===
+
+async function runBootSequence() {
+  const GREEN = '#33FF33';
+  let bootSkipped = false;
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+  const skip = () => { bootSkipped = true; };
+
+  document.addEventListener('keydown', skip);
+  document.addEventListener('click', skip);
+
+  try {
+    if (bootSkipped) return;
+
+    // 2. ASCII banner (instant)
+    const banner = [
+      "__     __    _       _   _              _         _",
+      "\\ \\   / /__ (_) __ _| |_| |   ___  ___ | |_ _ __ (_) ___ ___",
+      " \\ \\ / / _ \\| |/ _` | __| |  / _ \\/ __|| __| '__|| |/ __/ __|",
+      "  \\ V / (_) | | (_| | |_| |_|  __/ (__ | |_| |   | | (__\\__ \\",
+      "   \\_/ \\___/|_|\\__, |\\__|____\\___|\\___| \\__|_|   |_|\\___|___/",
+      "                |___/",
+      "                        A Division of Voigt Manufacturing Co.",
+    ];
+    for (const line of banner) {
+      crtScreen.print(line, GREEN);
+    }
+    crtScreen.render();
+    await delay(800);
+    if (bootSkipped) return;
+
+    // 3. System info lines
+    crtScreen.print('', GREEN);
+    crtScreen.print('Voigtlectrics 9000 Pro BIOS v3.21', GREEN);
+    crtScreen.render();
+    await delay(200);
+    if (bootSkipped) return;
+
+    crtScreen.print('Copyright (C) 1994 Voigt Manufacturing Co.', GREEN);
+    crtScreen.render();
+    await delay(300);
+    if (bootSkipped) return;
+
+    crtScreen.print('', GREEN);
+    crtScreen.print('CPU: Voigt V90 Processor 66MHz............OK', GREEN);
+    crtScreen.render();
+    await delay(300);
+    if (bootSkipped) return;
+
+    // 4. Memory test (animated counter)
+    crtScreen.printInline('Memory Test: ', GREEN);
+    crtScreen.render();
+    const memRow = crtScreen.cursorRow + 1; // moveCursor is 1-based
+    const memCol = crtScreen.cursorCol + 1;
+
+    for (let kb = 0; kb <= 16384; kb += 512) {
+      crtScreen.moveCursor(memRow, memCol);
+      crtScreen.printInline(kb + ' KB   ', GREEN);
+      crtScreen.render();
+      if (bootSkipped) return;
+      if (kb < 16384) await delay(40);
+    }
+    crtScreen.moveCursor(memRow, memCol);
+    crtScreen.printInline('16384 KB OK', GREEN);
+    crtScreen.newline();
+    crtScreen.render();
+    await delay(300);
+    if (bootSkipped) return;
+
+    // 5. Hardware detection (lines with pauses)
+    crtScreen.print('', GREEN);
+    crtScreen.render();
+
+    const hwLines = [
+      'Primary Master: Voigt VHD-540 540MB',
+      'Primary Slave:  None',
+      'CD-ROM Drive:   Voigt VCD-4X',
+      '',
+      'Keyboard: Detected',
+      'Mouse:    Voigt Serial Mouse',
+    ];
+    for (const line of hwLines) {
+      crtScreen.print(line, GREEN);
+      crtScreen.render();
+      if (bootSkipped) return;
+      await delay(line === '' ? 100 : 200);
+      if (bootSkipped) return;
+    }
+
+    // 6. Wait for user to start
+    crtScreen.print('', GREEN);
+    crtScreen.print('Press any key to start SamBasic', GREEN);
+    crtScreen.render();
+
+    // Remove skip listeners — the next gesture starts SamBasic instead
+    document.removeEventListener('keydown', skip);
+    document.removeEventListener('click', skip);
+
+    await new Promise(resolve => {
+      const start = () => {
+        document.removeEventListener('keydown', start);
+        document.removeEventListener('click', start);
+        resolve();
+      };
+      document.addEventListener('keydown', start);
+      document.addEventListener('click', start);
+    });
+
+    // Play ascending chime (AudioContext now unlocked by user gesture)
+    await audio.playSequence('T200 O5 C16 E16 G16 >C8');
+
+  } finally {
+    crtScreen.clear();
+  }
+}
+
+// Start boot sequence, then activate REPL
+(async () => {
+  await runBootSequence();
+  repl.activate();
+  monitorScreen.focus();
+  repl.onMonitorFocus();
+})();
 
 // === Examples Dropdown ===
 
