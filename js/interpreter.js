@@ -58,7 +58,7 @@ class Interpreter {
     const colors = {
       BLACK:        [0, 0, 0],
       BLUE:         [0, 0, 170],
-      GREEN:        [0, 170, 0],
+      GREEN:        [51, 255, 51],
       CYAN:         [0, 170, 170],
       RED:          [170, 0, 0],
       MAGENTA:      [170, 0, 170],

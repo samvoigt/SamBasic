@@ -363,7 +363,17 @@ async function runBootSequence() {
     if (bootSkipped) return;
 
     crtScreen.print('', GREEN);
-    crtScreen.print('CPU: Voigt V90 Processor 66MHz............OK', GREEN);
+    crtScreen.printInline('CPU: Voigt V90 Processor 66MHz', GREEN);
+    crtScreen.render();
+    const dots = 12;
+    for (let i = 0; i < dots; i++) {
+      await delay(500 / dots);
+      if (bootSkipped) return;
+      crtScreen.printInline('.', GREEN);
+      crtScreen.render();
+    }
+    crtScreen.printInline('OK', GREEN);
+    crtScreen.newline();
     crtScreen.render();
     await delay(300);
     if (bootSkipped) return;
@@ -388,6 +398,28 @@ async function runBootSequence() {
     await delay(300);
     if (bootSkipped) return;
 
+    // 4b. Frozzling Grobnitz spinner
+    crtScreen.printInline('Frozzling Grobnitz... ', GREEN);
+    crtScreen.render();
+    const spinChars = ['/', '-', '\\', '|'];
+    const spinRow = crtScreen.cursorRow + 1;
+    const spinCol = crtScreen.cursorCol + 1;
+    const spinEnd = Date.now() + 1500;
+    let spinIdx = 0;
+    while (Date.now() < spinEnd) {
+      crtScreen.moveCursor(spinRow, spinCol);
+      crtScreen.printInline(spinChars[spinIdx % spinChars.length], GREEN);
+      crtScreen.render();
+      if (bootSkipped) return;
+      spinIdx++;
+      await delay(80);
+    }
+    crtScreen.moveCursor(spinRow, spinCol);
+    crtScreen.printInline('OK', GREEN);
+    crtScreen.newline();
+    crtScreen.render();
+    if (bootSkipped) return;
+
     // 5. Hardware detection (lines with pauses)
     crtScreen.print('', GREEN);
     crtScreen.render();
@@ -398,7 +430,7 @@ async function runBootSequence() {
       'CD-ROM Drive:   Voigt VCD-4X',
       '',
       'Keyboard: Detected',
-      'Mouse:    Voigt Serial Mouse',
+      'Mouse: Voigt Serial Mouse',
     ];
     for (const line of hwLines) {
       crtScreen.print(line, GREEN);
@@ -427,8 +459,12 @@ async function runBootSequence() {
       document.addEventListener('click', start);
     });
 
-    // Play ascending chime (AudioContext now unlocked by user gesture)
-    await audio.playSequence('T200 O5 C16 E16 G16 >C8');
+    // Play startup chime (AudioContext now unlocked by user gesture)
+    await audio.playPoly([
+      { musicStr: 'T160 O4 C8 E8 G8 >C4.', waveType: 'triangle', volume: 1.2 },
+      { musicStr: 'T160 O3 C8 G8 >E8 G4.', waveType: 'sine', volume: 0.8 },
+      { musicStr: 'T160 O5 R8 R8 E8 G4.', waveType: 'sine', volume: 0.6 },
+    ]);
 
   } finally {
     crtScreen.clear();
@@ -438,6 +474,8 @@ async function runBootSequence() {
 // Start boot sequence, then activate REPL
 (async () => {
   await runBootSequence();
+  crtScreen.print('SamBasic v1.1 (C) 1994 Voigt Manufacturing Co.', '#33FF33');
+  crtScreen.render();
   repl.activate();
   monitorScreen.focus();
   repl.onMonitorFocus();

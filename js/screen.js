@@ -1,4 +1,4 @@
-const DEFAULT_COLOR = '#AAAAAA';
+const DEFAULT_COLOR = '#33FF33';
 
 // xterm-256 palette: 16 CGA colors + 6x6x6 color cube + 24-step grayscale
 const VGA_PALETTE = (() => {
