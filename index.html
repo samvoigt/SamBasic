@@ -31,7 +31,10 @@
             </div>
             <div class="monitor-bottom">
               <div class="monitor-badge">VoigtVision</div>
-              <button id="btn-power" class="power-btn" title="Power">&#9679;</button>
+              <div class="power-group">
+                <button id="btn-power" class="power-btn" title="Power">&#9679;</button>
+                <span class="power-label">POWER</span>
+              </div>
             </div>
           </div>
         </div>
@@ -39,7 +42,23 @@
           <div class="tower-top">
             <div class="tower-badge">Voigtlectrics 9000 Pro</div>
             <div class="tower-vents"></div>
-            <button id="btn-reset" class="reset-btn" title="Reset">RESET</button>
+            <div class="tower-buttons">
+              <div class="tower-btn-group">
+                <div class="tower-led" id="led-turbo"></div>
+                <button id="btn-turbo" class="tower-btn" title="Turbo"></button>
+                <span class="tower-btn-label">TURBO</span>
+              </div>
+              <div class="tower-btn-group">
+                <div class="tower-led" id="led-reset"></div>
+                <button id="btn-reset" class="tower-btn" title="Reset"></button>
+                <span class="tower-btn-label">RESET</span>
+              </div>
+              <div class="tower-btn-group">
+                <div class="tower-led" id="led-power"></div>
+                <button id="btn-tower-power" class="tower-btn" title="Power"></button>
+                <span class="tower-btn-label">POWER</span>
+              </div>
+            </div>
           </div>
           <div class="drive-bay">
             <div class="files-pane">

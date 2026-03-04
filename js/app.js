@@ -18,11 +18,18 @@ const btnDownload = document.getElementById('btn-download');
 const btnRemove = document.getElementById('btn-remove');
 const fileInputUpload = document.getElementById('file-input-upload');
 const btnReset = document.getElementById('btn-reset');
+const btnTowerPower = document.getElementById('btn-tower-power');
+const btnTurbo = document.getElementById('btn-turbo');
+const ledPower = document.getElementById('led-power');
+const ledTurbo = document.getElementById('led-turbo');
+const ledReset = document.getElementById('led-reset');
 
 let monitorOn = true;
 let selectedFile = null;
 let powerPausedInterpreter = false;
 let currentRunId = 0;
+let turboOn = true;
+let resetBlinkInterval = null;
 
 const codeHighlight = document.getElementById('code-highlight');
 
@@ -41,6 +48,23 @@ function setRunning(isRunning) {
   btnStep.disabled = !isRunning;
   btnStop.disabled = !isRunning && !bgMusic && !repl.executing;
   codeEditor.readOnly = isRunning;
+  setResetLed(isRunning);
+}
+
+function setResetLed(active) {
+  if (active) {
+    if (!resetBlinkInterval) {
+      resetBlinkInterval = setInterval(() => {
+        ledReset.classList.toggle('on-red');
+      }, 100);
+    }
+  } else {
+    if (resetBlinkInterval) {
+      clearInterval(resetBlinkInterval);
+      resetBlinkInterval = null;
+    }
+    ledReset.classList.remove('on-red');
+  }
 }
 
 // Run
@@ -182,7 +206,7 @@ fileInput.addEventListener('change', (e) => {
 });
 
 // Power
-btnPower.addEventListener('click', () => {
+function togglePower() {
   if (monitorOn) {
     // Turn off: pause program and all audio, black out screen
     repl.deactivate();
@@ -193,11 +217,16 @@ btnPower.addEventListener('click', () => {
     audio.suspendAll();
     monitorScreen.classList.add('off');
     btnPower.classList.add('off');
+    ledPower.classList.remove('on-green');
+    ledTurbo.classList.remove('on-amber');
+    setResetLed(false);
     monitorOn = false;
   } else {
     // Turn on: resume audio and program, restore screen
     monitorScreen.classList.remove('off');
     btnPower.classList.remove('off');
+    ledPower.classList.add('on-green');
+    if (turboOn) ledTurbo.classList.add('on-amber');
     monitorOn = true;
     audio.resumeAll();
     if (powerPausedInterpreter) {
@@ -208,7 +237,10 @@ btnPower.addEventListener('click', () => {
     }
     crtScreen.render();
   }
-});
+}
+
+btnPower.addEventListener('click', togglePower);
+btnTowerPower.addEventListener('click', togglePower);
 
 // === Local Files Panel ===
 
@@ -313,10 +345,21 @@ codeEditor.addEventListener('focus', () => {
   repl.onEditorFocus();
 });
 
-// Enable/disable STOP button when REPL starts/stops executing
+// Enable/disable STOP button and reset LED when REPL starts/stops executing
 repl.onExecutingChange = (executing) => {
   btnStop.disabled = !executing;
+  setResetLed(executing);
 };
+
+// Turbo button
+btnTurbo.addEventListener('click', () => {
+  turboOn = !turboOn;
+  ledTurbo.classList.toggle('on-amber', turboOn);
+});
+
+// Initialize LEDs
+ledPower.classList.add('on-green');
+ledTurbo.classList.add('on-amber');
 
 // === Boot Sequence ===
 
@@ -331,6 +374,7 @@ async function runBootSequence() {
   document.addEventListener('click', skip);
 
   try {
+    setResetLed(true);
     if (bootSkipped) return;
 
     // 2. ASCII banner (instant)
@@ -441,6 +485,7 @@ async function runBootSequence() {
     }
 
     // 6. Wait for user to start
+    setResetLed(false);
     crtScreen.print('', GREEN);
     crtScreen.print('Press any key to start SamBasic', GREEN);
     crtScreen.render();
@@ -467,6 +512,7 @@ async function runBootSequence() {
     ]);
 
   } finally {
+    setResetLed(false);
     crtScreen.clear();
   }
 }
