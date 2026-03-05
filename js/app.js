@@ -209,11 +209,11 @@ fileInput.addEventListener('change', (e) => {
 function togglePower() {
   if (monitorOn) {
     // Turn off: pause program and all audio, black out screen
-    repl.deactivate();
     if (interpreter.running && !interpreter.paused) {
       interpreter.pause();
       powerPausedInterpreter = true;
     }
+    repl.onEditorFocus(); // stop cursor blink without deactivating
     audio.suspendAll();
     monitorScreen.classList.add('off');
     btnPower.classList.add('off');
@@ -232,8 +232,8 @@ function togglePower() {
     if (powerPausedInterpreter) {
       interpreter.resume();
       powerPausedInterpreter = false;
-    } else {
-      repl.activate();
+    } else if (repl.active) {
+      repl.onMonitorFocus();
     }
     crtScreen.render();
   }
