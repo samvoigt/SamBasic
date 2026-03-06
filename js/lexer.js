@@ -2,7 +2,7 @@ const KEYWORDS = new Set([
   'PRINT', 'PRINTAT', 'MOVECURSOR', 'CLEARSCREEN',
   'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'END',
   'FOR', 'FROM', 'TO', 'STEP',
-  'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',
+  'WHILE', 'LOOP', 'WHEN', 'SETCOLOR', 'BEEP', 'PLAY',
   'AND', 'OR', 'NOT',
   'SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE',
   'PLAYPOLY',
@@ -181,7 +181,7 @@ function tokenize(source) {
   }
 
   // Merge END + block keyword pairs into single tokens
-  const END_BLOCKS = new Set(['IF', 'FOR', 'WHILE', 'STRUCT', 'FUNCTION', 'PATH3D']);
+  const END_BLOCKS = new Set(['IF', 'FOR', 'WHILE', 'LOOP', 'STRUCT', 'FUNCTION', 'PATH3D']);
   const merged = [];
   for (let j = 0; j < tokens.length; j++) {
     const tok = tokens[j];

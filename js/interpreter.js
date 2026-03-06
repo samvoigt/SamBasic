@@ -732,6 +732,32 @@ class Interpreter {
         }
         break;
       }
+      case 'loop_when': {
+        do {
+          try {
+            await this.execBlock(stmt.body);
+          } catch (e) {
+            if (e instanceof BreakSignal) break;
+            if (e instanceof ContinueSignal) {
+              this._stmtCount++;
+              if (this._stmtCount % 100 === 0) await this.yieldToEventLoop();
+              if (await this.evalExpr(stmt.condition)) break;
+              continue;
+            }
+            throw e;
+          }
+
+          this._stmtCount++;
+          if (this._stmtCount % 100 === 0) {
+            await this.yieldToEventLoop();
+          }
+          if (this.paused) {
+            await new Promise(resolve => { this._pauseResolve = resolve; });
+            if (!this.running) break;
+          }
+        } while (this.running && !await this.evalExpr(stmt.condition));
+        break;
+      }
       case 'setcolor': {
         const colorVal = await this.evalExpr(stmt.expr);
         this.screen.setColor(this._colorStructToHex(colorVal, stmt.line));

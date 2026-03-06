@@ -429,6 +429,9 @@ function parse(tokens, existingFunctions) {
     if (t.type === 'KEYWORD' && t.value === 'WHILE') {
       return parseWhile();
     }
+    if (t.type === 'KEYWORD' && t.value === 'LOOP') {
+      return parseLoop();
+    }
     if (t.type === 'KEYWORD' && t.value === 'SETCOLOR') {
       return parseSetcolor();
     }
@@ -1019,6 +1022,30 @@ function parse(tokens, existingFunctions) {
     if (!foundEnd) throw new SyntaxError(`Missing END WHILE for WHILE at line ${t.line}`);
 
     return { type: 'while', condition, body, line: t.line };
+  }
+
+  function parseLoop() {
+    const t = advance(); // LOOP
+    skipNewlines();
+
+    const body = [];
+    let foundEnd = false;
+    while (!atEnd()) {
+      skipNewlines();
+      if (peek().type === 'KEYWORD' && peek().value === 'END_LOOP') {
+        advance();
+        foundEnd = true;
+        break;
+      }
+      body.push(parseStatement());
+      skipNewlines();
+    }
+    if (!foundEnd) throw new SyntaxError(`Missing END LOOP for LOOP at line ${t.line}`);
+
+    expect('KEYWORD', 'WHEN');
+    const condition = parseExpr();
+
+    return { type: 'loop_when', body, condition, line: t.line };
   }
 
   function parseStructBlock() {
