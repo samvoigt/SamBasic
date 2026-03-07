@@ -96,6 +96,10 @@ btnRun.addEventListener('click', async () => {
       setRunning(false);
     }
     refreshFileList();
+    // Ensure cursor is on a fresh line after program output
+    if (crtScreen.cursorCol > 0) {
+      crtScreen.newline();
+    }
     repl.resetState();
     repl.activate();
   }
