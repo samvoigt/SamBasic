@@ -106,6 +106,145 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
     }
   }
 
+  // === Autocomplete ===
+  const acDropdown = document.getElementById('autocomplete-dropdown');
+  let acItems = [];
+  let acIndex = 0;
+  let acPrefix = '';
+  let acActive = false;
+
+  // Build keyword list with types for display
+  const AC_KEYWORD_LIST = [...KEYWORDS].map(k => ({ name: k, type: 'keyword' }));
+  const AC_TYPED_KW_LIST = Object.keys(TYPED_KEYWORDS).map(k => ({ name: k + TYPED_KEYWORDS[k], type: 'function' }));
+  const AC_BUILTINS = AC_KEYWORD_LIST.concat(AC_TYPED_KW_LIST);
+
+  function getUserIdentifiers() {
+    const seen = new Set();
+    const results = [];
+    try {
+      const tokens = tokenizeForHighlight(textarea.value);
+      for (const tok of tokens) {
+        if (['NUM_VAR', 'STR_VAR', 'ARR_VAR', 'STRUCT_VAR', 'BOOL_VAR', 'IDENT'].includes(tok.type)) {
+          const name = tok.value;
+          if (name && !seen.has(name)) {
+            seen.add(name);
+            const type = tok.type === 'IDENT' ? 'ident' : 'variable';
+            results.push({ name, type });
+          }
+        }
+      }
+    } catch (e) { /* ignore parse errors */ }
+    return results;
+  }
+
+  function getWordBeforeCursor() {
+    const pos = textarea.selectionStart;
+    const val = textarea.value;
+    let start = pos;
+    while (start > 0 && /[a-zA-Z0-9_#$@&?]/.test(val[start - 1])) start--;
+    return { word: val.slice(start, pos), start, end: pos };
+  }
+
+  function updateAutocomplete() {
+    const { word } = getWordBeforeCursor();
+    if (word.length < 2) {
+      closeAutocomplete();
+      return;
+    }
+    const prefix = word.toUpperCase();
+    const allItems = AC_BUILTINS.concat(getUserIdentifiers());
+    // Filter: prefix match, case-insensitive, deduplicate
+    const seen = new Set();
+    const matches = [];
+    for (const item of allItems) {
+      const upper = item.name.toUpperCase();
+      if (upper.startsWith(prefix) && upper !== prefix && !seen.has(upper)) {
+        seen.add(upper);
+        matches.push(item);
+        if (matches.length >= 8) break;
+      }
+    }
+    if (matches.length === 0) {
+      closeAutocomplete();
+      return;
+    }
+    acItems = matches;
+    acPrefix = word;
+    acIndex = 0;
+    acActive = true;
+    renderAutocomplete();
+    positionAutocomplete();
+  }
+
+  function renderAutocomplete() {
+    let html = '';
+    for (let i = 0; i < acItems.length; i++) {
+      const sel = i === acIndex ? ' selected' : '';
+      const typeLabel = acItems[i].type === 'keyword' ? 'kw' :
+                        acItems[i].type === 'function' ? 'fn' :
+                        acItems[i].type === 'variable' ? 'var' : '';
+      html += '<div class="autocomplete-item' + sel + '" data-index="' + i + '">';
+      html += escapeHtml(acItems[i].name);
+      if (typeLabel) html += '<span class="ac-type">' + typeLabel + '</span>';
+      html += '</div>';
+    }
+    acDropdown.innerHTML = html;
+    acDropdown.classList.add('open');
+    // Scroll selected item into view
+    const selEl = acDropdown.querySelector('.selected');
+    if (selEl) selEl.scrollIntoView({ block: 'nearest' });
+  }
+
+  function positionAutocomplete() {
+    const pos = textarea.selectionStart;
+    const val = textarea.value;
+    const before = val.slice(0, pos);
+    const lines = before.split('\n');
+    const row = lines.length - 1;
+    const col = lines[row].length;
+    // 14px font, 1.5 line-height = 21px per line; ~8.4px per char for Courier New 14px
+    const lineHeight = 21;
+    const charWidth = 8.4;
+    const padding = 12;
+    const lineNumWidth = 48;
+    const top = (row + 1) * lineHeight + padding - textarea.scrollTop;
+    const left = col * charWidth + padding + lineNumWidth - textarea.scrollLeft;
+    acDropdown.style.top = top + 'px';
+    acDropdown.style.left = left + 'px';
+  }
+
+  function closeAutocomplete() {
+    acActive = false;
+    acItems = [];
+    acDropdown.classList.remove('open');
+    acDropdown.innerHTML = '';
+  }
+
+  function acceptAutocomplete() {
+    if (!acActive || acItems.length === 0) return false;
+    const item = acItems[acIndex];
+    const { start, end } = getWordBeforeCursor();
+    const val = textarea.value;
+    // Insert the completed name, auto-capitalizing keywords
+    const completion = item.name;
+    textarea.value = val.substring(0, start) + completion + val.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + completion.length;
+    closeAutocomplete();
+    updateLineNumbers();
+    highlight();
+    return true;
+  }
+
+  // Mouse interaction with dropdown
+  acDropdown.addEventListener('mousedown', (e) => {
+    e.preventDefault(); // prevent textarea blur
+    const itemEl = e.target.closest('.autocomplete-item');
+    if (itemEl) {
+      acIndex = parseInt(itemEl.dataset.index);
+      acceptAutocomplete();
+    }
+  });
+
   textarea.addEventListener('input', () => {
     const pos = textarea.selectionStart;
     // Only auto-capitalize when cursor follows a non-word char (word just ended)
@@ -116,14 +255,45 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
     }
     updateLineNumbers();
     highlight();
+    updateAutocomplete();
   });
-  textarea.addEventListener('scroll', syncScroll);
+  textarea.addEventListener('scroll', () => {
+    syncScroll();
+    if (acActive) positionAutocomplete();
+  });
+  textarea.addEventListener('blur', () => closeAutocomplete());
 
   const BLOCK_OPENERS = /^\s*(IF\b|FOR\b|WHILE\b|LOOP\b|FUNCTION\b|STRUCT\b|PATH3D|ELSE\b|ELSEIF\b)/i;
   const BLOCK_CLOSERS = /^\s*END\s+(IF|FOR|WHILE|LOOP|FUNCTION|STRUCT|PATH3D)\b/i;
   const INDENT = '    ';
 
   textarea.addEventListener('keydown', (e) => {
+    // Autocomplete navigation
+    if (acActive) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        acIndex = (acIndex + 1) % acItems.length;
+        renderAutocomplete();
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        acIndex = (acIndex - 1 + acItems.length) % acItems.length;
+        renderAutocomplete();
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeAutocomplete();
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        acceptAutocomplete();
+        return;
+      }
+    }
+
     // Tab key inserts spaces
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -138,6 +308,7 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
 
     // Enter key auto-indents
     if (e.key === 'Enter') {
+      closeAutocomplete();
       e.preventDefault();
       autoCapitalize(true);
       const value = textarea.value;

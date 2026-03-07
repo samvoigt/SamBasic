@@ -405,6 +405,45 @@ html, body {
   color: #585B70;
 }
 
+/* === Autocomplete Dropdown === */
+.autocomplete-dropdown {
+  display: none;
+  position: absolute;
+  z-index: 10;
+  background: #2A2A3E;
+  border: 1px solid #45475A;
+  border-radius: 4px;
+  max-height: 176px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  min-width: 120px;
+}
+
+.autocomplete-dropdown.open {
+  display: block;
+}
+
+.autocomplete-item {
+  padding: 2px 10px;
+  color: #CDD6F4;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.autocomplete-item.selected {
+  background: #45475A;
+  color: #B4BEFE;
+}
+
+.autocomplete-item .ac-type {
+  color: #6C7086;
+  font-size: 11px;
+  margin-left: 8px;
+}
+
 /* === Monitor Pane === */
 .monitor-pane {
   display: flex;
