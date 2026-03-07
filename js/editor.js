@@ -79,7 +79,41 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
   updateLineNumbers();
   highlight();
 
+  // All keywords that should auto-capitalize
+  const ALL_KEYWORDS = new Set([...KEYWORDS, ...Object.keys(TYPED_KEYWORDS)]);
+
+  // Auto-capitalize the keyword immediately before the cursor.
+  // `atEnd` means the cursor is at the end of a word (e.g. Enter pressed)
+  // rather than after a delimiter character.
+  function autoCapitalize(atEnd) {
+    const pos = textarea.selectionStart;
+    const val = textarea.value;
+    const before = val.slice(0, pos);
+    const pattern = atEnd
+      ? /([a-zA-Z]+[#$@&?]?)$/
+      : /([a-zA-Z]+[#$@&?]?)(?:\W)$/;
+    const match = before.match(pattern);
+    if (!match) return;
+    const word = match[1];
+    const base = word.replace(/[#$@&?]$/, '');
+    const suffix = word.slice(base.length);
+    const upper = base.toUpperCase();
+    if (ALL_KEYWORDS.has(upper) && word !== upper + suffix) {
+      const wordStart = pos - word.length - (atEnd ? 0 : 1);
+      const sep = atEnd ? '' : val[pos - 1];
+      textarea.value = val.substring(0, wordStart) + upper + suffix + sep + val.substring(pos);
+      textarea.selectionStart = textarea.selectionEnd = pos;
+    }
+  }
+
   textarea.addEventListener('input', () => {
+    const pos = textarea.selectionStart;
+    // Only auto-capitalize when cursor follows a non-word char (word just ended)
+    if (pos === 0 || /\w/.test(textarea.value[pos - 1])) {
+      // Still inside a word, skip
+    } else {
+      autoCapitalize(false);
+    }
     updateLineNumbers();
     highlight();
   });
@@ -105,6 +139,7 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
     // Enter key auto-indents
     if (e.key === 'Enter') {
       e.preventDefault();
+      autoCapitalize(true);
       const value = textarea.value;
       const start = textarea.selectionStart;
       // Find the current line
