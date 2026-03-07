@@ -319,13 +319,13 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
       // Get current line's leading whitespace
       const leadingMatch = currentLine.match(/^(\s*)/);
       let indent = leadingMatch ? leadingMatch[1] : '';
-      // Get the full current line (not just up to cursor) for keyword detection
-      const lineEnd = value.indexOf('\n', start);
-      const fullLine = value.slice(lineStart, lineEnd === -1 ? value.length : lineEnd);
-      if (BLOCK_OPENERS.test(fullLine)) {
+      // Use text before cursor for keyword detection
+      if (BLOCK_OPENERS.test(currentLine)) {
         indent += INDENT;
-      } else if (BLOCK_CLOSERS.test(fullLine) && indent.length >= INDENT.length) {
+      } else if (BLOCK_CLOSERS.test(currentLine) && indent.length >= INDENT.length) {
         // Dedent the END line itself
+        const lineEnd = value.indexOf('\n', start);
+        const fullLine = value.slice(lineStart, lineEnd === -1 ? value.length : lineEnd);
         const dedentedLine = fullLine.slice(INDENT.length);
         const newLineStart = lineStart;
         const newLineEnd = lineEnd === -1 ? value.length : lineEnd;
