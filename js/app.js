@@ -23,6 +23,8 @@ const btnTurbo = document.getElementById('btn-turbo');
 const ledPower = document.getElementById('led-power');
 const ledTurbo = document.getElementById('led-turbo');
 const ledReset = document.getElementById('led-reset');
+const btnFormat = document.getElementById('btn-format');
+const btnClear = document.getElementById('btn-clear');
 
 let monitorOn = true;
 let selectedFile = null;
@@ -47,6 +49,45 @@ if (savedContent) {
   editorHelpers.updateLineNumbers();
   editorHelpers.highlight();
 }
+
+// Format button
+const FORMAT_OPENERS = /^(IF|FOR|WHILE|LOOP|FUNCTION|STRUCT|PATH3D)\b/i;
+const FORMAT_CLOSERS = /^END\s+(IF|FOR|WHILE|LOOP|FUNCTION|STRUCT|PATH3D)\b/i;
+const FORMAT_MID = /^(ELSE|ELSEIF)\b/i;
+const ALL_KW = new Set([...KEYWORDS, ...Object.keys(TYPED_KEYWORDS)]);
+
+btnFormat.addEventListener('click', () => {
+  const lines = codeEditor.value.split('\n');
+  let depth = 0;
+  const formatted = lines.map(line => {
+    const trimmed = line.trim();
+    if (trimmed === '') return '';
+    // Auto-capitalize keywords
+    const capitalized = trimmed.replace(/\b([a-zA-Z]+)\b(?![#$@&?])/g, (m) => {
+      const upper = m.toUpperCase();
+      return ALL_KW.has(upper) ? upper : m;
+    });
+    if (FORMAT_CLOSERS.test(capitalized)) depth = Math.max(0, depth - 1);
+    if (FORMAT_MID.test(capitalized)) depth = Math.max(0, depth - 1);
+    const indented = '\t'.repeat(depth) + capitalized;
+    if (FORMAT_OPENERS.test(capitalized)) depth++;
+    if (FORMAT_MID.test(capitalized)) depth++;
+    return indented;
+  });
+  codeEditor.value = formatted.join('\n');
+  editorHelpers.updateLineNumbers();
+  editorHelpers.highlight();
+  localStorage.setItem('sambasic_editor_content', codeEditor.value);
+});
+
+// Clear button
+btnClear.addEventListener('click', () => {
+  if (!confirm('Clear the editor?')) return;
+  codeEditor.value = '';
+  editorHelpers.updateLineNumbers();
+  editorHelpers.highlight();
+  localStorage.setItem('sambasic_editor_content', '');
+});
 
 // Button state management
 function setRunning(isRunning) {

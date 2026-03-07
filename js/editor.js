@@ -280,7 +280,7 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
 
   const BLOCK_OPENERS = /^\s*(IF\b|FOR\b|WHILE\b|LOOP\b|FUNCTION\b|STRUCT\b|PATH3D|ELSE\b|ELSEIF\b)/i;
   const BLOCK_CLOSERS = /^\s*END\s+(IF|FOR|WHILE|LOOP|FUNCTION|STRUCT|PATH3D)\b/i;
-  const INDENT = '    ';
+  const INDENT = '\t';
 
   textarea.addEventListener('keydown', (e) => {
     // Autocomplete navigation
@@ -316,7 +316,7 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
       const end = textarea.selectionEnd;
       const value = textarea.value;
       textarea.value = value.substring(0, start) + INDENT + value.substring(end);
-      textarea.selectionStart = textarea.selectionEnd = start + 4;
+      textarea.selectionStart = textarea.selectionEnd = start + 1;
       updateLineNumbers();
       highlight();
     }

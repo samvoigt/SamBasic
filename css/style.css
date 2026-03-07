@@ -287,6 +287,10 @@ html, body {
   align-items: center;
 }
 
+.toolbar-spacer {
+  flex: 1;
+}
+
 .toolbar-btn {
   font-family: 'Segoe UI', system-ui, sans-serif;
   font-size: 13px;
