@@ -85,15 +85,55 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
   });
   textarea.addEventListener('scroll', syncScroll);
 
-  // Tab key inserts spaces
+  const BLOCK_OPENERS = /^\s*(IF\b|FOR\b|WHILE\b|LOOP\b|FUNCTION\b|STRUCT\b|PATH3D|ELSE\b|ELSEIF\b)/i;
+  const BLOCK_CLOSERS = /^\s*END\s+(IF|FOR|WHILE|LOOP|FUNCTION|STRUCT|PATH3D)\b/i;
+  const INDENT = '    ';
+
   textarea.addEventListener('keydown', (e) => {
+    // Tab key inserts spaces
     if (e.key === 'Tab') {
       e.preventDefault();
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const value = textarea.value;
-      textarea.value = value.substring(0, start) + '    ' + value.substring(end);
+      textarea.value = value.substring(0, start) + INDENT + value.substring(end);
       textarea.selectionStart = textarea.selectionEnd = start + 4;
+      updateLineNumbers();
+      highlight();
+    }
+
+    // Enter key auto-indents
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const value = textarea.value;
+      const start = textarea.selectionStart;
+      // Find the current line
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      const currentLine = value.slice(lineStart, start);
+      // Get current line's leading whitespace
+      const leadingMatch = currentLine.match(/^(\s*)/);
+      let indent = leadingMatch ? leadingMatch[1] : '';
+      // Get the full current line (not just up to cursor) for keyword detection
+      const lineEnd = value.indexOf('\n', start);
+      const fullLine = value.slice(lineStart, lineEnd === -1 ? value.length : lineEnd);
+      if (BLOCK_OPENERS.test(fullLine)) {
+        indent += INDENT;
+      } else if (BLOCK_CLOSERS.test(fullLine) && indent.length >= INDENT.length) {
+        // Dedent the END line itself
+        const dedentedLine = fullLine.slice(INDENT.length);
+        const newLineStart = lineStart;
+        const newLineEnd = lineEnd === -1 ? value.length : lineEnd;
+        indent = indent.slice(INDENT.length);
+        const insert = '\n' + indent;
+        textarea.value = value.substring(0, newLineStart) + dedentedLine + insert + value.substring(Math.max(textarea.selectionEnd, newLineEnd));
+        textarea.selectionStart = textarea.selectionEnd = newLineStart + dedentedLine.length + insert.length;
+        updateLineNumbers();
+        highlight();
+        return;
+      }
+      const insert = '\n' + indent;
+      textarea.value = value.substring(0, start) + insert + value.substring(textarea.selectionEnd);
+      textarea.selectionStart = textarea.selectionEnd = start + insert.length;
       updateLineNumbers();
       highlight();
     }
