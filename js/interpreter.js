@@ -1116,10 +1116,6 @@ class Interpreter {
         // no-op at runtime; function definitions are collected at parse time
         break;
       }
-      case 'global_decl': {
-        // no-op at runtime; handled at call setup time
-        break;
-      }
       case 'return': {
         const val = stmt.value ? await this.evalExpr(stmt.value) : null;
         throw new ReturnSignal(val);
@@ -1226,15 +1222,47 @@ class Interpreter {
       boolVars: this.boolVars,
     });
 
-    // Fresh local scope
-    this.numVars = {};
-    this.strVars = {};
-    this.arrVars = {};
-    this.structVars = {};
-    this.boolVars = {};
+    // Local scope with global fallthrough for reads
+    const globalScope = this.callStack[0] || {
+      numVars: this.numVars, strVars: this.strVars,
+      arrVars: this.arrVars, structVars: this.structVars,
+      boolVars: this.boolVars,
+    };
+    const makeScope = (storeName) => {
+      const local = {};
+      const global = globalScope[storeName];
+      return new Proxy(local, {
+        get(target, prop) {
+          if (prop === Symbol.iterator || typeof prop === 'symbol') return Reflect.get(target, prop);
+          if (prop in target) return target[prop];
+          if (prop in global) return global[prop];
+          return undefined;
+        },
+        set(target, prop, value) {
+          target[prop] = value;
+          return true;
+        },
+        has(target, prop) {
+          return prop in target || prop in global;
+        },
+        ownKeys(target) {
+          return [...new Set([...Object.keys(target), ...Object.keys(global)])];
+        },
+        getOwnPropertyDescriptor(target, prop) {
+          if (prop in target) return Object.getOwnPropertyDescriptor(target, prop);
+          if (prop in global) return Object.getOwnPropertyDescriptor(global, prop);
+          return undefined;
+        },
+      });
+    };
+    this.numVars = makeScope('numVars');
+    this.strVars = makeScope('strVars');
+    this.arrVars = makeScope('arrVars');
+    this.structVars = makeScope('structVars');
+    this.boolVars = makeScope('boolVars');
     this._initBuiltinColors();
 
-    // Set parameter values
+    // Set parameter values (written to local scope)
     for (const arg of resolvedArgs) {
       const key = arg.varName;
       switch (arg.varSuffix) {
@@ -1243,26 +1271,6 @@ class Interpreter {
         case '@': this.arrVars[key] = arg.value; break;
         case '&': this.structVars[key] = arg.value; break;
         case '?': this.boolVars[key] = arg.value; break;
-      }
-    }
-
-    // Set up GLOBAL variable proxies
-    if (func.globals && func.globals.length > 0) {
-      const globalScope = this.callStack[0]; // outermost/main scope
-      for (const g of func.globals) {
-        const varKey = g.name;
-        const suffixToStore = { '#': 'numVars', '$': 'strVars', '@': 'arrVars', '&': 'structVars', '?': 'boolVars' };
-        const storeName = suffixToStore[g.suffix];
-        const globalStore = globalScope[storeName];
-        if (!(varKey in globalStore)) {
-          throw new Error(`GLOBAL variable '${varKey}${g.suffix}' does not exist in global scope at line ${line}`);
-        }
-        Object.defineProperty(this[storeName], varKey, {
-          get() { return globalStore[varKey]; },
-          set(val) { globalStore[varKey] = val; },
-          configurable: true,
-          enumerable: true,
-        });
       }
     }
 

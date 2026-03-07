@@ -7,7 +7,6 @@
 
 ' ---- Food placement function ----
 FUNCTION placeFood
-  GLOBAL snakeX@, snakeY@, foodX#, foodY#
   overlap? = YES
   WHILE overlap?
     foodX# = 2 + RANDOM# 77

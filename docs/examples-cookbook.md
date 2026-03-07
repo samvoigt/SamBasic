@@ -145,21 +145,6 @@ addItem items@, "shield"
 PRINT LENGTH# items@    ' 2
 ```
 
-## Function with GLOBAL
-
-```
-score# = 0
-
-FUNCTION addScore points#
-  GLOBAL score#
-  score# = score# + points#
-END FUNCTION
-
-addScore 10
-addScore 25
-PRINT score#    ' 35
-```
-
 ## Play a Melody
 
 ```

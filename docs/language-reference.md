@@ -204,17 +204,6 @@ END FUNCTION
 
 Arrays, strings, and structs are **deep-copied** by default. Use `REFERENCE` to pass by reference.
 
-### GLOBAL
-
-```
-FUNCTION increment
-  GLOBAL counter#
-  counter# = counter# + 1
-END FUNCTION
-```
-
-`GLOBAL` must be the **first statement** in the function body. Lists variables from the outer scope to access.
-
 ## Output
 
 ```
