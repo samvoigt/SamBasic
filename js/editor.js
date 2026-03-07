@@ -245,6 +245,20 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
     }
   });
 
+  let _saveTimer = null;
+  let _dirty = false;
+  window.addEventListener('beforeunload', () => {
+    if (_dirty) localStorage.setItem('sambasic_editor_content', textarea.value);
+  });
+  function debouncedSave() {
+    _dirty = true;
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => {
+      localStorage.setItem('sambasic_editor_content', textarea.value);
+      _dirty = false;
+    }, 10000);
+  }
+
   textarea.addEventListener('input', () => {
     const pos = textarea.selectionStart;
     // Only auto-capitalize when cursor follows a non-word char (word just ended)
@@ -256,6 +270,7 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
     updateLineNumbers();
     highlight();
     updateAutocomplete();
+    debouncedSave();
   });
   textarea.addEventListener('scroll', () => {
     syncScroll();

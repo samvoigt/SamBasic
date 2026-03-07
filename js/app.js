@@ -38,7 +38,15 @@ const crtScreen = new Screen(screenOutput);
 const audio = new SamAudio();
 const interpreter = new Interpreter(crtScreen, audio);
 const repl = new Repl(crtScreen, interpreter);
-setupEditor(codeEditor, lineNumbers, codeHighlight);
+const editorHelpers = setupEditor(codeEditor, lineNumbers, codeHighlight);
+
+// Restore editor content from previous session
+const savedContent = localStorage.getItem('sambasic_editor_content');
+if (savedContent) {
+  codeEditor.value = savedContent;
+  editorHelpers.updateLineNumbers();
+  editorHelpers.highlight();
+}
 
 // Button state management
 function setRunning(isRunning) {
