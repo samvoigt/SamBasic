@@ -51,6 +51,12 @@ class Interpreter {
     this.MAX_RECURSION_DEPTH = 256;
     this.fileHandles = {};
     this.nextFileHandle = 1;
+    if (!this._bpInitialized) {
+      this.breakpoints = new Set();
+      this.breakpointsEnabled = false;
+      this.onBreakpointHit = null;
+      this._bpInitialized = true;
+    }
     this.warnedVars = new Set();
     this.scene3d = null;
   }
@@ -161,6 +167,13 @@ class Interpreter {
 
         const stmt = this.ast[this.pc];
         this.pc++;
+
+        if (this.breakpointsEnabled && stmt.line && this.breakpoints.has(stmt.line)) {
+          this.paused = true;
+          if (this.onBreakpointHit) this.onBreakpointHit(stmt.line);
+          await new Promise(resolve => { this._pauseResolve = resolve; });
+          if (!this.running) break;
+        }
 
         try {
           await this.execStmt(stmt);
@@ -1189,8 +1202,16 @@ class Interpreter {
         if (!this.running) break;
       }
 
+      const blockStmt = stmts[i];
+      if (this.breakpointsEnabled && blockStmt.line && this.breakpoints.has(blockStmt.line)) {
+        this.paused = true;
+        if (this.onBreakpointHit) this.onBreakpointHit(blockStmt.line);
+        await new Promise(resolve => { this._pauseResolve = resolve; });
+        if (!this.running) break;
+      }
+
       try {
-        await this.execStmt(stmts[i]);
+        await this.execStmt(blockStmt);
       } catch (e) {
         if (e instanceof GotoSignal) throw e;
         if (e instanceof BreakSignal) throw e;
@@ -1457,6 +1478,13 @@ class Interpreter {
 
       const stmt = body[pc];
       pc++;
+
+      if (this.breakpointsEnabled && stmt.line && this.breakpoints.has(stmt.line)) {
+        this.paused = true;
+        if (this.onBreakpointHit) this.onBreakpointHit(stmt.line);
+        await new Promise(resolve => { this._pauseResolve = resolve; });
+        if (!this.running) break;
+      }
 
       try {
         await this.execStmt(stmt);

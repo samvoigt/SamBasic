@@ -431,7 +431,7 @@ html, body {
 
 .line-numbers {
   width: 48px;
-  padding: 12px 8px 12px 0;
+  padding: 12px 0 12px 0;
   text-align: right;
   font-family: 'Courier New', 'Consolas', monospace;
   font-size: 14px;
@@ -441,7 +441,34 @@ html, body {
   user-select: none;
   overflow: hidden;
   border-right: 1px solid #313244;
-  white-space: pre;
+  cursor: pointer;
+}
+
+.line-num {
+  padding-right: 8px;
+  position: relative;
+  height: 21px;
+}
+
+.line-num:hover {
+  color: #CDD6F4;
+}
+
+.bp-dot {
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #FF5555;
+  box-shadow: 0 0 4px rgba(255, 85, 85, 0.6);
+}
+
+.bp-dimmed .bp-dot {
+  background: #7a3333;
+  box-shadow: none;
 }
 
 .code-highlight {
@@ -463,6 +490,18 @@ html, body {
   overflow: auto;
   pointer-events: none;
   z-index: 1;
+}
+
+.hl-line {
+  height: 21px;
+  white-space: pre;
+  margin: 0 -12px;
+  padding: 0 12px;
+}
+
+.hl-break {
+  background: rgba(255, 85, 85, 0.15);
+  box-shadow: inset 3px 0 0 #FF5555;
 }
 
 #code-editor {

@@ -1,3 +1,6 @@
+const editorBreakpoints = new Set();
+let highlightedLine = 0;
+
 function setupEditor(textarea, lineNumbersEl, highlightEl) {
   const TOKEN_CLASS = {
     KEYWORD: 'hl-keyword',
@@ -45,6 +48,9 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
       const lineTokens = tokensByLine[lineNum] || [];
       let col = 0;
 
+      const hlClass = lineNum === highlightedLine ? ' hl-break' : '';
+      html += '<div class="hl-line' + hlClass + '">';
+
       for (const tok of lineTokens) {
         // Emit gap (whitespace) before this token
         if (tok.col > col) {
@@ -65,7 +71,10 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
         html += escapeHtml(line.slice(col));
       }
 
-      if (i < lines.length - 1) html += '\n';
+      // Ensure empty lines still have height
+      if (line.length === 0) html += '\n';
+
+      html += '</div>';
     }
 
     highlightEl.innerHTML = html;
@@ -363,13 +372,27 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
   function updateLineNumbers() {
     const lines = textarea.value.split('\n');
     const count = lines.length;
-    let nums = '';
+    let html = '';
     for (let i = 1; i <= count; i++) {
-      nums += i + '\n';
+      const hasBp = editorBreakpoints.has(i);
+      html += '<div class="line-num' + (hasBp ? ' has-bp' : '') + '" data-line="' + i + '">'
+            + (hasBp ? '<span class="bp-dot"></span>' : '') + i + '</div>';
     }
-    lineNumbersEl.textContent = nums;
+    lineNumbersEl.innerHTML = html;
     syncScroll();
   }
+
+  lineNumbersEl.addEventListener('click', (e) => {
+    const lineEl = e.target.closest('.line-num');
+    if (!lineEl) return;
+    const line = parseInt(lineEl.dataset.line);
+    if (editorBreakpoints.has(line)) {
+      editorBreakpoints.delete(line);
+    } else {
+      editorBreakpoints.add(line);
+    }
+    updateLineNumbers();
+  });
 
   function syncScroll() {
     lineNumbersEl.scrollTop = textarea.scrollTop;
@@ -377,5 +400,10 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
     highlightEl.scrollLeft = textarea.scrollLeft;
   }
 
-  return { updateLineNumbers, highlight };
+  function setHighlightedLine(line) {
+    highlightedLine = line;
+    highlight();
+  }
+
+  return { updateLineNumbers, highlight, breakpoints: editorBreakpoints, setHighlightedLine };
 }

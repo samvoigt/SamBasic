@@ -33,7 +33,7 @@ let selectedFile = null;
 let powerPausedInterpreter = false;
 let currentRunId = 0;
 let turboOn = true;
-let modeOn = false;
+let modeOn = true;
 let resetBlinkInterval = null;
 
 const codeHighlight = document.getElementById('code-highlight');
@@ -47,6 +47,17 @@ const filesPane = document.querySelector('.files-pane');
 const inspector = new Inspector(inspectorPane, interpreter);
 const repl = new Repl(crtScreen, interpreter);
 const editorHelpers = setupEditor(codeEditor, lineNumbers, codeHighlight);
+
+// Breakpoint hit callback — update pause button UI and highlight line
+interpreter.onBreakpointHit = (line) => {
+  btnPause.innerHTML = '<span class="btn-icon">&#9654;</span> Resume';
+  editorHelpers.setHighlightedLine(line);
+};
+
+// Start with mode on: inspector visible, breakpoints enabled
+filesPane.style.display = 'none';
+inspector.show();
+interpreter.breakpointsEnabled = true;
 
 // Restore editor content from previous session
 const savedContent = localStorage.getItem('sambasic_editor_content');
@@ -104,6 +115,7 @@ function setRunning(isRunning) {
   btnStop.disabled = !isRunning && !bgMusic && !repl.executing;
   codeEditor.readOnly = isRunning;
   setResetLed(isRunning);
+  if (!isRunning) editorHelpers.setHighlightedLine(0);
 }
 
 function setResetLed(active) {
@@ -142,6 +154,7 @@ btnRun.addEventListener('click', async () => {
     const tokens = tokenize(source);
     const { ast, labels, functions } = parse(tokens);
     interpreter.load(ast, labels, functions);
+    interpreter.breakpoints = new Set(editorBreakpoints);
     setRunning(true);
     await interpreter.run();
   } catch (e) {
@@ -166,6 +179,7 @@ btnPause.addEventListener('click', () => {
     if (interpreter.running) interpreter.resume();
     audio.resumeBackground();
     btnPause.innerHTML = '<span class="btn-icon">&#9646;&#9646;</span> Pause';
+    editorHelpers.setHighlightedLine(0);
   } else {
     if (interpreter.running) interpreter.pause();
     audio.pauseBackground();
@@ -175,6 +189,7 @@ btnPause.addEventListener('click', () => {
 
 // Step
 btnStep.addEventListener('click', () => {
+  editorHelpers.setHighlightedLine(0);
   interpreter.step();
 });
 
@@ -426,6 +441,8 @@ btnTurbo.addEventListener('click', () => {
 btnMode.addEventListener('click', () => {
   modeOn = !modeOn;
   ledMode.classList.toggle('on-purple', modeOn);
+  interpreter.breakpointsEnabled = modeOn;
+  lineNumbers.classList.toggle('bp-dimmed', !modeOn);
   if (modeOn) {
     filesPane.style.display = 'none';
     inspector.show();
@@ -438,6 +455,7 @@ btnMode.addEventListener('click', () => {
 // Initialize LEDs
 ledPower.classList.add('on-green');
 ledTurbo.classList.add('on-amber');
+ledMode.classList.add('on-purple');
 
 // === Boot Sequence ===
 
