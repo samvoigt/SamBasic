@@ -14,6 +14,7 @@ class BreakSignal {}
 class ContinueSignal {}
 
 class Interpreter {
+  static LOCAL_TARGET = Symbol('inspectorLocal');
   constructor(screen, audio) {
     this.screen = screen;
     this.audio = audio;
@@ -1241,6 +1242,7 @@ class Interpreter {
       const global = globalScope[storeName];
       return new Proxy(local, {
         get(target, prop) {
+          if (prop === Interpreter.LOCAL_TARGET) return target;
           if (prop === Symbol.iterator || typeof prop === 'symbol') return Reflect.get(target, prop);
           if (prop in target) return target[prop];
           if (prop in global) return global[prop];

@@ -23,6 +23,8 @@ const btnTurbo = document.getElementById('btn-turbo');
 const ledPower = document.getElementById('led-power');
 const ledTurbo = document.getElementById('led-turbo');
 const ledReset = document.getElementById('led-reset');
+const btnMode = document.getElementById('btn-mode');
+const ledMode = document.getElementById('led-mode');
 const btnFormat = document.getElementById('btn-format');
 const btnClear = document.getElementById('btn-clear');
 
@@ -31,6 +33,7 @@ let selectedFile = null;
 let powerPausedInterpreter = false;
 let currentRunId = 0;
 let turboOn = true;
+let modeOn = false;
 let resetBlinkInterval = null;
 
 const codeHighlight = document.getElementById('code-highlight');
@@ -39,6 +42,9 @@ const codeHighlight = document.getElementById('code-highlight');
 const crtScreen = new Screen(screenOutput);
 const audio = new SamAudio();
 const interpreter = new Interpreter(crtScreen, audio);
+const inspectorPane = document.querySelector('.inspector-pane');
+const filesPane = document.querySelector('.files-pane');
+const inspector = new Inspector(inspectorPane, interpreter);
 const repl = new Repl(crtScreen, interpreter);
 const editorHelpers = setupEditor(codeEditor, lineNumbers, codeHighlight);
 
@@ -272,6 +278,8 @@ function togglePower() {
     btnPower.classList.add('off');
     ledPower.classList.remove('on-green');
     ledTurbo.classList.remove('on-amber');
+    ledMode.classList.remove('on-purple');
+    if (modeOn) inspector.hide();
     setResetLed(false);
     monitorOn = false;
   } else {
@@ -280,6 +288,10 @@ function togglePower() {
     btnPower.classList.remove('off');
     ledPower.classList.add('on-green');
     if (turboOn) ledTurbo.classList.add('on-amber');
+    if (modeOn) {
+      ledMode.classList.add('on-purple');
+      inspector.show();
+    }
     monitorOn = true;
     audio.resumeAll();
     if (powerPausedInterpreter) {
@@ -408,6 +420,19 @@ repl.onExecutingChange = (executing) => {
 btnTurbo.addEventListener('click', () => {
   turboOn = !turboOn;
   ledTurbo.classList.toggle('on-amber', turboOn);
+});
+
+// Mode button — toggle between files pane and inspector
+btnMode.addEventListener('click', () => {
+  modeOn = !modeOn;
+  ledMode.classList.toggle('on-purple', modeOn);
+  if (modeOn) {
+    filesPane.style.display = 'none';
+    inspector.show();
+  } else {
+    inspector.hide();
+    filesPane.style.display = 'flex';
+  }
 });
 
 // Initialize LEDs

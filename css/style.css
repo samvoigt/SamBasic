@@ -159,6 +159,11 @@ html, body {
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 4px rgba(255, 51, 51, 0.6);
 }
 
+.tower-led.on-purple {
+  background: #AA55FF;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 4px rgba(170, 85, 255, 0.6);
+}
+
 .tower-btn-label {
   font-family: 'Courier New', 'Consolas', monospace;
   font-size: 7px;
@@ -265,6 +270,90 @@ html, body {
 }
 
 .files-empty {
+  padding: 8px 12px;
+  color: #585B70;
+  font-style: italic;
+  text-align: center;
+}
+
+/* === Inspector Pane === */
+.inspector-pane {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.inspector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  color: #585B70;
+  font-size: 13px;
+}
+
+.inspector-list {
+  overflow-y: auto;
+  flex: 1;
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.inspector-section {
+  padding: 4px 12px 2px;
+  color: #6C7086;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #2A2A3E;
+  margin-top: 4px;
+}
+
+.inspector-section:first-child {
+  margin-top: 0;
+}
+
+.inspector-var {
+  padding: 2px 12px 2px 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inspector-var-name {
+  color: #B4BEFE;
+}
+
+.inspector-var-eq {
+  color: #6C7086;
+}
+
+.inspector-var-num {
+  color: #FAB387;
+}
+
+.inspector-var-str {
+  color: #A6E3A1;
+}
+
+.inspector-var-bool {
+  color: #CBA6F7;
+}
+
+.inspector-var-arr,
+.inspector-var-struct {
+  color: #89B4FA;
+}
+
+.inspector-sub {
+  padding: 1px 12px 1px 28px;
+  color: #7F849C;
+}
+
+.inspector-empty {
   padding: 8px 12px;
   color: #585B70;
   font-style: italic;

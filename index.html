@@ -50,6 +50,11 @@
                 <span class="tower-btn-label">TURBO</span>
               </div>
               <div class="tower-btn-group">
+                <div class="tower-led" id="led-mode"></div>
+                <button id="btn-mode" class="tower-btn" title="Mode"></button>
+                <span class="tower-btn-label">MODE</span>
+              </div>
+              <div class="tower-btn-group">
                 <div class="tower-led" id="led-reset"></div>
                 <button id="btn-reset" class="tower-btn" title="Reset"></button>
                 <span class="tower-btn-label">RESET</span>
@@ -72,6 +77,12 @@
                 </div>
               </div>
               <div class="files-list" id="files-list"></div>
+            </div>
+            <div class="inspector-pane" style="display: none;">
+              <div class="inspector-header">
+                <span>Variables</span>
+              </div>
+              <div class="inspector-list" id="inspector-list"></div>
             </div>
           </div>
           <input type="file" id="file-input-upload" hidden>
@@ -118,6 +129,7 @@
   <script src="js/parser.js"></script>
   <script src="js/editor.js"></script>
   <script src="js/interpreter.js"></script>
+  <script src="js/inspector.js"></script>
   <script src="js/repl.js"></script>
   <script src="js/app.js"></script>
 </body>
