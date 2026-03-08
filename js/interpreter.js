@@ -503,6 +503,14 @@ class Interpreter {
         fh.pos++;
         return ch;
       }
+      case 'READSCREEN': {
+        const row = Math.floor(await this.evalExpr(params.ROW));
+        const col = Math.floor(await this.evalExpr(params.COLUMN));
+        if (row < 1 || row > this.screen.rows || col < 1 || col > this.screen.cols) {
+          throw new Error(`READSCREEN: position (${row}, ${col}) out of bounds at line ${line}`);
+        }
+        return this.screen.buffer[row - 1][col - 1].char;
+      }
       case 'TONUMBER': {
         const val = await this.evalExpr(params.VALUE);
         const num = parseFloat(val);

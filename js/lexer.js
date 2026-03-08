@@ -26,7 +26,7 @@ const TYPED_KEYWORDS = {
   LENGTH: '#', SUBSTRING: '$', UPPERCASE: '$', LOWERCASE: '$', CONTAINS: '?',
   ABS: '#', SQRT: '#', ROUND: '#', FLOOR: '#', CEIL: '#',
   MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
-  OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?',
+  OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?', READSCREEN: '$',
   TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$', RUNNINGTIME: '#', FILEEXISTS: '?',
   CREATESPRITE: '#',
   OBJECT3D: '#',
