@@ -54,7 +54,7 @@ class Interpreter {
     if (!this._bpInitialized) {
       this.breakpoints = new Set();
       this.breakpointsEnabled = false;
-      this.onBreakpointHit = null;
+      this.onPause = null;
       this._bpInitialized = true;
     }
     this.warnedVars = new Set();
@@ -160,17 +160,24 @@ class Interpreter {
 
     try {
       while (this.running && this.pc < this.ast.length) {
+        if (this.stepping) {
+          this.paused = true;
+          this.stepping = false;
+        }
+
+        const stmt = this.ast[this.pc];
+
         if (this.paused) {
+          if (this.onPause) this.onPause(stmt.line);
           await new Promise(resolve => { this._pauseResolve = resolve; });
           if (!this.running) break;
         }
 
-        const stmt = this.ast[this.pc];
         this.pc++;
 
-        if (this.breakpointsEnabled && stmt.line && this.breakpoints.has(stmt.line)) {
+        if (!this.stepping && this.breakpointsEnabled && stmt.line && this.breakpoints.has(stmt.line)) {
           this.paused = true;
-          if (this.onBreakpointHit) this.onBreakpointHit(stmt.line);
+          if (this.onPause) this.onPause(stmt.line);
           await new Promise(resolve => { this._pauseResolve = resolve; });
           if (!this.running) break;
         }
@@ -1197,15 +1204,22 @@ class Interpreter {
     for (let i = 0; i < stmts.length; i++) {
       if (!this.running) break;
 
+      if (this.stepping) {
+        this.paused = true;
+        this.stepping = false;
+      }
+
+      const blockStmt = stmts[i];
+
       if (this.paused) {
+        if (this.onPause) this.onPause(blockStmt.line);
         await new Promise(resolve => { this._pauseResolve = resolve; });
         if (!this.running) break;
       }
 
-      const blockStmt = stmts[i];
-      if (this.breakpointsEnabled && blockStmt.line && this.breakpoints.has(blockStmt.line)) {
+      if (!this.stepping && this.breakpointsEnabled && blockStmt.line && this.breakpoints.has(blockStmt.line)) {
         this.paused = true;
-        if (this.onBreakpointHit) this.onBreakpointHit(blockStmt.line);
+        if (this.onPause) this.onPause(blockStmt.line);
         await new Promise(resolve => { this._pauseResolve = resolve; });
         if (!this.running) break;
       }
@@ -1471,17 +1485,24 @@ class Interpreter {
   async execFunctionBody(body, localLabels) {
     let pc = 0;
     while (this.running && pc < body.length) {
+      if (this.stepping) {
+        this.paused = true;
+        this.stepping = false;
+      }
+
+      const stmt = body[pc];
+
       if (this.paused) {
+        if (this.onPause) this.onPause(stmt.line);
         await new Promise(resolve => { this._pauseResolve = resolve; });
         if (!this.running) break;
       }
 
-      const stmt = body[pc];
       pc++;
 
-      if (this.breakpointsEnabled && stmt.line && this.breakpoints.has(stmt.line)) {
+      if (!this.stepping && this.breakpointsEnabled && stmt.line && this.breakpoints.has(stmt.line)) {
         this.paused = true;
-        if (this.onBreakpointHit) this.onBreakpointHit(stmt.line);
+        if (this.onPause) this.onPause(stmt.line);
         await new Promise(resolve => { this._pauseResolve = resolve; });
         if (!this.running) break;
       }

@@ -1,5 +1,8 @@
 const editorBreakpoints = new Set();
 let highlightedLine = 0;
+let _prevLineCount = 0;
+let _editLine = 0;
+let _editCol = 0;
 
 function setupEditor(textarea, lineNumbersEl, highlightEl) {
   const TOKEN_CLASS = {
@@ -287,11 +290,22 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
   });
   textarea.addEventListener('blur', () => closeAutocomplete());
 
+  function captureEditPos() {
+    const pos = textarea.selectionStart;
+    const before = textarea.value.slice(0, pos);
+    const lines = before.split('\n');
+    _editLine = lines.length;
+    _editCol = lines[lines.length - 1].length;
+  }
+
+  textarea.addEventListener('beforeinput', captureEditPos);
+
   const BLOCK_OPENERS = /^\s*(IF\b|FOR\b|WHILE\b|LOOP\b|FUNCTION\b|STRUCT\b|PATH3D|ELSE\b|ELSEIF\b)/i;
   const BLOCK_CLOSERS = /^\s*END\s+(IF|FOR|WHILE|LOOP|FUNCTION|STRUCT|PATH3D)\b/i;
   const INDENT = '\t';
 
   textarea.addEventListener('keydown', (e) => {
+    captureEditPos();
     // Autocomplete navigation
     if (acActive) {
       if (e.key === 'ArrowDown') {
@@ -369,9 +383,38 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
     }
   });
 
+  function adjustBreakpoints(newCount) {
+    const delta = newCount - _prevLineCount;
+    if (delta === 0 || _prevLineCount === 0) return;
+
+    const updated = new Set();
+    if (delta > 0) {
+      // Lines inserted: shift breakpoints at or after the insert point
+      const threshold = _editCol === 0 ? _editLine : _editLine + 1;
+      for (const bp of editorBreakpoints) {
+        updated.add(bp >= threshold ? bp + delta : bp);
+      }
+    } else {
+      // Lines deleted: remove breakpoints in deleted range, shift rest up
+      const absDelta = -delta;
+      const removeStart = _editCol === 0 ? _editLine : _editLine + 1;
+      const removeEnd = removeStart + absDelta - 1;
+      for (const bp of editorBreakpoints) {
+        if (bp >= removeStart && bp <= removeEnd) continue;
+        updated.add(bp > removeEnd ? bp + delta : bp);
+      }
+    }
+    editorBreakpoints.clear();
+    for (const bp of updated) editorBreakpoints.add(bp);
+  }
+
   function updateLineNumbers() {
     const lines = textarea.value.split('\n');
     const count = lines.length;
+    if (_prevLineCount > 0 && count !== _prevLineCount) {
+      adjustBreakpoints(count);
+    }
+    _prevLineCount = count;
     let html = '';
     for (let i = 1; i <= count; i++) {
       const hasBp = editorBreakpoints.has(i);

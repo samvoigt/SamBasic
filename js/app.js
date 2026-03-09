@@ -48,10 +48,10 @@ const inspector = new Inspector(inspectorPane, interpreter);
 const repl = new Repl(crtScreen, interpreter);
 const editorHelpers = setupEditor(codeEditor, lineNumbers, codeHighlight);
 
-// Breakpoint hit callback — update pause button UI and highlight line
-interpreter.onBreakpointHit = (line) => {
-  btnPause.innerHTML = '<span class="btn-icon">&#9654;</span> Resume';
+// Pause callback — highlight the line about to execute and update button
+interpreter.onPause = (line) => {
   editorHelpers.setHighlightedLine(line);
+  btnPause.innerHTML = '<span class="btn-icon">&#9654;</span> Resume';
 };
 
 // Start with mode on: inspector visible, breakpoints enabled
@@ -111,11 +111,14 @@ function setRunning(isRunning) {
   const bgMusic = audio._bgPlaying;
   btnRun.disabled = isRunning;
   btnPause.disabled = !isRunning && !bgMusic;
-  btnStep.disabled = !isRunning;
+  btnStep.disabled = false;
   btnStop.disabled = !isRunning && !bgMusic && !repl.executing;
   codeEditor.readOnly = isRunning;
   setResetLed(isRunning);
-  if (!isRunning) editorHelpers.setHighlightedLine(0);
+  if (!isRunning) {
+    editorHelpers.setHighlightedLine(0);
+    btnPause.innerHTML = '<span class="btn-icon">&#9646;&#9646;</span> Pause';
+  }
 }
 
 function setResetLed(active) {
@@ -188,9 +191,46 @@ btnPause.addEventListener('click', () => {
 });
 
 // Step
-btnStep.addEventListener('click', () => {
-  editorHelpers.setHighlightedLine(0);
-  interpreter.step();
+btnStep.addEventListener('click', async () => {
+  if (!monitorOn) return;
+  if (interpreter.running) {
+    interpreter.step();
+    return;
+  }
+  // Start program in stepping mode — reuse Run's handler logic
+  if (!codeEditor.value.trim()) return;
+
+  if (repl.hasState) {
+    if (!confirm('Running a program will clear REPL state. Continue?')) return;
+  }
+
+  if (interpreter.running) {
+    interpreter.stop();
+  }
+
+  repl.deactivate();
+  const runId = ++currentRunId;
+  try {
+    const tokens = tokenize(codeEditor.value);
+    const { ast, labels, functions } = parse(tokens);
+    interpreter.load(ast, labels, functions);
+    interpreter.breakpoints = new Set(editorBreakpoints);
+    interpreter.stepping = true;
+    setRunning(true);
+    await interpreter.run();
+  } catch (e) {
+    crtScreen.showError(`ERROR: ${e.message}`);
+  } finally {
+    if (runId === currentRunId) {
+      setRunning(false);
+    }
+    refreshFileList();
+    if (crtScreen.cursorCol > 0) {
+      crtScreen.newline();
+    }
+    repl.resetState();
+    repl.activate();
+  }
 });
 
 // Stop
