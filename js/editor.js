@@ -325,7 +325,7 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
         closeAutocomplete();
         return;
       }
-      if (e.key === 'Tab') {
+      if (e.key === 'Tab' || e.key === 'Enter') {
         e.preventDefault();
         acceptAutocomplete();
         return;
