@@ -1,0 +1,411 @@
+' =============================================
+'   SYNTH - A Visual Synthesizer
+'   Click piano keys or use QWERTY keyboard
+'   Mouse controls: wave, filter, envelope
+' =============================================
+
+' ---- Layout constants ----
+keyboardY# = 320
+keyW# = 36
+keyH# = 140
+blackKeyW# = 22
+blackKeyH# = 90
+numWhiteKeys# = 15
+
+' ---- Note frequencies (C4 to E5) ----
+freqs@ = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50]
+
+' Map QWERTY keys to white key indices (1-based)
+' a=C4 s=D4 d=E4 f=F4 g=G4 h=A4 j=B4 k=C5 l=D5
+qwertyKeys@ = ["a","s","d","f","g","h","j","k","l",";","'"]
+
+' Black key indices: which white key they sit between
+' C#=1, D#=2, skip, F#=4, G#=5, A#=6, skip, C#5=8, D#5=9, skip, F#5=11, G#5=12, A#5=13
+blackKeySlots@ = [1, 2, 0, 4, 5, 6, 0, 8, 9, 0, 11, 12, 13]
+blackFreqs@ = [277.18, 311.13, 0, 369.99, 415.30, 466.16, 0, 554.37, 622.25, 0, 739.99, 830.61, 932.33]
+qwertyBlackKeys@ = ["w","e","","t","y","u","","o","p"]
+
+' ---- Synth state ----
+waveNames@ = ["SQUARE", "SAW", "TRIANGLE", "SINE", "NOISE"]
+currentWave# = 1
+filterCutoff# = 8000
+filterRes# = 1
+envAttack# = 0.02
+envDecay# = 0.1
+envSustain# = 0.7
+envRelease# = 0.3
+
+' ---- Create the main tone (monophonic for simplicity) ----
+tone# = GENERATETONE# FREQ 440 WAVE "SQUARE"
+TONEENVELOPE tone#, envAttack#, envDecay#, envSustain#, envRelease#
+TONEFILTER tone#, "LOWPASS", filterCutoff#, filterRes#
+TONEVOLUME tone#, 0.6
+SYNTHVOLUME 0.7
+
+' ---- Graphics setup ----
+BUFFERENABLED YES
+
+' ---- State tracking ----
+activeKey# = 0
+lastKey$ = ""
+needsRedraw? = YES
+lastMouse# = 0
+
+' ---- Draw functions ----
+
+FUNCTION drawPiano
+  ' White keys
+  FOR i# FROM 1 TO numWhiteKeys#
+    x# = (i# - 1) * keyW# + 100
+    IF i# = activeKey# THEN
+      SETCOLOR LIGHTCYAN&
+    ELSE
+      SETCOLOR WHITE&
+    END IF
+    DRAWBOX X1 x# Y1 keyboardY# X2 (x# + keyW# - 2) Y2 (keyboardY# + keyH#), FILL YES
+    SETCOLOR DARKGRAY&
+    DRAWBOX X1 x# Y1 keyboardY# X2 (x# + keyW# - 2) Y2 (keyboardY# + keyH#)
+  END FOR
+
+  ' Black keys
+  FOR i# FROM 1 TO LENGTH# blackKeySlots@
+    slot# = blackKeySlots@[i#]
+    IF slot# = 0 THEN
+      CONTINUE
+    END IF
+    x# = slot# * keyW# + 100 - (blackKeyW# / 2)
+    IF activeKey# < 0 AND (0 - activeKey#) = i# THEN
+      SETCOLOR DARKGRAY&
+    ELSE
+      SETCOLOR BLACK&
+    END IF
+    DRAWBOX X1 x# Y1 keyboardY# X2 (x# + blackKeyW#) Y2 (keyboardY# + blackKeyH#), FILL YES
+  END FOR
+END FUNCTION
+
+FUNCTION drawControls
+  ' Canvas y for text row R = (6 + (R-1) * 13) * 1.424
+  ' Row 1=9, 3=46, 4=64, 6=101, 8=138, 10=175, 12=212, 14=249
+
+  ' ---- Wave selector (row 3-4) ----
+  SETCOLOR YELLOW&
+  PRINTAT 2, 2, "WAVE"
+  FOR i# FROM 1 TO LENGTH# waveNames@
+    IF i# = currentWave# THEN
+      SETCOLOR LIGHTGREEN&
+    ELSE
+      SETCOLOR DARKGRAY&
+    END IF
+    bx# = 10 + (i# - 1) * 65
+    DRAWBOX X1 bx# Y1 55 X2 (bx# + 60) Y2 78, FILL YES
+    IF i# = currentWave# THEN
+      SETCOLOR BLACK&
+    ELSE
+      SETCOLOR LIGHTGRAY&
+    END IF
+    col# = 2 + (i# - 1) * 8
+    PRINTAT 4, col#, waveNames@[i#]
+  END FOR
+
+  ' ---- Filter cutoff (row 6) ----
+  SETCOLOR YELLOW&
+  PRINTAT 6, 2, "CUTOFF"
+  SETCOLOR DARKGRAY&
+  DRAWBOX X1 55 Y1 94 X2 310 Y2 112, FILL YES
+  cutoffPct# = (filterCutoff# - 100) / 9900
+  fillW# = cutoffPct# * 255
+  SETCOLOR LIGHTBLUE&
+  DRAWBOX X1 55 Y1 94 X2 (55 + fillW#) Y2 112, FILL YES
+  SETCOLOR WHITE&
+  cutStr$ = TOSTRING$ FLOOR# filterCutoff#
+  PRINTAT 6, 41, cutStr$ + "Hz  "
+
+  ' ---- Filter resonance (row 8) ----
+  SETCOLOR YELLOW&
+  PRINTAT 8, 2, "RES"
+  SETCOLOR DARKGRAY&
+  DRAWBOX X1 55 Y1 131 X2 310 Y2 149, FILL YES
+  resPct# = (filterRes# - 0.1) / 19.9
+  fillW# = resPct# * 255
+  SETCOLOR LIGHTMAGENTA&
+  DRAWBOX X1 55 Y1 131 X2 (55 + fillW#) Y2 149, FILL YES
+  SETCOLOR WHITE&
+  resStr$ = TOSTRING$ ROUND# (filterRes# * 10) / 10
+  PRINTAT 8, 41, resStr$ + "  "
+
+  ' ---- Envelope sliders (rows 10, 12) ----
+  SETCOLOR YELLOW&
+  PRINTAT 10, 2, "ATK"
+  SETCOLOR DARKGRAY&
+  DRAWBOX X1 55 Y1 168 X2 165 Y2 186, FILL YES
+  aPct# = envAttack# / 1.0
+  SETCOLOR LIGHTRED&
+  DRAWBOX X1 55 Y1 168 X2 (55 + aPct# * 110) Y2 186, FILL YES
+
+  SETCOLOR YELLOW&
+  PRINTAT 10, 22, "DEC"
+  SETCOLOR DARKGRAY&
+  DRAWBOX X1 200 Y1 168 X2 310 Y2 186, FILL YES
+  dPct# = envDecay# / 1.0
+  SETCOLOR YELLOW&
+  DRAWBOX X1 200 Y1 168 X2 (200 + dPct# * 110) Y2 186, FILL YES
+
+  SETCOLOR YELLOW&
+  PRINTAT 12, 2, "SUS"
+  SETCOLOR DARKGRAY&
+  DRAWBOX X1 55 Y1 205 X2 165 Y2 223, FILL YES
+  SETCOLOR GREEN&
+  DRAWBOX X1 55 Y1 205 X2 (55 + envSustain# * 110) Y2 223, FILL YES
+
+  SETCOLOR YELLOW&
+  PRINTAT 12, 22, "REL"
+  SETCOLOR DARKGRAY&
+  DRAWBOX X1 200 Y1 205 X2 310 Y2 223, FILL YES
+  rPct# = envRelease# / 2.0
+  SETCOLOR LIGHTCYAN&
+  DRAWBOX X1 200 Y1 205 X2 (200 + rPct# * 110) Y2 223, FILL YES
+
+  ' ---- Envelope visualization (right side) ----
+  SETCOLOR YELLOW&
+  PRINTAT 2, 46, "ENVELOPE"
+  SETCOLOR DARKGRAY&
+  DRAWBOX X1 355 Y1 55 X2 620 Y2 230, FILL YES
+
+  SETCOLOR LIGHTGREEN&
+  envW# = 255
+  envH# = 160
+  envX# = 360
+  envY# = 60
+
+  totalTime# = envAttack# + envDecay# + 0.3 + envRelease#
+  aEnd# = envX# + (envAttack# / totalTime#) * envW#
+  dEnd# = aEnd# + (envDecay# / totalTime#) * envW#
+  sEnd# = dEnd# + (0.3 / totalTime#) * envW#
+  rEnd# = sEnd# + (envRelease# / totalTime#) * envW#
+
+  bottom# = envY# + envH#
+  top# = envY# + 5
+  susY# = bottom# - (envSustain# * envH#)
+
+  DRAWLINE X1 envX# Y1 bottom# X2 aEnd# Y2 top#
+  DRAWLINE X1 aEnd# Y1 top# X2 dEnd# Y2 susY#
+  DRAWLINE X1 dEnd# Y1 susY# X2 sEnd# Y2 susY#
+  DRAWLINE X1 sEnd# Y1 susY# X2 rEnd# Y2 bottom#
+
+  ' ---- Instructions ----
+  SETCOLOR DARKGRAY&
+  PRINTAT 22, 2, "Keys: A-L = notes | W,E,T,Y,U,O,P = sharps"
+  PRINTAT 23, 2, "Mouse: click piano, drag sliders"
+END FUNCTION
+
+' ======== MAIN LOOP ========
+LOOP
+  mx# = MOUSEX#
+  my# = MOUSEY#
+  mb# = MOUSEBUTTON#
+  k$ = GETKEY$
+
+  oldActive# = activeKey#
+  changed? = NO
+
+  ' ---- Keyboard input ----
+  IF k$ <> lastKey$ THEN
+    ' Check white keys
+    IF k$ <> "" THEN
+      FOR i# FROM 1 TO LENGTH# qwertyKeys@
+        IF k$ = qwertyKeys@[i#] THEN
+          activeKey# = i#
+          TONEFREQ tone#, freqs@[i#]
+          TONEON tone#
+          changed? = YES
+          BREAK
+        END IF
+      END FOR
+      ' Check black keys
+      IF NOT changed? THEN
+        FOR i# FROM 1 TO LENGTH# qwertyBlackKeys@
+          IF qwertyBlackKeys@[i#] <> "" AND k$ = qwertyBlackKeys@[i#] THEN
+            ' Find which black key this is
+            bkIdx# = 0
+            count# = 0
+            FOR j# FROM 1 TO LENGTH# blackKeySlots@
+              IF blackKeySlots@[j#] > 0 THEN
+                count# = count# + 1
+                IF count# = i# THEN
+                  bkIdx# = j#
+                  BREAK
+                END IF
+              END IF
+            END FOR
+            IF bkIdx# > 0 AND blackFreqs@[bkIdx#] > 0 THEN
+              activeKey# = 0 - bkIdx#
+              TONEFREQ tone#, blackFreqs@[bkIdx#]
+              TONEON tone#
+              changed? = YES
+            END IF
+            BREAK
+          END IF
+        END FOR
+      END IF
+    END IF
+    IF k$ = "" AND lastKey$ <> "" THEN
+      TONEOFF tone#
+      activeKey# = 0
+      changed? = YES
+    END IF
+    lastKey$ = k$
+  END IF
+
+  ' ---- Mouse click on piano keys ----
+  IF mb# > 0 AND my# >= keyboardY# THEN
+    ' Check black keys first (they overlap white keys)
+    clickedBlack? = NO
+    FOR i# FROM 1 TO LENGTH# blackKeySlots@
+      slot# = blackKeySlots@[i#]
+      IF slot# = 0 THEN
+        CONTINUE
+      END IF
+      bx# = slot# * keyW# + 100 - (blackKeyW# / 2)
+      IF mx# >= bx# AND mx# <= (bx# + blackKeyW#) AND my# <= (keyboardY# + blackKeyH#) THEN
+        IF blackFreqs@[i#] > 0 THEN
+          IF activeKey# <> (0 - i#) THEN
+            activeKey# = 0 - i#
+            TONEFREQ tone#, blackFreqs@[i#]
+            TONEON tone#
+            changed? = YES
+          END IF
+          clickedBlack? = YES
+          BREAK
+        END IF
+      END IF
+    END FOR
+    ' Check white keys
+    IF NOT clickedBlack? THEN
+      FOR i# FROM 1 TO numWhiteKeys#
+        x# = (i# - 1) * keyW# + 100
+        IF mx# >= x# AND mx# < (x# + keyW#) THEN
+          IF activeKey# <> i# THEN
+            activeKey# = i#
+            TONEFREQ tone#, freqs@[i#]
+            TONEON tone#
+            changed? = YES
+          END IF
+          BREAK
+        END IF
+      END FOR
+    END IF
+  END IF
+
+  ' Release on mouse up (only if mouse was playing)
+  IF mb# = 0 AND lastMouse# > 0 AND activeKey# <> 0 AND k$ = "" THEN
+    TONEOFF tone#
+    activeKey# = 0
+    changed? = YES
+  END IF
+  lastMouse# = mb#
+
+  ' ---- Mouse interaction with controls ----
+  IF mb# > 0 AND my# < keyboardY# THEN
+    ' Wave selector buttons (y=55-78)
+    IF my# >= 50 AND my# <= 82 THEN
+      FOR i# FROM 1 TO LENGTH# waveNames@
+        bx# = 10 + (i# - 1) * 65
+        IF mx# >= bx# AND mx# <= (bx# + 60) THEN
+          IF currentWave# <> i# THEN
+            currentWave# = i#
+            waveName$ = waveNames@[currentWave#]
+            IF waveName$ = "SAW" THEN
+              TONEWAVE tone#, "SAWTOOTH"
+            ELSE
+              TONEWAVE tone#, waveName$
+            END IF
+            changed? = YES
+          END IF
+          BREAK
+        END IF
+      END FOR
+    END IF
+
+    ' Cutoff slider (y=94-112)
+    IF my# >= 90 AND my# <= 116 AND mx# >= 55 AND mx# <= 310 THEN
+      pct# = (mx# - 55) / 255
+      IF pct# < 0 THEN
+        pct# = 0
+      END IF
+      IF pct# > 1 THEN
+        pct# = 1
+      END IF
+      filterCutoff# = 100 + pct# * 9900
+      TONEFILTER tone#, "LOWPASS", filterCutoff#, filterRes#
+      changed? = YES
+    END IF
+
+    ' Resonance slider (y=131-149)
+    IF my# >= 127 AND my# <= 153 AND mx# >= 55 AND mx# <= 310 THEN
+      pct# = (mx# - 55) / 255
+      IF pct# < 0 THEN
+        pct# = 0
+      END IF
+      IF pct# > 1 THEN
+        pct# = 1
+      END IF
+      filterRes# = 0.1 + pct# * 19.9
+      TONEFILTER tone#, "LOWPASS", filterCutoff#, filterRes#
+      changed? = YES
+    END IF
+
+    ' Attack slider (y=168-186)
+    IF my# >= 164 AND my# <= 190 AND mx# >= 55 AND mx# <= 165 THEN
+      envAttack# = ((mx# - 55) / 110) * 1.0
+      IF envAttack# < 0.001 THEN
+        envAttack# = 0.001
+      END IF
+      TONEENVELOPE tone#, envAttack#, envDecay#, envSustain#, envRelease#
+      changed? = YES
+    END IF
+
+    ' Decay slider (y=168-186)
+    IF my# >= 164 AND my# <= 190 AND mx# >= 200 AND mx# <= 310 THEN
+      envDecay# = ((mx# - 200) / 110) * 1.0
+      IF envDecay# < 0 THEN
+        envDecay# = 0
+      END IF
+      TONEENVELOPE tone#, envAttack#, envDecay#, envSustain#, envRelease#
+      changed? = YES
+    END IF
+
+    ' Sustain slider (y=205-223)
+    IF my# >= 201 AND my# <= 227 AND mx# >= 55 AND mx# <= 165 THEN
+      envSustain# = (mx# - 55) / 110
+      IF envSustain# < 0 THEN
+        envSustain# = 0
+      END IF
+      IF envSustain# > 1 THEN
+        envSustain# = 1
+      END IF
+      TONEENVELOPE tone#, envAttack#, envDecay#, envSustain#, envRelease#
+      changed? = YES
+    END IF
+
+    ' Release slider (y=205-223)
+    IF my# >= 201 AND my# <= 227 AND mx# >= 200 AND mx# <= 310 THEN
+      envRelease# = ((mx# - 200) / 110) * 2.0
+      IF envRelease# < 0.001 THEN
+        envRelease# = 0.001
+      END IF
+      TONEENVELOPE tone#, envAttack#, envDecay#, envSustain#, envRelease#
+      changed? = YES
+    END IF
+  END IF
+
+  ' ---- Redraw if something changed ----
+  IF changed? OR needsRedraw? THEN
+    CLEARBUFFER COLOR BLACK&
+    drawControls
+    drawPiano
+    SHOWBUFFER
+    needsRedraw? = NO
+  END IF
+
+  SLEEP 0.016
+END LOOP WHEN 0
