@@ -675,6 +675,93 @@ function parse(tokens, existingFunctions) {
       return { type: 'object3d_stmt', shape, params, line: dt.line };
     }
 
+    // --- Synth Tone Statements ---
+
+    if (t.type === 'KEYWORD' && t.value === 'TONEON') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      return { type: 'toneon', id: idExpr, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'TONEOFF') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      return { type: 'toneoff', id: idExpr, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'DELETETONE') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      return { type: 'deletetone', id: idExpr, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'CLEARTONES') {
+      const dt = advance();
+      return { type: 'cleartones', line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'TONEFREQ') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      expect('COMMA');
+      const freqExpr = parseExpr();
+      let rampExpr = null;
+      if (match('COMMA')) {
+        rampExpr = parseExpr();
+      }
+      return { type: 'tonefreq', id: idExpr, freq: freqExpr, ramp: rampExpr, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'TONEWAVE') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      expect('COMMA');
+      const waveExpr = parseExpr();
+      return { type: 'tonewave', id: idExpr, wave: waveExpr, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'TONEVOLUME') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      expect('COMMA');
+      const levelExpr = parseExpr();
+      return { type: 'tonevolume', id: idExpr, level: levelExpr, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'TONEENVELOPE') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      expect('COMMA');
+      const aExpr = parseExpr();
+      expect('COMMA');
+      const dExpr = parseExpr();
+      expect('COMMA');
+      const sExpr = parseExpr();
+      expect('COMMA');
+      const rExpr = parseExpr();
+      return { type: 'toneenvelope', id: idExpr, a: aExpr, d: dExpr, s: sExpr, r: rExpr, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'TONEFILTER') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      expect('COMMA');
+      const filterTypeExpr = parseExpr();
+      let cutoffExpr = null;
+      let resonanceExpr = null;
+      if (match('COMMA')) {
+        cutoffExpr = parseExpr();
+        if (match('COMMA')) {
+          resonanceExpr = parseExpr();
+        }
+      }
+      return { type: 'tonefilter', id: idExpr, filterType: filterTypeExpr, cutoff: cutoffExpr, resonance: resonanceExpr, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'TONEDETUNE') {
+      const dt = advance();
+      const idExpr = parseExpr();
+      expect('COMMA');
+      const centsExpr = parseExpr();
+      return { type: 'tonedetune', id: idExpr, cents: centsExpr, line: dt.line };
+    }
+    if (t.type === 'KEYWORD' && t.value === 'SYNTHVOLUME') {
+      const dt = advance();
+      const levelExpr = parseExpr();
+      return { type: 'synthvolume', level: levelExpr, line: dt.line };
+    }
+
     // APPEND items@ expr
     if (t.type === 'KEYWORD' && t.value === 'APPEND') {
       advance();
@@ -753,6 +840,9 @@ function parse(tokens, existingFunctions) {
         'SORT', 'INSERT', 'REMOVE',
         'BUFFERENABLED', 'SHOWBUFFER', 'CLEARBUFFER',
         'DRAWPIXEL', 'DRAWLINE', 'DRAWBOX', 'DRAWCIRCLE', 'DRAWSPRITE',
+        'DELETETONE', 'CLEARTONES', 'TONEON', 'TONEOFF',
+        'TONEFREQ', 'TONEWAVE', 'TONEVOLUME', 'TONEENVELOPE',
+        'TONEFILTER', 'TONEDETUNE', 'SYNTHVOLUME',
       ]);
       if (KEYWORDS.has(upper)) {
         throw new SyntaxError(`Did you mean '${upper}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -766,6 +856,7 @@ function parse(tokens, existingFunctions) {
         TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$', RUNNINGTIME: '#', FILEEXISTS: '?',
         CREATESPRITE: '#',
         OBJECT3D: '#', GROUP3D: '#', PATH3D: '#',
+        GENERATETONE: '#',
       };
       if (TYPED_KW_SUFFIXES[upper]) {
         throw new SyntaxError(`Did you mean '${upper}${TYPED_KW_SUFFIXES[upper]}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -1208,6 +1299,7 @@ function parse(tokens, existingFunctions) {
     FILEEXISTS: [{ name: 'FILE', required: true }],
     CREATESPRITE: [{ name: 'DATA', required: true }],
     GROUP3D: [],
+    GENERATETONE: [{ name: 'FREQ', required: false }, { name: 'WAVE', required: false }],
   };
 
   function parseAssignBuiltinKeyword(varToken, line) {

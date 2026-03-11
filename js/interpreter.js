@@ -59,6 +59,7 @@ class Interpreter {
     }
     this.warnedVars = new Set();
     this.scene3d = null;
+    this.synth = null;
   }
 
   _initBuiltinColors() {
@@ -88,6 +89,11 @@ class Interpreter {
   _ensureScene3D() {
     if (!this.scene3d) this.scene3d = new Scene3D();
     return this.scene3d;
+  }
+
+  _ensureSynth() {
+    if (!this.synth) this.synth = new SamSynth();
+    return this.synth;
   }
 
   _renderScene3D() {
@@ -296,6 +302,8 @@ class Interpreter {
     this.running = false;
     this.paused = false;
     if (this.audio) this.audio.stopAll();
+    if (this.synth) this.synth.stopAll();
+    this.synth = null;
     if (this._pauseResolve) {
       this._pauseResolve();
       this._pauseResolve = null;
@@ -565,6 +573,14 @@ class Interpreter {
       }
       case 'GROUP3D': {
         return this._ensureScene3D().createGroup();
+      }
+      case 'GENERATETONE': {
+        const freq = params.FREQ ? Number(await this.evalExpr(params.FREQ)) : 440;
+        const wave = params.WAVE ? String(await this.evalExpr(params.WAVE)).toLowerCase() : 'square';
+        const validWaves = ['sine', 'square', 'saw', 'sawtooth', 'triangle', 'noise'];
+        if (!validWaves.includes(wave)) throw new Error(`GENERATETONE: unknown wave type '${wave}' at line ${line}`);
+        const waveNorm = wave === 'sawtooth' ? 'saw' : wave;
+        return this._ensureSynth().generateTone(freq, waveNorm);
       }
       default:
         throw new Error(`Unknown builtin keyword '${keyword}' at line ${line}`);
@@ -860,6 +876,79 @@ class Interpreter {
         if (this.audio) this.audio.stopBackground();
         break;
       }
+
+      // --- Synth Tone ---
+
+      case 'toneon': {
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        this._ensureSynth().toneOn(id);
+        break;
+      }
+      case 'toneoff': {
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        this._ensureSynth().toneOff(id);
+        break;
+      }
+      case 'deletetone': {
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        this._ensureSynth().deleteChannel(id);
+        break;
+      }
+      case 'cleartones': {
+        if (this.synth) this.synth.clear();
+        break;
+      }
+      case 'tonefreq': {
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        const freq = Number(await this.evalExpr(stmt.freq));
+        const ramp = stmt.ramp ? Number(await this.evalExpr(stmt.ramp)) : 0;
+        this._ensureSynth().setFreq(id, freq, ramp);
+        break;
+      }
+      case 'tonewave': {
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        let wave = String(await this.evalExpr(stmt.wave)).toLowerCase();
+        if (wave === 'sawtooth') wave = 'saw';
+        this._ensureSynth().setWave(id, wave);
+        break;
+      }
+      case 'tonevolume': {
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        const level = Number(await this.evalExpr(stmt.level));
+        this._ensureSynth().setVolume(id, level);
+        break;
+      }
+      case 'toneenvelope': {
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        const a = Number(await this.evalExpr(stmt.a));
+        const d = Number(await this.evalExpr(stmt.d));
+        const s = Number(await this.evalExpr(stmt.s));
+        const r = Number(await this.evalExpr(stmt.r));
+        this._ensureSynth().setEnvelope(id, a, d, s, r);
+        break;
+      }
+      case 'tonefilter': {
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        const filterType = String(await this.evalExpr(stmt.filterType)).toLowerCase();
+        const validTypes = ['lowpass', 'highpass', 'bandpass', 'none'];
+        if (!validTypes.includes(filterType)) throw new Error(`TONEFILTER: unknown filter type '${filterType}' at line ${stmt.line}`);
+        const cutoff = stmt.cutoff ? Number(await this.evalExpr(stmt.cutoff)) : 1000;
+        const resonance = stmt.resonance ? Number(await this.evalExpr(stmt.resonance)) : 1;
+        this._ensureSynth().setFilter(id, filterType, cutoff, resonance);
+        break;
+      }
+      case 'tonedetune': {
+        const id = Math.floor(await this.evalExpr(stmt.id));
+        const cents = Number(await this.evalExpr(stmt.cents));
+        this._ensureSynth().setDetune(id, cents);
+        break;
+      }
+      case 'synthvolume': {
+        const level = Number(await this.evalExpr(stmt.level));
+        this._ensureSynth().setMasterVolume(level);
+        break;
+      }
+
       case 'bufferenabled': {
         const val = await this.evalExpr(stmt.value);
         this.screen.setBufferEnabled(!!val);
