@@ -20,10 +20,17 @@ class Interpreter {
     this.audio = audio;
     this.reset();
 
-    // Key state for GETKEY
+    // Key state for GETKEY / GETALLKEYS
     this.currentKey = '';
-    this._keydownHandler = (e) => { this.currentKey = e.key; };
-    this._keyupHandler = () => { this.currentKey = ''; };
+    this.pressedKeys = new Set();
+    this._keydownHandler = (e) => {
+      this.currentKey = e.key;
+      this.pressedKeys.add(e.key);
+    };
+    this._keyupHandler = (e) => {
+      this.currentKey = '';
+      this.pressedKeys.delete(e.key);
+    };
     document.addEventListener('keydown', this._keydownHandler);
     document.addEventListener('keyup', this._keyupHandler);
 
@@ -462,6 +469,8 @@ class Interpreter {
       }
       case 'GETKEY':
         return this.currentKey;
+      case 'GETALLKEYS':
+        return Array.from(this.pressedKeys);
       case 'RANDOM': {
         const max = Math.floor(await this.evalExpr(params.MAX));
         return Math.floor(Math.random() * (max + 1));
@@ -725,6 +734,10 @@ class Interpreter {
             break;
           case 'bool':
             this.boolVars[stmt.name] = result ? 1 : 0;
+            break;
+          case 'arr':
+            if (!Array.isArray(result)) throw new Error(`${stmt.keyword}: expected an array at line ${stmt.line}`);
+            this.arrVars[stmt.name] = result;
             break;
           default:
             throw new Error(`Cannot assign ${stmt.keyword} result to ${stmt.varType} variable at line ${stmt.line}`);

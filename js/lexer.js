@@ -39,6 +39,7 @@ const TYPED_KEYWORDS = {
   MOUSEX: '#',
   MOUSEY: '#',
   MOUSEBUTTON: '#',
+  GETALLKEYS: '@',
 };
 
 

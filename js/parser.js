@@ -858,6 +858,7 @@ function parse(tokens, existingFunctions) {
         OBJECT3D: '#', GROUP3D: '#', PATH3D: '#',
         GENERATETONE: '#',
         MOUSEX: '#', MOUSEY: '#', MOUSEBUTTON: '#',
+        GETALLKEYS: '@',
       };
       if (TYPED_KW_SUFFIXES[upper]) {
         throw new SyntaxError(`Did you mean '${upper}${TYPED_KW_SUFFIXES[upper]}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -1271,6 +1272,7 @@ function parse(tokens, existingFunctions) {
   const BUILTIN_KEYWORD_PARAMS = {
     INPUT: [{ name: 'TEXT', required: false }],
     GETKEY: [],
+    GETALLKEYS: [],
     RANDOM: [{ name: 'MAX', required: true }],
     LENGTH: [{ name: 'VALUE', required: true }],
     SUBSTRING: [{ name: 'TEXT', required: true }, { name: 'START', required: true }, { name: 'LENGTH', required: true }],

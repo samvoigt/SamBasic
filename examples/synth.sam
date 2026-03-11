@@ -1,5 +1,5 @@
 ' =============================================
-'   SYNTH - A Visual Synthesizer
+'   SYNTH - A Polyphonic Visual Synthesizer
 '   Click piano keys or use QWERTY keyboard
 '   Mouse controls: wave, filter, envelope
 ' =============================================
@@ -17,11 +17,9 @@ keyboardX# = 10
 freqs@ = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25, 698.46]
 
 ' Map QWERTY keys to white key indices (1-based)
-' a=C4 s=D4 d=E4 f=F4 g=G4 h=A4 j=B4 k=C5 l=D5
 qwertyKeys@ = ["a","s","d","f","g","h","j","k","l",";","'"]
 
 ' Black key indices: which white key they sit between
-' C#=1, D#=2, skip, F#=4, G#=5, A#=6, skip, C#5=8, D#5=9
 blackKeySlots@ = [1, 2, 0, 4, 5, 6, 0, 8, 9]
 blackFreqs@ = [277.18, 311.13, 0, 369.99, 415.30, 466.16, 0, 554.37, 622.25]
 qwertyBlackKeys@ = ["w","e","","t","y","u","","o","p"]
@@ -36,21 +34,90 @@ envDecay# = 0.1
 envSustain# = 0.7
 envRelease# = 0.3
 
-' ---- Create the main tone (monophonic for simplicity) ----
-tone# = GENERATETONE# FREQ 440 WAVE "SQUARE"
-TONEENVELOPE tone#, envAttack#, envDecay#, envSustain#, envRelease#
-TONEFILTER tone#, "LOWPASS", filterCutoff#, filterRes#
-TONEVOLUME tone#, 0.6
+' ---- Create per-key tones for polyphony ----
+whiteTones@ = [0,0,0,0,0,0,0,0,0,0,0]
+whiteActive@ = [0,0,0,0,0,0,0,0,0,0,0]
+FOR i# FROM 1 TO numWhiteKeys#
+  t# = GENERATETONE# FREQ freqs@[i#] WAVE "SQUARE"
+  TONEENVELOPE t#, envAttack#, envDecay#, envSustain#, envRelease#
+  TONEFILTER t#, "LOWPASS", filterCutoff#, filterRes#
+  TONEVOLUME t#, 0.6
+  whiteTones@[i#] = t#
+END FOR
+
+blackTones@ = [0,0,0,0,0,0,0,0,0]
+blackActive@ = [0,0,0,0,0,0,0,0,0]
+FOR i# FROM 1 TO LENGTH# blackFreqs@
+  IF blackFreqs@[i#] > 0 THEN
+    t# = GENERATETONE# FREQ blackFreqs@[i#] WAVE "SQUARE"
+    TONEENVELOPE t#, envAttack#, envDecay#, envSustain#, envRelease#
+    TONEFILTER t#, "LOWPASS", filterCutoff#, filterRes#
+    TONEVOLUME t#, 0.6
+    blackTones@[i#] = t#
+  END IF
+END FOR
+
+' Separate tone for mouse clicks (mouse can only play one note)
+mouseTone# = GENERATETONE# FREQ 440 WAVE "SQUARE"
+TONEENVELOPE mouseTone#, envAttack#, envDecay#, envSustain#, envRelease#
+TONEFILTER mouseTone#, "LOWPASS", filterCutoff#, filterRes#
+TONEVOLUME mouseTone#, 0.6
+mouseKey# = 0
+
 SYNTHVOLUME 0.7
 
 ' ---- Graphics setup ----
 BUFFERENABLED YES
 
 ' ---- State tracking ----
-activeKey# = 0
-lastKey$ = ""
 needsRedraw? = YES
 lastMouse# = 0
+
+' ---- Helper: apply wave to all tones ----
+FUNCTION applyWaveToAll
+  waveName$ = waveNames@[currentWave#]
+  realWave$ = waveName$
+  IF waveName$ = "SAW" THEN
+    realWave$ = "SAWTOOTH"
+  ELSE IF waveName$ = "TRI" THEN
+    realWave$ = "TRIANGLE"
+  END IF
+  FOR i# FROM 1 TO LENGTH# whiteTones@
+    TONEWAVE whiteTones@[i#], realWave$
+  END FOR
+  FOR i# FROM 1 TO LENGTH# blackTones@
+    IF blackTones@[i#] > 0 THEN
+      TONEWAVE blackTones@[i#], realWave$
+    END IF
+  END FOR
+  TONEWAVE mouseTone#, realWave$
+END FUNCTION
+
+' ---- Helper: apply filter to all tones ----
+FUNCTION applyFilterToAll
+  FOR i# FROM 1 TO LENGTH# whiteTones@
+    TONEFILTER whiteTones@[i#], "LOWPASS", filterCutoff#, filterRes#
+  END FOR
+  FOR i# FROM 1 TO LENGTH# blackTones@
+    IF blackTones@[i#] > 0 THEN
+      TONEFILTER blackTones@[i#], "LOWPASS", filterCutoff#, filterRes#
+    END IF
+  END FOR
+  TONEFILTER mouseTone#, "LOWPASS", filterCutoff#, filterRes#
+END FUNCTION
+
+' ---- Helper: apply envelope to all tones ----
+FUNCTION applyEnvelopeToAll
+  FOR i# FROM 1 TO LENGTH# whiteTones@
+    TONEENVELOPE whiteTones@[i#], envAttack#, envDecay#, envSustain#, envRelease#
+  END FOR
+  FOR i# FROM 1 TO LENGTH# blackTones@
+    IF blackTones@[i#] > 0 THEN
+      TONEENVELOPE blackTones@[i#], envAttack#, envDecay#, envSustain#, envRelease#
+    END IF
+  END FOR
+  TONEENVELOPE mouseTone#, envAttack#, envDecay#, envSustain#, envRelease#
+END FUNCTION
 
 ' ---- Draw functions ----
 
@@ -58,7 +125,7 @@ FUNCTION drawPiano
   ' White keys
   FOR i# FROM 1 TO numWhiteKeys#
     x# = (i# - 1) * keyW# + keyboardX#
-    IF i# = activeKey# THEN
+    IF whiteActive@[i#] OR mouseKey# = i# THEN
       SETCOLOR LIGHTCYAN&
     ELSE
       SETCOLOR WHITE&
@@ -75,7 +142,7 @@ FUNCTION drawPiano
       CONTINUE
     END IF
     x# = slot# * keyW# + keyboardX# - (blackKeyW# / 2)
-    IF activeKey# < 0 AND (0 - activeKey#) = i# THEN
+    IF blackActive@[i#] OR mouseKey# = (0 - i#) THEN
       SETCOLOR DARKGRAY&
     ELSE
       SETCOLOR BLACK&
@@ -187,8 +254,8 @@ FUNCTION drawControls
 
   ' ---- Instructions (above keyboard) ----
   SETCOLOR WHITE&
-  PRINTAT 16, 2, "Keys: A-L = notes | W,E,T,Y,U,O,P = sharps"
-  PRINTAT 17, 2, "Mouse: click piano, drag sliders"
+  PRINTAT 16, 2, "Keys: A-; = notes | W,E,T,Y,U,O,P = sharps"
+  PRINTAT 17, 2, "Mouse: click piano, drag sliders | Chords OK!"
 END FUNCTION
 
 ' ======== MAIN LOOP ========
@@ -196,51 +263,57 @@ LOOP
   mx# = MOUSEX#
   my# = MOUSEY#
   mb# = MOUSEBUTTON#
-  k$ = GETKEY$
-
-  oldActive# = activeKey#
+  keys@ = GETALLKEYS@
   changed? = NO
 
-  ' ---- Keyboard input ----
-  IF k$ <> lastKey$ THEN
-    ' Check white keys
-    IF k$ <> "" THEN
-      FOR i# FROM 1 TO LENGTH# qwertyKeys@
-        IF k$ = qwertyKeys@[i#] THEN
-          activeKey# = i#
-          TONEFREQ tone#, freqs@[i#]
-          TONEON tone#
-          changed? = YES
-          BREAK
-        END IF
-      END FOR
-      ' Check black keys
-      IF NOT changed? THEN
-        FOR i# FROM 1 TO LENGTH# qwertyBlackKeys@
-          IF qwertyBlackKeys@[i#] <> "" AND k$ = qwertyBlackKeys@[i#] THEN
-            ' qwertyBlackKeys and blackKeySlots are 1:1 by index
-            IF i# <= LENGTH# blackKeySlots@ AND blackKeySlots@[i#] > 0 THEN
-              activeKey# = 0 - i#
-              TONEFREQ tone#, blackFreqs@[i#]
-              TONEON tone#
-              changed? = YES
-            END IF
-            BREAK
-          END IF
-        END FOR
+  ' ---- Keyboard input (polyphonic via GETALLKEYS@) ----
+  FOR i# FROM 1 TO numWhiteKeys#
+    keyDown? = NO
+    FOR j# FROM 1 TO LENGTH# keys@
+      IF keys@[j#] = qwertyKeys@[i#] THEN
+        keyDown? = YES
+        BREAK
       END IF
-    END IF
-    IF k$ = "" AND lastKey$ <> "" THEN
-      TONEOFF tone#
-      activeKey# = 0
+    END FOR
+    IF keyDown? AND NOT whiteActive@[i#] THEN
+      TONEON whiteTones@[i#]
+      whiteActive@[i#] = YES
+      changed? = YES
+    ELSE IF NOT keyDown? AND whiteActive@[i#] THEN
+      TONEOFF whiteTones@[i#]
+      whiteActive@[i#] = NO
       changed? = YES
     END IF
-    lastKey$ = k$
-  END IF
+  END FOR
+
+  FOR i# FROM 1 TO LENGTH# qwertyBlackKeys@
+    IF qwertyBlackKeys@[i#] = "" THEN
+      CONTINUE
+    END IF
+    keyDown? = NO
+    FOR j# FROM 1 TO LENGTH# keys@
+      IF keys@[j#] = qwertyBlackKeys@[i#] THEN
+        keyDown? = YES
+        BREAK
+      END IF
+    END FOR
+    IF keyDown? AND NOT blackActive@[i#] THEN
+      IF blackTones@[i#] > 0 THEN
+        TONEON blackTones@[i#]
+        blackActive@[i#] = YES
+        changed? = YES
+      END IF
+    ELSE IF NOT keyDown? AND blackActive@[i#] THEN
+      IF blackTones@[i#] > 0 THEN
+        TONEOFF blackTones@[i#]
+        blackActive@[i#] = NO
+        changed? = YES
+      END IF
+    END IF
+  END FOR
 
   ' ---- Mouse click on piano keys ----
   IF mb# > 0 AND my# >= keyboardY# THEN
-    ' Check black keys first (they overlap white keys)
     clickedBlack? = NO
     FOR i# FROM 1 TO LENGTH# blackKeySlots@
       slot# = blackKeySlots@[i#]
@@ -250,10 +323,10 @@ LOOP
       bx# = slot# * keyW# + keyboardX# - (blackKeyW# / 2)
       IF mx# >= bx# AND mx# <= (bx# + blackKeyW#) AND my# <= (keyboardY# + blackKeyH#) THEN
         IF blackFreqs@[i#] > 0 THEN
-          IF activeKey# <> (0 - i#) THEN
-            activeKey# = 0 - i#
-            TONEFREQ tone#, blackFreqs@[i#]
-            TONEON tone#
+          IF mouseKey# <> (0 - i#) THEN
+            mouseKey# = 0 - i#
+            TONEFREQ mouseTone#, blackFreqs@[i#]
+            TONEON mouseTone#
             changed? = YES
           END IF
           clickedBlack? = YES
@@ -261,15 +334,14 @@ LOOP
         END IF
       END IF
     END FOR
-    ' Check white keys
     IF NOT clickedBlack? THEN
       FOR i# FROM 1 TO numWhiteKeys#
         x# = (i# - 1) * keyW# + keyboardX#
         IF mx# >= x# AND mx# < (x# + keyW#) THEN
-          IF activeKey# <> i# THEN
-            activeKey# = i#
-            TONEFREQ tone#, freqs@[i#]
-            TONEON tone#
+          IF mouseKey# <> i# THEN
+            mouseKey# = i#
+            TONEFREQ mouseTone#, freqs@[i#]
+            TONEON mouseTone#
             changed? = YES
           END IF
           BREAK
@@ -278,10 +350,10 @@ LOOP
     END IF
   END IF
 
-  ' Release on mouse up (only if mouse was playing)
-  IF mb# = 0 AND lastMouse# > 0 AND activeKey# <> 0 AND k$ = "" THEN
-    TONEOFF tone#
-    activeKey# = 0
+  ' Release on mouse up
+  IF mb# = 0 AND lastMouse# > 0 AND mouseKey# <> 0 THEN
+    TONEOFF mouseTone#
+    mouseKey# = 0
     changed? = YES
   END IF
   lastMouse# = mb#
@@ -295,14 +367,7 @@ LOOP
         IF mx# >= bx# AND mx# <= (bx# + 60) THEN
           IF currentWave# <> i# THEN
             currentWave# = i#
-            waveName$ = waveNames@[currentWave#]
-            IF waveName$ = "SAW" THEN
-              TONEWAVE tone#, "SAWTOOTH"
-            ELSE IF waveName$ = "TRI" THEN
-              TONEWAVE tone#, "TRIANGLE"
-            ELSE
-              TONEWAVE tone#, waveName$
-            END IF
+            applyWaveToAll
             changed? = YES
           END IF
           BREAK
@@ -320,7 +385,7 @@ LOOP
         pct# = 1
       END IF
       filterCutoff# = 100 + pct# * 9900
-      TONEFILTER tone#, "LOWPASS", filterCutoff#, filterRes#
+      applyFilterToAll
       changed? = YES
     END IF
 
@@ -334,7 +399,7 @@ LOOP
         pct# = 1
       END IF
       filterRes# = 0.1 + pct# * 19.9
-      TONEFILTER tone#, "LOWPASS", filterCutoff#, filterRes#
+      applyFilterToAll
       changed? = YES
     END IF
 
@@ -344,7 +409,7 @@ LOOP
       IF envAttack# < 0.001 THEN
         envAttack# = 0.001
       END IF
-      TONEENVELOPE tone#, envAttack#, envDecay#, envSustain#, envRelease#
+      applyEnvelopeToAll
       changed? = YES
     END IF
 
@@ -354,7 +419,7 @@ LOOP
       IF envDecay# < 0 THEN
         envDecay# = 0
       END IF
-      TONEENVELOPE tone#, envAttack#, envDecay#, envSustain#, envRelease#
+      applyEnvelopeToAll
       changed? = YES
     END IF
 
@@ -367,7 +432,7 @@ LOOP
       IF envSustain# > 1 THEN
         envSustain# = 1
       END IF
-      TONEENVELOPE tone#, envAttack#, envDecay#, envSustain#, envRelease#
+      applyEnvelopeToAll
       changed? = YES
     END IF
 
@@ -377,7 +442,7 @@ LOOP
       IF envRelease# < 0.001 THEN
         envRelease# = 0.001
       END IF
-      TONEENVELOPE tone#, envAttack#, envDecay#, envSustain#, envRelease#
+      applyEnvelopeToAll
       changed? = YES
     END IF
   END IF
