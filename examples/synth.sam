@@ -1,6 +1,7 @@
 ' =============================================
 '   SYNTH - A Polyphonic Visual Synthesizer
 '   Click piano keys or use QWERTY keyboard
+'   Arrow keys = drum pads
 '   Mouse controls: wave, filter, envelope
 ' =============================================
 
@@ -25,7 +26,7 @@ blackFreqs@ = [277.18, 311.13, 0, 369.99, 415.30, 466.16, 0, 554.37, 622.25]
 qwertyBlackKeys@ = ["w","e","","t","y","u","","o","p"]
 
 ' ---- Synth state ----
-waveNames@ = ["SQUARE", "SAW", "TRI", "SINE", "NOISE"]
+waveNames@ = ["SQUARE", "SAW", "TRI", "SINE"]
 currentWave# = 1
 filterCutoff# = 8000
 filterRes# = 1
@@ -57,12 +58,54 @@ FOR i# FROM 1 TO LENGTH# blackFreqs@
   END IF
 END FOR
 
-' Separate tone for mouse clicks (mouse can only play one note)
+' Separate tone for mouse clicks on piano
 mouseTone# = GENERATETONE# FREQ 440 WAVE "SQUARE"
 TONEENVELOPE mouseTone#, envAttack#, envDecay#, envSustain#, envRelease#
 TONEFILTER mouseTone#, "LOWPASS", filterCutoff#, filterRes#
 TONEVOLUME mouseTone#, 0.6
 mouseKey# = 0
+
+' ---- Drum pads ----
+' Drum layout mirrors arrow keys:
+'        [KICK]          (ArrowUp)
+' [CHAT] [SNARE] [OHAT]  (Left, Down, Right)
+drumNames@ = ["KICK", "SNARE", "CH", "OH"]
+drumKeys@ = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
+drumActive@ = [0, 0, 0, 0]
+
+' Drum pad positions (x1, y1, x2, y2 for each)
+padW# = 62
+padH# = 52
+padGap# = 6
+padCenterX# = 520
+padTopY# = 345
+padBotY# = 403
+
+' Kick (top center)
+kickTone# = GENERATETONE# FREQ 150 WAVE "SINE"
+TONEENVELOPE kickTone#, 0.001, 0.2, 0, 0.05
+TONEFILTER kickTone#, "LOWPASS", 200, 1
+TONEVOLUME kickTone#, 0.8
+
+' Snare (bottom center)
+snareTone# = GENERATETONE# FREQ 100 WAVE "NOISE"
+TONEENVELOPE snareTone#, 0.001, 0.15, 0, 0.05
+TONEFILTER snareTone#, "HIGHPASS", 1000, 2
+TONEVOLUME snareTone#, 0.7
+
+' Closed hat (left)
+chatTone# = GENERATETONE# FREQ 100 WAVE "NOISE"
+TONEENVELOPE chatTone#, 0.001, 0.05, 0, 0.02
+TONEFILTER chatTone#, "HIGHPASS", 6000, 1
+TONEVOLUME chatTone#, 0.5
+
+' Open hat (right)
+ohatTone# = GENERATETONE# FREQ 100 WAVE "NOISE"
+TONEENVELOPE ohatTone#, 0.001, 0.3, 0, 0.1
+TONEFILTER ohatTone#, "HIGHPASS", 5000, 1
+TONEVOLUME ohatTone#, 0.5
+
+drumTones@ = [kickTone#, snareTone#, chatTone#, ohatTone#]
 
 SYNTHVOLUME 0.7
 
@@ -73,7 +116,7 @@ BUFFERENABLED YES
 needsRedraw? = YES
 lastMouse# = 0
 
-' ---- Helper: apply wave to all tones ----
+' ---- Helper: apply wave to all piano tones ----
 FUNCTION applyWaveToAll
   waveName$ = waveNames@[currentWave#]
   realWave$ = waveName$
@@ -93,7 +136,7 @@ FUNCTION applyWaveToAll
   TONEWAVE mouseTone#, realWave$
 END FUNCTION
 
-' ---- Helper: apply filter to all tones ----
+' ---- Helper: apply filter to all piano tones ----
 FUNCTION applyFilterToAll
   FOR i# FROM 1 TO LENGTH# whiteTones@
     TONEFILTER whiteTones@[i#], "LOWPASS", filterCutoff#, filterRes#
@@ -106,7 +149,7 @@ FUNCTION applyFilterToAll
   TONEFILTER mouseTone#, "LOWPASS", filterCutoff#, filterRes#
 END FUNCTION
 
-' ---- Helper: apply envelope to all tones ----
+' ---- Helper: apply envelope to all piano tones ----
 FUNCTION applyEnvelopeToAll
   FOR i# FROM 1 TO LENGTH# whiteTones@
     TONEENVELOPE whiteTones@[i#], envAttack#, envDecay#, envSustain#, envRelease#
@@ -149,6 +192,59 @@ FUNCTION drawPiano
     END IF
     DRAWBOX X1 x# Y1 keyboardY# X2 (x# + blackKeyW#) Y2 (keyboardY# + blackKeyH#), FILL YES
   END FOR
+END FUNCTION
+
+FUNCTION drawDrums
+  ' Pad positions: KICK=top center, CH=bot left, SNARE=bot center, OH=bot right
+  ' Drum 1=KICK, 2=SNARE, 3=CH, 4=OH
+
+  ' KICK (top center) - ArrowUp
+  IF drumActive@[1] THEN
+    SETCOLOR LIGHTRED&
+  ELSE
+    SETCOLOR RED&
+  END IF
+  kx1# = padCenterX# - (padW# / 2)
+  kx2# = padCenterX# + (padW# / 2)
+  DRAWBOX X1 kx1# Y1 padTopY# X2 kx2# Y2 (padTopY# + padH#), FILL YES
+  SETCOLOR WHITE&
+  PRINTAT 20, 64, "KICK"
+
+  ' CH (bottom left) - ArrowLeft
+  IF drumActive@[3] THEN
+    SETCOLOR LIGHTCYAN&
+  ELSE
+    SETCOLOR CYAN&
+  END IF
+  cx1# = padCenterX# - padW# - padGap# - (padW# / 2)
+  cx2# = cx1# + padW#
+  DRAWBOX X1 cx1# Y1 padBotY# X2 cx2# Y2 (padBotY# + padH#), FILL YES
+  SETCOLOR WHITE&
+  PRINTAT 24, 57, "CH"
+
+  ' SNARE (bottom center) - ArrowDown
+  IF drumActive@[2] THEN
+    SETCOLOR YELLOW&
+  ELSE
+    SETCOLOR BROWN&
+  END IF
+  sx1# = padCenterX# - (padW# / 2)
+  sx2# = padCenterX# + (padW# / 2)
+  DRAWBOX X1 sx1# Y1 padBotY# X2 sx2# Y2 (padBotY# + padH#), FILL YES
+  SETCOLOR WHITE&
+  PRINTAT 24, 65, "SNR"
+
+  ' OH (bottom right) - ArrowRight
+  IF drumActive@[4] THEN
+    SETCOLOR GREEN&
+  ELSE
+    SETCOLOR DARKGRAY&
+  END IF
+  ox1# = padCenterX# + (padW# / 2) + padGap#
+  ox2# = ox1# + padW#
+  DRAWBOX X1 ox1# Y1 padBotY# X2 ox2# Y2 (padBotY# + padH#), FILL YES
+  SETCOLOR WHITE&
+  PRINTAT 24, 74, "OH"
 END FUNCTION
 
 FUNCTION drawControls
@@ -255,7 +351,7 @@ FUNCTION drawControls
   ' ---- Instructions (above keyboard) ----
   SETCOLOR WHITE&
   PRINTAT 16, 2, "Keys: A-; = notes | W,E,T,Y,U,O,P = sharps"
-  PRINTAT 17, 2, "Mouse: click piano, drag sliders | Chords OK!"
+  PRINTAT 17, 2, "Arrows = drums | Mouse: click, drag sliders"
 END FUNCTION
 
 ' ======== MAIN LOOP ========
@@ -266,7 +362,7 @@ LOOP
   keys@ = GETALLKEYS@
   changed? = NO
 
-  ' ---- Keyboard input (polyphonic via GETALLKEYS@) ----
+  ' ---- Keyboard input: piano (polyphonic) ----
   FOR i# FROM 1 TO numWhiteKeys#
     keyDown? = NO
     FOR j# FROM 1 TO LENGTH# keys@
@@ -312,49 +408,150 @@ LOOP
     END IF
   END FOR
 
-  ' ---- Mouse click on piano keys ----
-  IF mb# > 0 AND my# >= keyboardY# THEN
-    clickedBlack? = NO
-    FOR i# FROM 1 TO LENGTH# blackKeySlots@
-      slot# = blackKeySlots@[i#]
-      IF slot# = 0 THEN
-        CONTINUE
-      END IF
-      bx# = slot# * keyW# + keyboardX# - (blackKeyW# / 2)
-      IF mx# >= bx# AND mx# <= (bx# + blackKeyW#) AND my# <= (keyboardY# + blackKeyH#) THEN
-        IF blackFreqs@[i#] > 0 THEN
-          IF mouseKey# <> (0 - i#) THEN
-            mouseKey# = 0 - i#
-            TONEFREQ mouseTone#, blackFreqs@[i#]
-            TONEON mouseTone#
-            changed? = YES
-          END IF
-          clickedBlack? = YES
-          BREAK
-        END IF
+  ' ---- Keyboard input: drums (polyphonic) ----
+  FOR i# FROM 1 TO 4
+    keyDown? = NO
+    FOR j# FROM 1 TO LENGTH# keys@
+      IF keys@[j#] = drumKeys@[i#] THEN
+        keyDown? = YES
+        BREAK
       END IF
     END FOR
-    IF NOT clickedBlack? THEN
-      FOR i# FROM 1 TO numWhiteKeys#
-        x# = (i# - 1) * keyW# + keyboardX#
-        IF mx# >= x# AND mx# < (x# + keyW#) THEN
-          IF mouseKey# <> i# THEN
-            mouseKey# = i#
-            TONEFREQ mouseTone#, freqs@[i#]
-            TONEON mouseTone#
-            changed? = YES
+    IF keyDown? AND NOT drumActive@[i#] THEN
+      ' Kick needs pitch reset before trigger
+      IF i# = 1 THEN
+        TONEFREQ kickTone#, 150
+      END IF
+      TONEON drumTones@[i#]
+      ' Kick pitch sweep after trigger
+      IF i# = 1 THEN
+        TONEFREQ kickTone#, 50, 0.1
+      END IF
+      drumActive@[i#] = YES
+      changed? = YES
+    ELSE IF NOT keyDown? AND drumActive@[i#] THEN
+      TONEOFF drumTones@[i#]
+      drumActive@[i#] = NO
+      changed? = YES
+    END IF
+  END FOR
+
+  ' ---- Mouse click on piano keys ----
+  IF mb# > 0 AND my# >= keyboardY# THEN
+    ' Check drum pads first
+    clickedDrum? = NO
+
+    ' KICK pad (top center)
+    kx1# = padCenterX# - (padW# / 2)
+    kx2# = padCenterX# + (padW# / 2)
+    IF mx# >= kx1# AND mx# <= kx2# AND my# >= padTopY# AND my# <= (padTopY# + padH#) THEN
+      IF NOT drumActive@[1] THEN
+        TONEFREQ kickTone#, 150
+        TONEON kickTone#
+        TONEFREQ kickTone#, 50, 0.1
+        drumActive@[1] = YES
+        changed? = YES
+      END IF
+      clickedDrum? = YES
+    END IF
+
+    ' CH pad (bottom left)
+    IF NOT clickedDrum? THEN
+      cx1# = padCenterX# - padW# - padGap# - (padW# / 2)
+      cx2# = cx1# + padW#
+      IF mx# >= cx1# AND mx# <= cx2# AND my# >= padBotY# AND my# <= (padBotY# + padH#) THEN
+        IF NOT drumActive@[3] THEN
+          TONEON chatTone#
+          drumActive@[3] = YES
+          changed? = YES
+        END IF
+        clickedDrum? = YES
+      END IF
+    END IF
+
+    ' SNARE pad (bottom center)
+    IF NOT clickedDrum? THEN
+      sx1# = padCenterX# - (padW# / 2)
+      sx2# = padCenterX# + (padW# / 2)
+      IF mx# >= sx1# AND mx# <= sx2# AND my# >= padBotY# AND my# <= (padBotY# + padH#) THEN
+        IF NOT drumActive@[2] THEN
+          TONEON snareTone#
+          drumActive@[2] = YES
+          changed? = YES
+        END IF
+        clickedDrum? = YES
+      END IF
+    END IF
+
+    ' OH pad (bottom right)
+    IF NOT clickedDrum? THEN
+      ox1# = padCenterX# + (padW# / 2) + padGap#
+      ox2# = ox1# + padW#
+      IF mx# >= ox1# AND mx# <= ox2# AND my# >= padBotY# AND my# <= (padBotY# + padH#) THEN
+        IF NOT drumActive@[4] THEN
+          TONEON ohatTone#
+          drumActive@[4] = YES
+          changed? = YES
+        END IF
+        clickedDrum? = YES
+      END IF
+    END IF
+
+    ' Check piano black keys
+    IF NOT clickedDrum? THEN
+      clickedBlack? = NO
+      FOR i# FROM 1 TO LENGTH# blackKeySlots@
+        slot# = blackKeySlots@[i#]
+        IF slot# = 0 THEN
+          CONTINUE
+        END IF
+        bx# = slot# * keyW# + keyboardX# - (blackKeyW# / 2)
+        IF mx# >= bx# AND mx# <= (bx# + blackKeyW#) AND my# <= (keyboardY# + blackKeyH#) THEN
+          IF blackFreqs@[i#] > 0 THEN
+            IF mouseKey# <> (0 - i#) THEN
+              mouseKey# = 0 - i#
+              TONEFREQ mouseTone#, blackFreqs@[i#]
+              TONEON mouseTone#
+              changed? = YES
+            END IF
+            clickedBlack? = YES
+            BREAK
           END IF
-          BREAK
         END IF
       END FOR
+      ' Check piano white keys
+      IF NOT clickedBlack? THEN
+        FOR i# FROM 1 TO numWhiteKeys#
+          x# = (i# - 1) * keyW# + keyboardX#
+          IF mx# >= x# AND mx# < (x# + keyW#) THEN
+            IF mouseKey# <> i# THEN
+              mouseKey# = i#
+              TONEFREQ mouseTone#, freqs@[i#]
+              TONEON mouseTone#
+              changed? = YES
+            END IF
+            BREAK
+          END IF
+        END FOR
+      END IF
     END IF
   END IF
 
-  ' Release on mouse up
-  IF mb# = 0 AND lastMouse# > 0 AND mouseKey# <> 0 THEN
-    TONEOFF mouseTone#
-    mouseKey# = 0
-    changed? = YES
+  ' Release mouse piano on mouse up
+  IF mb# = 0 AND lastMouse# > 0 THEN
+    IF mouseKey# <> 0 THEN
+      TONEOFF mouseTone#
+      mouseKey# = 0
+      changed? = YES
+    END IF
+    ' Release mouse-triggered drums
+    FOR i# FROM 1 TO 4
+      IF drumActive@[i#] THEN
+        TONEOFF drumTones@[i#]
+        drumActive@[i#] = NO
+        changed? = YES
+      END IF
+    END FOR
   END IF
   lastMouse# = mb#
 
@@ -452,6 +649,7 @@ LOOP
     CLEARBUFFER COLOR BLACK&
     drawControls
     drawPiano
+    drawDrums
     SHOWBUFFER
     needsRedraw? = NO
   END IF
