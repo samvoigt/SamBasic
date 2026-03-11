@@ -446,6 +446,20 @@ function setupEditor(textarea, lineNumbersEl, highlightEl) {
   function setHighlightedLine(line) {
     highlightedLine = line;
     highlight();
+    if (line > 0) {
+      const lineHeight = 21;
+      const padding = 12;
+      const lineTop = (line - 1) * lineHeight + padding;
+      const lineBottom = lineTop + lineHeight;
+      const viewTop = textarea.scrollTop;
+      const viewBottom = viewTop + textarea.clientHeight;
+      if (lineTop < viewTop) {
+        textarea.scrollTop = lineTop - padding;
+      } else if (lineBottom > viewBottom) {
+        textarea.scrollTop = lineBottom - textarea.clientHeight + padding;
+      }
+      syncScroll();
+    }
   }
 
   return { updateLineNumbers, highlight, breakpoints: editorBreakpoints, setHighlightedLine };
