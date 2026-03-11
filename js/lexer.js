@@ -36,6 +36,9 @@ const TYPED_KEYWORDS = {
   GROUP3D: '#',
   PATH3D: '#',
   GENERATETONE: '#',
+  MOUSEX: '#',
+  MOUSEY: '#',
+  MOUSEBUTTON: '#',
 };
 
 

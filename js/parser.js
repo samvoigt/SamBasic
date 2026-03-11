@@ -857,6 +857,7 @@ function parse(tokens, existingFunctions) {
         CREATESPRITE: '#',
         OBJECT3D: '#', GROUP3D: '#', PATH3D: '#',
         GENERATETONE: '#',
+        MOUSEX: '#', MOUSEY: '#', MOUSEBUTTON: '#',
       };
       if (TYPED_KW_SUFFIXES[upper]) {
         throw new SyntaxError(`Did you mean '${upper}${TYPED_KW_SUFFIXES[upper]}'? Keywords must be UPPERCASE at line ${t.line}`);
@@ -1300,6 +1301,9 @@ function parse(tokens, existingFunctions) {
     CREATESPRITE: [{ name: 'DATA', required: true }],
     GROUP3D: [],
     GENERATETONE: [{ name: 'FREQ', required: false }, { name: 'WAVE', required: false }],
+    MOUSEX: [],
+    MOUSEY: [],
+    MOUSEBUTTON: [],
   };
 
   function parseAssignBuiltinKeyword(varToken, line) {

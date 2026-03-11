@@ -26,6 +26,35 @@ class Interpreter {
     this._keyupHandler = () => { this.currentKey = ''; };
     document.addEventListener('keydown', this._keydownHandler);
     document.addEventListener('keyup', this._keyupHandler);
+
+    // Mouse state for MOUSEX/MOUSEY/MOUSEBUTTON
+    this.mouseX = 0;
+    this.mouseY = 0;
+    this.mouseButton = 0;
+    this._monitorEl = this.screen.el.closest('.monitor-screen');
+    this._mousemoveHandler = (e) => {
+      const rect = this._monitorEl.getBoundingClientRect();
+      const scaleX = 640 / rect.width;
+      const scaleY = 480 / rect.height;
+      this.mouseX = Math.floor(e.clientX - rect.left) * scaleX;
+      this.mouseY = Math.floor(e.clientY - rect.top) * scaleY;
+      this.mouseX = Math.max(0, Math.min(639, Math.floor(this.mouseX)));
+      this.mouseY = Math.max(0, Math.min(479, Math.floor(this.mouseY)));
+    };
+    this._mousedownHandler = (e) => {
+      this.mouseButton = e.buttons;
+      this._mousemoveHandler(e);
+    };
+    this._mouseupHandler = (e) => {
+      this.mouseButton = e.buttons;
+    };
+    this._contextmenuHandler = (e) => {
+      if (this.running) e.preventDefault();
+    };
+    this._monitorEl.addEventListener('mousemove', this._mousemoveHandler);
+    this._monitorEl.addEventListener('mousedown', this._mousedownHandler);
+    this._monitorEl.addEventListener('mouseup', this._mouseupHandler);
+    this._monitorEl.addEventListener('contextmenu', this._contextmenuHandler);
   }
 
   reset() {
@@ -574,6 +603,12 @@ class Interpreter {
       case 'GROUP3D': {
         return this._ensureScene3D().createGroup();
       }
+      case 'MOUSEX':
+        return this.mouseX;
+      case 'MOUSEY':
+        return this.mouseY;
+      case 'MOUSEBUTTON':
+        return this.mouseButton;
       case 'GENERATETONE': {
         const freq = params.FREQ ? Number(await this.evalExpr(params.FREQ)) : 440;
         const wave = params.WAVE ? String(await this.evalExpr(params.WAVE)).toLowerCase() : 'square';
