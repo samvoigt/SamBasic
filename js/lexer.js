@@ -31,7 +31,7 @@ const TYPED_KEYWORDS = {
   MIN: '#', MAX: '#', SIN: '#', COS: '#', LOG: '#', SIGN: '#',
   OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?', READSCREEN: '$',
   TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$', RUNNINGTIME: '#', FILEEXISTS: '?',
-  CREATESPRITE: '#',
+  CREATESPRITE: '#', CREATESPRITESHEET: '@',
   OBJECT3D: '#',
   GROUP3D: '#',
   PATH3D: '#',

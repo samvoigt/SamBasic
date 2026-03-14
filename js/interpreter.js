@@ -609,6 +609,31 @@ class Interpreter {
         if (!Array.isArray(data)) throw new Error(`CREATESPRITE: DATA must be a 2D array at line ${line}`);
         return this.screen.createSprite(data);
       }
+      case 'CREATESPRITESHEET': {
+        const data = await this.evalExpr(params.DATA);
+        const tileW = Math.floor(await this.evalExpr(params.TILEWIDTH));
+        const tileH = Math.floor(await this.evalExpr(params.TILEHEIGHT));
+        if (!Array.isArray(data) || data.length === 0)
+          throw new Error(`CREATESPRITESHEET: DATA must be a non-empty 2D array at line ${line}`);
+        if (tileW <= 0 || tileH <= 0)
+          throw new Error(`CREATESPRITESHEET: tile dimensions must be positive at line ${line}`);
+        const sheetHeight = data.length;
+        const sheetWidth = Array.isArray(data[0]) ? data[0].length : 0;
+        const tilesX = Math.floor(sheetWidth / tileW);
+        const tilesY = Math.floor(sheetHeight / tileH);
+        const spriteIds = [];
+        for (let ty = 0; ty < tilesY; ty++) {
+          for (let tx = 0; tx < tilesX; tx++) {
+            const tileData = [];
+            for (let r = 0; r < tileH; r++) {
+              const row = data[ty * tileH + r];
+              tileData.push(row.slice(tx * tileW, tx * tileW + tileW));
+            }
+            spriteIds.push(this.screen.createSprite(tileData));
+          }
+        }
+        return spriteIds;
+      }
       case 'GROUP3D': {
         return this._ensureScene3D().createGroup();
       }

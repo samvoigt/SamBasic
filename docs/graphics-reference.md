@@ -160,6 +160,46 @@ DRAWSPRITE SPRITE id#, X 100, Y 200, ANGLE a#, FLIPH YES  ' Rotated + flipped
 
 `ANGLE` is in degrees (clockwise). Rotation is around the sprite's center (after scaling). The (X, Y) position is the top-left of the unrotated bounding box. All transforms compose: scale → flip → rotate.
 
+### Sprite Sheets
+
+Create multiple sprites from a single 2D array by slicing it into equal-sized tiles:
+
+```
+sheet@ = ([1, 2, 3, 4]
+          [5, 6, 7, 8]
+          [9, 10, 11, 12]
+          [13, 14, 15, 16])
+tiles@ = CREATESPRITESHEET@ DATA sheet@, TILEWIDTH 2, TILEHEIGHT 2
+```
+
+Returns a 1-indexed array of sprite IDs. Tiles are read left-to-right, top-to-bottom:
+- `tiles@[1]` = top-left tile (pixels `[[1,2],[5,6]]`)
+- `tiles@[2]` = top-right tile (pixels `[[3,4],[7,8]]`)
+- `tiles@[3]` = bottom-left tile
+- `tiles@[4]` = bottom-right tile
+
+Partial tiles (where the sheet isn't evenly divisible) are ignored.
+
+**Animation example:**
+
+```
+walkFrames@ = CREATESPRITESHEET@ DATA walkSheet@, TILEWIDTH 16, TILEHEIGHT 16
+frame# = 1
+frameCount# = LENGTH# walkFrames@
+
+BUFFERENABLED YES
+WHILE 1 = 1
+  IF RUNNINGTIME# - lastAnim# > 150 THEN
+    frame# = frame# MOD frameCount# + 1
+    lastAnim# = RUNNINGTIME#
+  END IF
+  CLEARBUFFER
+  DRAWSPRITE SPRITE walkFrames@[frame#], X playerX#, Y playerY#, SCALE 4
+  SHOWBUFFER
+  SLEEP 0.016
+END WHILE
+```
+
 ## Game Loop Pattern
 
 ```
