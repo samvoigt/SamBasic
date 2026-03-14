@@ -861,6 +861,7 @@ function parse(tokens, existingFunctions) {
         OPEN: '#', READFILELINE: '$', READFILECHARACTER: '$', ENDOFFILE: '?', READSCREEN: '$',
         TONUMBER: '#', TOSTRING: '$', INDEXOF: '#', TRIM: '$', RUNNINGTIME: '#', FILEEXISTS: '?',
         CREATESPRITE: '#', CREATESPRITESHEET: '@', SPRITEWIDTH: '#', SPRITEHEIGHT: '#',
+        LOADSPRITE: '#', LOADSPRITESHEET: '@',
         BOXCOLLIDES: '?',
         OBJECT3D: '#', GROUP3D: '#', PATH3D: '#',
         GENERATETONE: '#',
@@ -1315,6 +1316,12 @@ function parse(tokens, existingFunctions) {
     ],
     SPRITEWIDTH: [{ name: 'SPRITE', required: true }],
     SPRITEHEIGHT: [{ name: 'SPRITE', required: true }],
+    LOADSPRITE: [{ name: 'FILE', required: true }],
+    LOADSPRITESHEET: [
+      { name: 'FILE', required: true },
+      { name: 'TILEWIDTH', required: true },
+      { name: 'TILEHEIGHT', required: true },
+    ],
     BOXCOLLIDES: [
       { name: 'X1', required: true },
       { name: 'Y1', required: true },

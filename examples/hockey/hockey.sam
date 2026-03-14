@@ -1,0 +1,248 @@
+' ============================================
+'   WHALERS HOCKEY - Rink & Camera Test
+'   Arrow keys to move puck around the ice
+' ============================================
+
+' ============ CONSTANTS ============
+SCREEN_W# = 640
+SCREEN_H# = 480
+
+' Rink (world coordinates)
+RINK_W# = 1200
+RINK_H# = 400
+RINK_TOP# = 40
+BOARD_THICKNESS# = 12
+ICE_LEFT# = 20
+ICE_RIGHT# = 1180
+ICE_TOP# = 52
+ICE_BOTTOM# = 428
+
+' Goal dimensions
+GOAL_W# = 8
+GOAL_H# = 60
+GOAL_LEFT_X# = 60
+GOAL_RIGHT_X# = 1140
+
+' Lines
+CENTER_X# = 600
+BLUE_LEFT_X# = 450
+BLUE_RIGHT_X# = 750
+LINE_HALF# = 2
+CORNER_R# = 60
+ICE_CORNER_R# = 48
+CREASE_COLOR& = {.r# = 153, .g# = 204, .b# = 255}
+
+' Benches (along top boards, between blue lines)
+BENCH_Y1# = 8
+BENCH_Y2# = 40
+BENCH_GAP# = 20
+BENCH_LEFT_X1# = 460
+BENCH_LEFT_X2# = 590
+BENCH_RIGHT_X1# = 610
+BENCH_RIGHT_X2# = 740
+BENCH_COLOR& = {.r# = 60, .g# = 40, .b# = 20}
+BENCH_SEAT_COLOR& = {.r# = 100, .g# = 70, .b# = 40}
+
+' ============ STATE ============
+camX# = 0
+puckX# = 600
+puckY# = 240
+
+' ============ FUNCTIONS ============
+
+FUNCTION updateCamera
+  ' Target: center puck horizontally on screen
+  targetCamX# = puckX# - SCREEN_W# / 2
+
+  ' Clamp to rink bounds
+  targetCamX# = MAX# A targetCamX#, B 0
+  targetCamX# = MIN# A targetCamX#, B (RINK_W# - SCREEN_W#)
+
+  ' Smooth follow (lerp)
+  camX# = camX# + (targetCamX# - camX#) * 0.08
+END FUNCTION
+
+FUNCTION collidePuck
+  ' Straight wall clamping
+  puckX# = MAX# A puckX#, B ICE_LEFT#
+  puckX# = MIN# A puckX#, B ICE_RIGHT#
+  puckY# = MAX# A puckY#, B ICE_TOP#
+  puckY# = MIN# A puckY#, B ICE_BOTTOM#
+
+  ' Corner circle centers
+  cLeftX# = ICE_LEFT# + ICE_CORNER_R#
+  cRightX# = ICE_RIGHT# - ICE_CORNER_R#
+  cTopY# = ICE_TOP# + ICE_CORNER_R#
+  cBotY# = ICE_BOTTOM# - ICE_CORNER_R#
+
+  ' Top-left corner
+  IF puckX# < cLeftX# AND puckY# < cTopY# THEN
+    dx# = puckX# - cLeftX#
+    dy# = puckY# - cTopY#
+    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
+    IF dist# > ICE_CORNER_R# THEN
+      puckX# = cLeftX# + dx# / dist# * ICE_CORNER_R#
+      puckY# = cTopY# + dy# / dist# * ICE_CORNER_R#
+    END IF
+  END IF
+
+  ' Top-right corner
+  IF puckX# > cRightX# AND puckY# < cTopY# THEN
+    dx# = puckX# - cRightX#
+    dy# = puckY# - cTopY#
+    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
+    IF dist# > ICE_CORNER_R# THEN
+      puckX# = cRightX# + dx# / dist# * ICE_CORNER_R#
+      puckY# = cTopY# + dy# / dist# * ICE_CORNER_R#
+    END IF
+  END IF
+
+  ' Bottom-left corner
+  IF puckX# < cLeftX# AND puckY# > cBotY# THEN
+    dx# = puckX# - cLeftX#
+    dy# = puckY# - cBotY#
+    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
+    IF dist# > ICE_CORNER_R# THEN
+      puckX# = cLeftX# + dx# / dist# * ICE_CORNER_R#
+      puckY# = cBotY# + dy# / dist# * ICE_CORNER_R#
+    END IF
+  END IF
+
+  ' Bottom-right corner
+  IF puckX# > cRightX# AND puckY# > cBotY# THEN
+    dx# = puckX# - cRightX#
+    dy# = puckY# - cBotY#
+    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
+    IF dist# > ICE_CORNER_R# THEN
+      puckX# = cRightX# + dx# / dist# * ICE_CORNER_R#
+      puckY# = cBotY# + dy# / dist# * ICE_CORNER_R#
+    END IF
+  END IF
+END FUNCTION
+
+FUNCTION drawRink
+  ' Boards (dark gray rounded rectangle)
+  SETCOLOR DARKGRAY&
+  bx1# = 0 - camX#
+  by1# = RINK_TOP#
+  bx2# = RINK_W# - camX#
+  by2# = RINK_TOP# + RINK_H#
+  DRAWBOX X1 (bx1# + CORNER_R#), Y1 by1#, X2 (bx2# - CORNER_R#), Y2 by2#, FILL YES
+  DRAWBOX X1 bx1#, Y1 (by1# + CORNER_R#), X2 bx2#, Y2 (by2# - CORNER_R#), FILL YES
+  DRAWCIRCLE X (bx1# + CORNER_R#), Y (by1# + CORNER_R#), RADIUS CORNER_R#, FILL YES
+  DRAWCIRCLE X (bx2# - CORNER_R#), Y (by1# + CORNER_R#), RADIUS CORNER_R#, FILL YES
+  DRAWCIRCLE X (bx1# + CORNER_R#), Y (by2# - CORNER_R#), RADIUS CORNER_R#, FILL YES
+  DRAWCIRCLE X (bx2# - CORNER_R#), Y (by2# - CORNER_R#), RADIUS CORNER_R#, FILL YES
+
+  ' Player benches (top side, between blue lines)
+  ' Home bench (left of center)
+  SETCOLOR BENCH_COLOR&
+  DRAWBOX X1 (BENCH_LEFT_X1# - camX#), Y1 BENCH_Y1#, X2 (BENCH_LEFT_X2# - camX#), Y2 BENCH_Y2#, FILL YES
+  SETCOLOR BENCH_SEAT_COLOR&
+  DRAWBOX X1 (BENCH_LEFT_X1# + 3 - camX#), Y1 (BENCH_Y1# + 3), X2 (BENCH_LEFT_X2# - 3 - camX#), Y2 (BENCH_Y2# - 3), FILL YES
+  ' Away bench (right of center)
+  SETCOLOR BENCH_COLOR&
+  DRAWBOX X1 (BENCH_RIGHT_X1# - camX#), Y1 BENCH_Y1#, X2 (BENCH_RIGHT_X2# - camX#), Y2 BENCH_Y2#, FILL YES
+  SETCOLOR BENCH_SEAT_COLOR&
+  DRAWBOX X1 (BENCH_RIGHT_X1# + 3 - camX#), Y1 (BENCH_Y1# + 3), X2 (BENCH_RIGHT_X2# - 3 - camX#), Y2 (BENCH_Y2# - 3), FILL YES
+
+  ' Ice surface (white rounded rectangle)
+  SETCOLOR WHITE&
+  ix1# = ICE_LEFT# - camX#
+  iy1# = ICE_TOP#
+  ix2# = ICE_RIGHT# - camX#
+  iy2# = ICE_BOTTOM#
+  DRAWBOX X1 (ix1# + ICE_CORNER_R#), Y1 iy1#, X2 (ix2# - ICE_CORNER_R#), Y2 iy2#, FILL YES
+  DRAWBOX X1 ix1#, Y1 (iy1# + ICE_CORNER_R#), X2 ix2#, Y2 (iy2# - ICE_CORNER_R#), FILL YES
+  DRAWCIRCLE X (ix1# + ICE_CORNER_R#), Y (iy1# + ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
+  DRAWCIRCLE X (ix2# - ICE_CORNER_R#), Y (iy1# + ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
+  DRAWCIRCLE X (ix1# + ICE_CORNER_R#), Y (iy2# - ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
+  DRAWCIRCLE X (ix2# - ICE_CORNER_R#), Y (iy2# - ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
+
+  ' Goal lines (thin red)
+  SETCOLOR RED&
+  DRAWLINE X1 (GOAL_LEFT_X# - camX#), Y1 ICE_TOP#, X2 (GOAL_LEFT_X# - camX#), Y2 ICE_BOTTOM#
+  DRAWLINE X1 (GOAL_RIGHT_X# - camX#), Y1 ICE_TOP#, X2 (GOAL_RIGHT_X# - camX#), Y2 ICE_BOTTOM#
+
+  ' Center red line (thick)
+  lx# = CENTER_X# - camX#
+  DRAWBOX X1 (lx# - LINE_HALF#), Y1 ICE_TOP#, X2 (lx# + LINE_HALF#), Y2 ICE_BOTTOM#, FILL YES
+
+  ' Blue lines (thick)
+  SETCOLOR BLUE&
+  lx# = BLUE_LEFT_X# - camX#
+  DRAWBOX X1 (lx# - LINE_HALF#), Y1 ICE_TOP#, X2 (lx# + LINE_HALF#), Y2 ICE_BOTTOM#, FILL YES
+  lx# = BLUE_RIGHT_X# - camX#
+  DRAWBOX X1 (lx# - LINE_HALF#), Y1 ICE_TOP#, X2 (lx# + LINE_HALF#), Y2 ICE_BOTTOM#, FILL YES
+
+  ' Center circle and dot
+  SETCOLOR RED&
+  cx# = CENTER_X# - camX#
+  cy# = 240
+  DRAWCIRCLE X cx#, Y cy#, RADIUS 60, FILL NO
+  DRAWCIRCLE X cx#, Y cy#, RADIUS 3, FILL YES
+
+  ' Faceoff circles and dots (4 zone dots)
+  DRAWCIRCLE X (200 - camX#), Y 150, RADIUS 60, FILL NO
+  DRAWCIRCLE X (200 - camX#), Y 330, RADIUS 60, FILL NO
+  DRAWCIRCLE X (1000 - camX#), Y 150, RADIUS 60, FILL NO
+  DRAWCIRCLE X (1000 - camX#), Y 330, RADIUS 60, FILL NO
+  DRAWCIRCLE X (200 - camX#), Y 150, RADIUS 3, FILL YES
+  DRAWCIRCLE X (200 - camX#), Y 330, RADIUS 3, FILL YES
+  DRAWCIRCLE X (1000 - camX#), Y 150, RADIUS 3, FILL YES
+  DRAWCIRCLE X (1000 - camX#), Y 330, RADIUS 3, FILL YES
+
+  ' Goal creases (filled light blue semicircles)
+  ' Left crease: filled circle + white box to mask left half
+  SETCOLOR CREASE_COLOR&
+  DRAWCIRCLE X (GOAL_LEFT_X# - camX#), Y 240, RADIUS 25, FILL YES
+  SETCOLOR WHITE&
+  DRAWBOX X1 (GOAL_LEFT_X# - 26 - camX#), Y1 214, X2 (GOAL_LEFT_X# - camX#), Y2 266, FILL YES
+  ' Right crease: filled circle + white box to mask right half
+  SETCOLOR CREASE_COLOR&
+  DRAWCIRCLE X (GOAL_RIGHT_X# - camX#), Y 240, RADIUS 25, FILL YES
+  SETCOLOR WHITE&
+  DRAWBOX X1 (GOAL_RIGHT_X# - camX#), Y1 214, X2 (GOAL_RIGHT_X# + 26 - camX#), Y2 266, FILL YES
+
+  ' Goal nets
+  SETCOLOR RED&
+  DRAWBOX X1 (GOAL_LEFT_X# - GOAL_W# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_LEFT_X# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
+  DRAWBOX X1 (GOAL_RIGHT_X# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_RIGHT_X# + GOAL_W# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
+END FUNCTION
+
+' ============ MAIN LOOP ============
+BUFFERENABLED YES
+running? = YES
+
+WHILE running?
+  ' Input: move puck with arrow keys
+  keys@ = GETALLKEYS@
+  FOR i# FROM 1 TO LENGTH# keys@
+    IF keys@[i#] = "ArrowLeft" THEN
+      puckX# = puckX# - 5
+    END IF
+    IF keys@[i#] = "ArrowRight" THEN
+      puckX# = puckX# + 5
+    END IF
+    IF keys@[i#] = "ArrowUp" THEN
+      puckY# = puckY# - 3
+    END IF
+    IF keys@[i#] = "ArrowDown" THEN
+      puckY# = puckY# + 3
+    END IF
+  END FOR
+
+  collidePuck
+
+  updateCamera
+
+  CLEARBUFFER
+  drawRink
+
+  ' Draw puck
+  SETCOLOR BLACK&
+  DRAWCIRCLE X (puckX# - camX#), Y puckY#, RADIUS 4, FILL YES
+
+  SHOWBUFFER
+  SLEEP 0.016
+END WHILE

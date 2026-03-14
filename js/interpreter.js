@@ -364,6 +364,29 @@ class Interpreter {
     this.fileHandles = {};
   }
 
+  _parseSprFormat(content, fileName) {
+    const rows = [];
+    for (const rawLine of content.split('\n')) {
+      const line = rawLine.trim();
+      if (line === '' || line.startsWith('#')) continue;
+      const pixels = line.split(/\s+/).map(hex => {
+        if (hex === '..') return 0;
+        const val = parseInt(hex, 16);
+        if (isNaN(val) || val < 0 || val > 255)
+          throw new Error(`Invalid pixel value '${hex}' in sprite file '${fileName}'`);
+        return val;
+      });
+      rows.push(pixels);
+    }
+    if (rows.length === 0) throw new Error(`Sprite file '${fileName}' contains no pixel data`);
+    const width = rows[0].length;
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i].length !== width)
+        throw new Error(`Row ${i + 1} has ${rows[i].length} pixels but expected ${width} in sprite file '${fileName}'`);
+    }
+    return rows;
+  }
+
   yieldToEventLoop() {
     return new Promise(resolve => setTimeout(resolve, 0));
   }
@@ -651,6 +674,38 @@ class Interpreter {
             for (let r = 0; r < tileH; r++) {
               const row = data[ty * tileH + r];
               tileData.push(row.slice(tx * tileW, tx * tileW + tileW));
+            }
+            spriteIds.push(this.screen.createSprite(tileData));
+          }
+        }
+        return spriteIds;
+      }
+      case 'LOADSPRITE': {
+        const fileName = String(await this.evalExpr(params.FILE));
+        const stored = localStorage.getItem('sambasic_file:' + fileName);
+        if (stored === null) throw new Error(`File '${fileName}' not found at line ${line}`);
+        const data = this._parseSprFormat(stored, fileName);
+        return this.screen.createSprite(data);
+      }
+      case 'LOADSPRITESHEET': {
+        const fileName = String(await this.evalExpr(params.FILE));
+        const tileW = Math.floor(await this.evalExpr(params.TILEWIDTH));
+        const tileH = Math.floor(await this.evalExpr(params.TILEHEIGHT));
+        const stored = localStorage.getItem('sambasic_file:' + fileName);
+        if (stored === null) throw new Error(`File '${fileName}' not found at line ${line}`);
+        if (tileW <= 0 || tileH <= 0)
+          throw new Error(`LOADSPRITESHEET: tile dimensions must be positive at line ${line}`);
+        const data = this._parseSprFormat(stored, fileName);
+        const sheetH = data.length;
+        const sheetW = data[0].length;
+        const tilesX = Math.floor(sheetW / tileW);
+        const tilesY = Math.floor(sheetH / tileH);
+        const spriteIds = [];
+        for (let ty = 0; ty < tilesY; ty++) {
+          for (let tx = 0; tx < tilesX; tx++) {
+            const tileData = [];
+            for (let r = 0; r < tileH; r++) {
+              tileData.push(data[ty * tileH + r].slice(tx * tileW, tx * tileW + tileW));
             }
             spriteIds.push(this.screen.createSprite(tileData));
           }
@@ -1475,7 +1530,11 @@ class Interpreter {
           return undefined;
         },
         set(target, prop, value) {
-          target[prop] = value;
+          if (!(prop in target) && prop in global) {
+            global[prop] = value;
+          } else {
+            target[prop] = value;
+          }
           return true;
         },
         has(target, prop) {
