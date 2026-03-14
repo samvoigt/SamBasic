@@ -595,8 +595,9 @@ function parse(tokens, existingFunctions) {
         { name: 'SCALE', required: false },
         { name: 'SCALEX', required: false },
         { name: 'SCALEY', required: false },
+        { name: 'ANGLE', required: false },
       ], dt.line);
-      return { type: 'drawsprite', sprite: resolved.SPRITE, x: resolved.X, y: resolved.Y, flipH: resolved.FLIPH || null, flipV: resolved.FLIPV || null, scale: resolved.SCALE || null, scaleX: resolved.SCALEX || null, scaleY: resolved.SCALEY || null, line: dt.line };
+      return { type: 'drawsprite', sprite: resolved.SPRITE, x: resolved.X, y: resolved.Y, flipH: resolved.FLIPH || null, flipV: resolved.FLIPV || null, scale: resolved.SCALE || null, scaleX: resolved.SCALEX || null, scaleY: resolved.SCALEY || null, angle: resolved.ANGLE || null, line: dt.line };
     }
 
     // --- 3D Wireframe Statements ---

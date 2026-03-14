@@ -150,6 +150,16 @@ DRAWSPRITE SPRITE id#, X 100, Y 200, SCALE 4, FLIPH YES   ' Scaled + flipped
 
 `SCALE` sets both axes uniformly. `SCALEX`/`SCALEY` override `SCALE` for their respective axis. All default to 1. The sprite's top-left corner stays at (X, Y) — scaling expands rightward and downward. Pixel art stays crisp (nearest-neighbor interpolation).
 
+### Rotating a Sprite
+
+```
+DRAWSPRITE SPRITE id#, X 100, Y 200, ANGLE 45             ' 45° clockwise
+DRAWSPRITE SPRITE id#, X 100, Y 200, ANGLE 90, SCALE 2    ' Rotated + scaled
+DRAWSPRITE SPRITE id#, X 100, Y 200, ANGLE a#, FLIPH YES  ' Rotated + flipped
+```
+
+`ANGLE` is in degrees (clockwise). Rotation is around the sprite's center (after scaling). The (X, Y) position is the top-left of the unrotated bounding box. All transforms compose: scale → flip → rotate.
+
 ## Game Loop Pattern
 
 ```

@@ -415,20 +415,24 @@ class Screen {
     const sprite = this.sprites[id];
     if (!sprite) throw new Error(`Sprite ${id} not found`);
     const ctx = this._activeCtx;
-    const { flipH = false, flipV = false, scaleX = 1, scaleY = 1 } = opts;
+    const { flipH = false, flipV = false, scaleX = 1, scaleY = 1, angle = 0 } = opts;
 
     const w = sprite.width * scaleX;
     const h = sprite.height * scaleY;
-    const needsTransform = flipH || flipV;
+    const needsTransform = flipH || flipV || angle !== 0;
 
     if (needsTransform) {
       ctx.save();
-      ctx.translate(
-        flipH ? x + w : x,
-        flipV ? y + h : y
-      );
-      ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
-      ctx.drawImage(sprite.canvas, 0, 0, w, h);
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      ctx.translate(cx, cy);
+      if (angle !== 0) {
+        ctx.rotate(angle * Math.PI / 180);
+      }
+      if (flipH || flipV) {
+        ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+      }
+      ctx.drawImage(sprite.canvas, -w / 2, -h / 2, w, h);
       ctx.restore();
     } else if (scaleX !== 1 || scaleY !== 1) {
       ctx.drawImage(sprite.canvas, x, y, w, h);

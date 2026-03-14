@@ -1055,7 +1055,8 @@ class Interpreter {
         const scaleUniform = stmt.scale ? await this.evalExpr(stmt.scale) : 1;
         const scaleX = stmt.scaleX ? await this.evalExpr(stmt.scaleX) : scaleUniform;
         const scaleY = stmt.scaleY ? await this.evalExpr(stmt.scaleY) : scaleUniform;
-        this.screen.drawSprite(spriteId, x, y, { flipH, flipV, scaleX, scaleY });
+        const angle = stmt.angle ? await this.evalExpr(stmt.angle) : 0;
+        this.screen.drawSprite(spriteId, x, y, { flipH, flipV, scaleX, scaleY, angle });
         break;
       }
       case 'drawpath': {
