@@ -129,6 +129,16 @@ Draws the sprite at pixel position (100, 200). Uses keyword syntax: `SPRITE`, `X
 
 The sprite's `0`/null cells are transparent. Sprites respect double buffering.
 
+### Flipping a Sprite
+
+```
+DRAWSPRITE SPRITE id#, X 100, Y 200, FLIPH YES         ' Mirror horizontally
+DRAWSPRITE SPRITE id#, X 100, Y 200, FLIPV YES         ' Mirror vertically
+DRAWSPRITE SPRITE id#, X 100, Y 200, FLIPH YES, FLIPV YES  ' Both
+```
+
+`FLIPH` and `FLIPV` are optional (default `NO`). The sprite occupies the same bounding box regardless of flip state.
+
 ## Game Loop Pattern
 
 ```

@@ -408,12 +408,25 @@ class Screen {
     return id;
   }
 
-  drawSprite(id, x, y) {
+  drawSprite(id, x, y, opts = {}) {
     this._ensureGraphics();
     const sprite = this.sprites[id];
     if (!sprite) throw new Error(`Sprite ${id} not found`);
     const ctx = this._activeCtx;
-    ctx.drawImage(sprite.canvas, x, y);
+    const { flipH = false, flipV = false } = opts;
+
+    if (flipH || flipV) {
+      ctx.save();
+      ctx.translate(
+        flipH ? x + sprite.width : x,
+        flipV ? y + sprite.height : y
+      );
+      ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+      ctx.drawImage(sprite.canvas, 0, 0);
+      ctx.restore();
+    } else {
+      ctx.drawImage(sprite.canvas, x, y);
+    }
   }
 
   showError(message) {

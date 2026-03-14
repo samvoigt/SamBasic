@@ -1050,7 +1050,9 @@ class Interpreter {
         const spriteId = Math.floor(await this.evalExpr(stmt.sprite));
         const x = Math.floor(await this.evalExpr(stmt.x));
         const y = Math.floor(await this.evalExpr(stmt.y));
-        this.screen.drawSprite(spriteId, x, y);
+        const flipH = stmt.flipH ? !!(await this.evalExpr(stmt.flipH)) : false;
+        const flipV = stmt.flipV ? !!(await this.evalExpr(stmt.flipV)) : false;
+        this.screen.drawSprite(spriteId, x, y, { flipH, flipV });
         break;
       }
       case 'drawpath': {
