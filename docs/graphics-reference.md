@@ -139,6 +139,17 @@ DRAWSPRITE SPRITE id#, X 100, Y 200, FLIPH YES, FLIPV YES  ' Both
 
 `FLIPH` and `FLIPV` are optional (default `NO`). The sprite occupies the same bounding box regardless of flip state.
 
+### Scaling a Sprite
+
+```
+DRAWSPRITE SPRITE id#, X 100, Y 200, SCALE 2              ' 2x uniform
+DRAWSPRITE SPRITE id#, X 100, Y 200, SCALEX 3, SCALEY 2   ' 3x wide, 2x tall
+DRAWSPRITE SPRITE id#, X 100, Y 200, SCALE 0.5             ' Half size
+DRAWSPRITE SPRITE id#, X 100, Y 200, SCALE 4, FLIPH YES   ' Scaled + flipped
+```
+
+`SCALE` sets both axes uniformly. `SCALEX`/`SCALEY` override `SCALE` for their respective axis. All default to 1. The sprite's top-left corner stays at (X, Y) — scaling expands rightward and downward. Pixel art stays crisp (nearest-neighbor interpolation).
+
 ## Game Loop Pattern
 
 ```

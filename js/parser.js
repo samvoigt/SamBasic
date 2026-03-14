@@ -592,8 +592,11 @@ function parse(tokens, existingFunctions) {
         { name: 'Y', required: true },
         { name: 'FLIPH', required: false },
         { name: 'FLIPV', required: false },
+        { name: 'SCALE', required: false },
+        { name: 'SCALEX', required: false },
+        { name: 'SCALEY', required: false },
       ], dt.line);
-      return { type: 'drawsprite', sprite: resolved.SPRITE, x: resolved.X, y: resolved.Y, flipH: resolved.FLIPH || null, flipV: resolved.FLIPV || null, line: dt.line };
+      return { type: 'drawsprite', sprite: resolved.SPRITE, x: resolved.X, y: resolved.Y, flipH: resolved.FLIPH || null, flipV: resolved.FLIPV || null, scale: resolved.SCALE || null, scaleX: resolved.SCALEX || null, scaleY: resolved.SCALEY || null, line: dt.line };
     }
 
     // --- 3D Wireframe Statements ---

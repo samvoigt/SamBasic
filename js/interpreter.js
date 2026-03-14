@@ -1052,7 +1052,10 @@ class Interpreter {
         const y = Math.floor(await this.evalExpr(stmt.y));
         const flipH = stmt.flipH ? !!(await this.evalExpr(stmt.flipH)) : false;
         const flipV = stmt.flipV ? !!(await this.evalExpr(stmt.flipV)) : false;
-        this.screen.drawSprite(spriteId, x, y, { flipH, flipV });
+        const scaleUniform = stmt.scale ? await this.evalExpr(stmt.scale) : 1;
+        const scaleX = stmt.scaleX ? await this.evalExpr(stmt.scaleX) : scaleUniform;
+        const scaleY = stmt.scaleY ? await this.evalExpr(stmt.scaleY) : scaleUniform;
+        this.screen.drawSprite(spriteId, x, y, { flipH, flipV, scaleX, scaleY });
         break;
       }
       case 'drawpath': {

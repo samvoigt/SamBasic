@@ -99,12 +99,14 @@ class Screen {
     if (!this.frontCanvas) {
       this.frontCanvas = document.getElementById('graphics-canvas');
       this.frontCtx = this.frontCanvas.getContext('2d');
+      this.frontCtx.imageSmoothingEnabled = false;
     }
     if (!this.backCanvas) {
       this.backCanvas = document.createElement('canvas');
       this.backCanvas.width = 640;
       this.backCanvas.height = 480;
       this.backCtx = this.backCanvas.getContext('2d');
+      this.backCtx.imageSmoothingEnabled = false;
     }
     if (!this.monitorEl) {
       this.monitorEl = this.el.closest('.monitor-screen');
@@ -413,17 +415,23 @@ class Screen {
     const sprite = this.sprites[id];
     if (!sprite) throw new Error(`Sprite ${id} not found`);
     const ctx = this._activeCtx;
-    const { flipH = false, flipV = false } = opts;
+    const { flipH = false, flipV = false, scaleX = 1, scaleY = 1 } = opts;
 
-    if (flipH || flipV) {
+    const w = sprite.width * scaleX;
+    const h = sprite.height * scaleY;
+    const needsTransform = flipH || flipV;
+
+    if (needsTransform) {
       ctx.save();
       ctx.translate(
-        flipH ? x + sprite.width : x,
-        flipV ? y + sprite.height : y
+        flipH ? x + w : x,
+        flipV ? y + h : y
       );
       ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
-      ctx.drawImage(sprite.canvas, 0, 0);
+      ctx.drawImage(sprite.canvas, 0, 0, w, h);
       ctx.restore();
+    } else if (scaleX !== 1 || scaleY !== 1) {
+      ctx.drawImage(sprite.canvas, x, y, w, h);
     } else {
       ctx.drawImage(sprite.canvas, x, y);
     }
