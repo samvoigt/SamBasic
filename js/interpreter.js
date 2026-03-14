@@ -609,6 +609,29 @@ class Interpreter {
         if (!Array.isArray(data)) throw new Error(`CREATESPRITE: DATA must be a 2D array at line ${line}`);
         return this.screen.createSprite(data);
       }
+      case 'SPRITEWIDTH': {
+        const id = Math.floor(await this.evalExpr(params.SPRITE));
+        const sprite = this.screen.sprites[id];
+        if (!sprite) throw new Error(`Sprite ${id} not found at line ${line}`);
+        return sprite.width;
+      }
+      case 'SPRITEHEIGHT': {
+        const id = Math.floor(await this.evalExpr(params.SPRITE));
+        const sprite = this.screen.sprites[id];
+        if (!sprite) throw new Error(`Sprite ${id} not found at line ${line}`);
+        return sprite.height;
+      }
+      case 'BOXCOLLIDES': {
+        const x1 = await this.evalExpr(params.X1);
+        const y1 = await this.evalExpr(params.Y1);
+        const w1 = await this.evalExpr(params.W1);
+        const h1 = await this.evalExpr(params.H1);
+        const x2 = await this.evalExpr(params.X2);
+        const y2 = await this.evalExpr(params.Y2);
+        const w2 = await this.evalExpr(params.W2);
+        const h2 = await this.evalExpr(params.H2);
+        return (x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2) ? 1 : 0;
+      }
       case 'CREATESPRITESHEET': {
         const data = await this.evalExpr(params.DATA);
         const tileW = Math.floor(await this.evalExpr(params.TILEWIDTH));

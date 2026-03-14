@@ -200,6 +200,41 @@ WHILE 1 = 1
 END WHILE
 ```
 
+## Collision Detection
+
+### BOXCOLLIDES?
+
+Tests whether two axis-aligned bounding boxes overlap:
+
+```
+hit? = BOXCOLLIDES? X1 ax#, Y1 ay#, W1 aw#, H1 ah#, X2 bx#, Y2 by#, W2 bw#, H2 bh#
+```
+
+Returns `YES` if the rectangles overlap, `NO` if they don't. Edge-touching boxes do not count as colliding.
+
+### SPRITEWIDTH# / SPRITEHEIGHT#
+
+Query a sprite's pixel dimensions:
+
+```
+w# = SPRITEWIDTH# SPRITE id#
+h# = SPRITEHEIGHT# SPRITE id#
+```
+
+### Example
+
+```
+' Check if puck hits player (accounting for scale)
+puckW# = SPRITEWIDTH# SPRITE puckSpr# * puckScale#
+puckH# = SPRITEHEIGHT# SPRITE puckSpr# * puckScale#
+playerW# = SPRITEWIDTH# SPRITE playerSpr# * playerScale#
+playerH# = SPRITEHEIGHT# SPRITE playerSpr# * playerScale#
+
+IF BOXCOLLIDES? X1 puckX#, Y1 puckY#, W1 puckW#, H1 puckH#, X2 playerX#, Y2 playerY#, W2 playerW#, H2 playerH# THEN
+  puckDX# = puckDX# * -1
+END IF
+```
+
 ## Game Loop Pattern
 
 ```
