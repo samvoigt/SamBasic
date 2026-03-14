@@ -1013,8 +1013,9 @@ function parse(tokens, existingFunctions) {
       if (peek().type === 'KEYWORD' && peek().value === 'ELSE') {
         const elseToken = advance(); // consume ELSE
         skipNewlines();
-        // ELSE IF → recurse into parseIfChain
-        if (peek().type === 'KEYWORD' && peek().value === 'IF') {
+        // ELSE IF on same line → recurse into parseIfChain
+        // ELSE followed by IF on next line → nested IF inside else body
+        if (peek().type === 'KEYWORD' && peek().value === 'IF' && peek().line === elseToken.line) {
           advance(); // consume IF
           const nested = parseIfChain(elseToken);
           elseBody = [nested];
@@ -1167,6 +1168,8 @@ function parse(tokens, existingFunctions) {
     const params = [];
     let optionalStarted = false;
     while (!atLineEnd()) {
+      // Skip commas between parameters
+      if (match('COMMA')) continue;
       if (match('KEYWORD', 'OPTIONAL')) {
         optionalStarted = true;
         continue;

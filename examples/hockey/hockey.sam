@@ -43,10 +43,130 @@ BENCH_RIGHT_X2# = 740
 BENCH_COLOR& = {.r# = 60, .g# = 40, .b# = 20}
 BENCH_SEAT_COLOR& = {.r# = 100, .g# = 70, .b# = 40}
 
+' Player/sprite constants
+PLAYER_SCALE# = 3
+PUCK_SCALE# = 2
+NUM_PLAYERS# = 8
+
+' ============ SPRITES ============
+' Run sprites.sam first to write these to localStorage
+
+' Skater sprites (3 skating frames, 3 shooting frames per team)
+wSkate@ = SIZE 3
+wSkate@[1] = LOADSPRITE# FILE "hockey-w-skate1.spr"
+wSkate@[2] = LOADSPRITE# FILE "hockey-w-skate2.spr"
+wSkate@[3] = LOADSPRITE# FILE "hockey-w-skate3.spr"
+wShoot@ = SIZE 3
+wShoot@[1] = LOADSPRITE# FILE "hockey-w-shoot1.spr"
+wShoot@[2] = LOADSPRITE# FILE "hockey-w-shoot2.spr"
+wShoot@[3] = LOADSPRITE# FILE "hockey-w-shoot3.spr"
+
+oSkate@ = SIZE 3
+oSkate@[1] = LOADSPRITE# FILE "hockey-o-skate1.spr"
+oSkate@[2] = LOADSPRITE# FILE "hockey-o-skate2.spr"
+oSkate@[3] = LOADSPRITE# FILE "hockey-o-skate3.spr"
+oShoot@ = SIZE 3
+oShoot@[1] = LOADSPRITE# FILE "hockey-o-shoot1.spr"
+oShoot@[2] = LOADSPRITE# FILE "hockey-o-shoot2.spr"
+oShoot@[3] = LOADSPRITE# FILE "hockey-o-shoot3.spr"
+
+' Goalie sprites (idle + 3 save types x 2 frames each)
+wGoalieId# = LOADSPRITE# FILE "hockey-w-goalie.spr"
+wGoalieGlove@ = SIZE 2
+wGoalieGlove@[1] = LOADSPRITE# FILE "hockey-w-goalie-glove1.spr"
+wGoalieGlove@[2] = LOADSPRITE# FILE "hockey-w-goalie-glove2.spr"
+wGoalieBlocker@ = SIZE 2
+wGoalieBlocker@[1] = LOADSPRITE# FILE "hockey-w-goalie-blocker1.spr"
+wGoalieBlocker@[2] = LOADSPRITE# FILE "hockey-w-goalie-blocker2.spr"
+wGoalieSplit@ = SIZE 2
+wGoalieSplit@[1] = LOADSPRITE# FILE "hockey-w-goalie-split1.spr"
+wGoalieSplit@[2] = LOADSPRITE# FILE "hockey-w-goalie-split2.spr"
+
+oGoalieId# = LOADSPRITE# FILE "hockey-o-goalie.spr"
+oGoalieGlove@ = SIZE 2
+oGoalieGlove@[1] = LOADSPRITE# FILE "hockey-o-goalie-glove1.spr"
+oGoalieGlove@[2] = LOADSPRITE# FILE "hockey-o-goalie-glove2.spr"
+oGoalieBlocker@ = SIZE 2
+oGoalieBlocker@[1] = LOADSPRITE# FILE "hockey-o-goalie-blocker1.spr"
+oGoalieBlocker@[2] = LOADSPRITE# FILE "hockey-o-goalie-blocker2.spr"
+oGoalieSplit@ = SIZE 2
+oGoalieSplit@[1] = LOADSPRITE# FILE "hockey-o-goalie-split1.spr"
+oGoalieSplit@[2] = LOADSPRITE# FILE "hockey-o-goalie-split2.spr"
+
+puckSprId# = LOADSPRITE# FILE "hockey-puck.spr"
+
+' ============ ANIMATION CONSTANTS ============
+' Animation states
+ANIM_SKATE# = 0
+ANIM_SHOOT# = 1
+ANIM_GOALIE_IDLE# = 2
+ANIM_GOALIE_GLOVE# = 3
+ANIM_GOALIE_BLOCKER# = 4
+ANIM_GOALIE_SPLIT# = 5
+
+' Timing (in frames at ~60fps)
+SKATE_FRAME_TIME# = 8
+SHOOT_FRAME_TIME# = 6
+GOALIE_FRAME_TIME# = 10
+
 ' ============ STATE ============
 camX# = 0
 puckX# = 600
 puckY# = 240
+puckLoose? = YES
+puckOwner# = 0
+
+' On-ice player state (1-4 Whalers, 5-8 Opponent)
+' Index 4 = Whalers goalie, 8 = Opponent goalie
+pX@ = SIZE 8
+pY@ = SIZE 8
+pVX@ = SIZE 8
+pVY@ = SIZE 8
+pDir@ = SIZE 8
+pState@ = SIZE 8
+pHasPuck@ = SIZE 8
+activeP# = 1
+
+' Animation state per player
+pAnim@ = SIZE 8
+pAnimFrame@ = SIZE 8
+pAnimTimer@ = SIZE 8
+FOR i# FROM 1 TO 8
+  pAnimFrame@[i#] = 1
+  pAnimTimer@[i#] = 0
+END FOR
+' Goalies start in idle
+pAnim@[4] = ANIM_GOALIE_IDLE#
+pAnim@[8] = ANIM_GOALIE_IDLE#
+
+' Initial positions (center-ice faceoff)
+' Whalers (left side): C at faceoff, wings spread, goalie in net
+pX@[1] = 590
+pY@[1] = 240
+pDir@[1] = 1
+pX@[2] = 500
+pY@[2] = 160
+pDir@[2] = 1
+pX@[3] = 500
+pY@[3] = 320
+pDir@[3] = 1
+pX@[4] = 80
+pY@[4] = 240
+pDir@[4] = 1
+
+' Opponent (right side)
+pX@[5] = 610
+pY@[5] = 240
+pDir@[5] = -1
+pX@[6] = 700
+pY@[6] = 160
+pDir@[6] = -1
+pX@[7] = 700
+pY@[7] = 320
+pDir@[7] = -1
+pX@[8] = 1120
+pY@[8] = 240
+pDir@[8] = -1
 
 ' ============ FUNCTIONS ============
 
@@ -210,9 +330,144 @@ FUNCTION drawRink
   DRAWBOX X1 (GOAL_RIGHT_X# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_RIGHT_X# + GOAL_W# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
 END FUNCTION
 
+FUNCTION updateAnimations
+  FOR i# FROM 1 TO 8
+    pAnimTimer@[i#] = pAnimTimer@[i#] + 1
+    anim# = pAnim@[i#]
+
+    IF anim# = ANIM_SKATE# THEN
+      IF pAnimTimer@[i#] >= SKATE_FRAME_TIME# THEN
+        pAnimTimer@[i#] = 0
+        pAnimFrame@[i#] = pAnimFrame@[i#] + 1
+        IF pAnimFrame@[i#] > 3 THEN
+          pAnimFrame@[i#] = 1
+        END IF
+      END IF
+    ELSE IF anim# = ANIM_SHOOT# THEN
+      IF pAnimTimer@[i#] >= SHOOT_FRAME_TIME# THEN
+        pAnimTimer@[i#] = 0
+        pAnimFrame@[i#] = pAnimFrame@[i#] + 1
+        IF pAnimFrame@[i#] > 3 THEN
+          pAnimFrame@[i#] = 1
+          pAnim@[i#] = ANIM_SKATE#
+        END IF
+      END IF
+    ELSE IF anim# = ANIM_GOALIE_GLOVE# OR anim# = ANIM_GOALIE_BLOCKER# OR anim# = ANIM_GOALIE_SPLIT# THEN
+      IF pAnimTimer@[i#] >= GOALIE_FRAME_TIME# THEN
+        pAnimTimer@[i#] = 0
+        pAnimFrame@[i#] = pAnimFrame@[i#] + 1
+        IF pAnimFrame@[i#] > 2 THEN
+          pAnimFrame@[i#] = 1
+          pAnim@[i#] = ANIM_GOALIE_IDLE#
+        END IF
+      END IF
+    END IF
+  END FOR
+END FUNCTION
+
+FUNCTION getPlayerSprite# IDX idx#
+  anim# = pAnim@[idx#]
+  frame# = pAnimFrame@[idx#]
+  isWhalers? = (idx# <= 4)
+
+  IF anim# = ANIM_SKATE# THEN
+    IF isWhalers? THEN
+      result# = wSkate@[frame#]
+    ELSE
+      result# = oSkate@[frame#]
+    END IF
+  ELSE IF anim# = ANIM_SHOOT# THEN
+    IF isWhalers? THEN
+      result# = wShoot@[frame#]
+    ELSE
+      result# = oShoot@[frame#]
+    END IF
+  ELSE IF anim# = ANIM_GOALIE_IDLE# THEN
+    IF isWhalers? THEN
+      result# = wGoalieId#
+    ELSE
+      result# = oGoalieId#
+    END IF
+  ELSE IF anim# = ANIM_GOALIE_GLOVE# THEN
+    IF isWhalers? THEN
+      result# = wGoalieGlove@[frame#]
+    ELSE
+      result# = oGoalieGlove@[frame#]
+    END IF
+  ELSE IF anim# = ANIM_GOALIE_BLOCKER# THEN
+    IF isWhalers? THEN
+      result# = wGoalieBlocker@[frame#]
+    ELSE
+      result# = oGoalieBlocker@[frame#]
+    END IF
+  ELSE IF anim# = ANIM_GOALIE_SPLIT# THEN
+    IF isWhalers? THEN
+      result# = wGoalieSplit@[frame#]
+    ELSE
+      result# = oGoalieSplit@[frame#]
+    END IF
+  END IF
+
+  RETURN result#
+END FUNCTION
+
+FUNCTION drawPlayers
+  ' Sort by Y for depth (bubble sort, only 8 elements)
+  sortOrder@ = [1, 2, 3, 4, 5, 6, 7, 8]
+  FOR i# FROM 1 TO 7
+    FOR j# FROM 1 TO 8 - i#
+      IF pY@[sortOrder@[j#]] > pY@[sortOrder@[j# + 1]] THEN
+        temp# = sortOrder@[j#]
+        sortOrder@[j#] = sortOrder@[j# + 1]
+        sortOrder@[j# + 1] = temp#
+      END IF
+    END FOR
+  END FOR
+
+  FOR i# FROM 1 TO 8
+    idx# = sortOrder@[i#]
+    sx# = pX@[idx#] - camX#
+    sy# = pY@[idx#]
+
+    ' Skip if off screen
+    IF sx# < -30 OR sx# > 670 THEN
+      CONTINUE
+    END IF
+
+    ' Pick sprite based on team, position, and animation state
+    sprId# = getPlayerSprite# IDX idx#
+
+    ' Flip if facing left
+    flip? = NO
+    IF pDir@[idx#] = -1 THEN
+      flip? = YES
+    END IF
+
+    ' Active player indicator
+    IF idx# = activeP# THEN
+      SETCOLOR CYAN&
+      DRAWCIRCLE X (sx# + 5 * PLAYER_SCALE#), Y (sy# + 15 * PLAYER_SCALE#), RADIUS 5, FILL YES
+    END IF
+
+    ' Draw player
+    DRAWSPRITE SPRITE sprId#, X sx#, Y sy#, SCALE PLAYER_SCALE#, FLIPH flip?
+  END FOR
+END FUNCTION
+
+FUNCTION drawPuck
+  IF puckLoose? THEN
+    sx# = puckX# - camX#
+    IF sx# > -10 AND sx# < 650 THEN
+      DRAWSPRITE SPRITE puckSprId#, X sx#, Y puckY#, SCALE PUCK_SCALE#
+    END IF
+  END IF
+END FUNCTION
+
 ' ============ MAIN LOOP ============
 BUFFERENABLED YES
 running? = YES
+goalieTestTimer# = 0
+goalieTestAnim# = 0
 
 WHILE running?
   ' Input: move puck with arrow keys
@@ -234,14 +489,48 @@ WHILE running?
 
   collidePuck
 
+  ' Test: cycle goalie through idle → splits every 90 frames (~1.5 sec)
+  goalieTestTimer# = goalieTestTimer# + 1
+  IF goalieTestTimer# >= 90 THEN
+    goalieTestTimer# = 0
+    goalieTestAnim# = goalieTestAnim# + 1
+    IF goalieTestAnim# > 3 THEN
+      goalieTestAnim# = 0
+    END IF
+    IF goalieTestAnim# = 0 THEN
+      pAnim@[4] = ANIM_GOALIE_IDLE#
+      pAnim@[8] = ANIM_GOALIE_IDLE#
+    ELSE IF goalieTestAnim# = 1 THEN
+      pAnim@[4] = ANIM_GOALIE_SPLIT#
+      pAnim@[8] = ANIM_GOALIE_SPLIT#
+      pAnimFrame@[4] = 1
+      pAnimFrame@[8] = 1
+      pAnimTimer@[4] = 0
+      pAnimTimer@[8] = 0
+    ELSE IF goalieTestAnim# = 2 THEN
+      pAnim@[4] = ANIM_GOALIE_GLOVE#
+      pAnim@[8] = ANIM_GOALIE_GLOVE#
+      pAnimFrame@[4] = 1
+      pAnimFrame@[8] = 1
+      pAnimTimer@[4] = 0
+      pAnimTimer@[8] = 0
+    ELSE IF goalieTestAnim# = 3 THEN
+      pAnim@[4] = ANIM_GOALIE_BLOCKER#
+      pAnim@[8] = ANIM_GOALIE_BLOCKER#
+      pAnimFrame@[4] = 1
+      pAnimFrame@[8] = 1
+      pAnimTimer@[4] = 0
+      pAnimTimer@[8] = 0
+    END IF
+  END IF
+
+  updateAnimations
   updateCamera
 
   CLEARBUFFER
   drawRink
-
-  ' Draw puck
-  SETCOLOR BLACK&
-  DRAWCIRCLE X (puckX# - camX#), Y puckY#, RADIUS 4, FILL YES
+  drawPlayers
+  drawPuck
 
   SHOWBUFFER
   SLEEP 0.016

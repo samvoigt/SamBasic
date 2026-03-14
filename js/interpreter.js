@@ -364,6 +364,16 @@ class Interpreter {
     this.fileHandles = {};
   }
 
+  async _loadFileContent(fileName, line) {
+    const stored = localStorage.getItem('sambasic_file:' + fileName);
+    if (stored !== null) return stored;
+    try {
+      const resp = await fetch(fileName);
+      if (resp.ok) return await resp.text();
+    } catch (e) { /* fetch not available or failed */ }
+    throw new Error(`File '${fileName}' not found at line ${line}`);
+  }
+
   _parseSprFormat(content, fileName) {
     const rows = [];
     for (const rawLine of content.split('\n')) {
@@ -682,20 +692,18 @@ class Interpreter {
       }
       case 'LOADSPRITE': {
         const fileName = String(await this.evalExpr(params.FILE));
-        const stored = localStorage.getItem('sambasic_file:' + fileName);
-        if (stored === null) throw new Error(`File '${fileName}' not found at line ${line}`);
-        const data = this._parseSprFormat(stored, fileName);
+        const content = await this._loadFileContent(fileName, line);
+        const data = this._parseSprFormat(content, fileName);
         return this.screen.createSprite(data);
       }
       case 'LOADSPRITESHEET': {
         const fileName = String(await this.evalExpr(params.FILE));
         const tileW = Math.floor(await this.evalExpr(params.TILEWIDTH));
         const tileH = Math.floor(await this.evalExpr(params.TILEHEIGHT));
-        const stored = localStorage.getItem('sambasic_file:' + fileName);
-        if (stored === null) throw new Error(`File '${fileName}' not found at line ${line}`);
+        const content = await this._loadFileContent(fileName, line);
         if (tileW <= 0 || tileH <= 0)
           throw new Error(`LOADSPRITESHEET: tile dimensions must be positive at line ${line}`);
-        const data = this._parseSprFormat(stored, fileName);
+        const data = this._parseSprFormat(content, fileName);
         const sheetH = data.length;
         const sheetW = data[0].length;
         const tilesX = Math.floor(sheetW / tileW);

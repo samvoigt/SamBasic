@@ -49,6 +49,7 @@ function tokenize(source) {
   const tokens = [];
   const lines = source.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   let parenDepth = 0;
+  let bracketDepth = 0;
 
   for (let lineNum = 0; lineNum < lines.length; lineNum++) {
     const line = lines[lineNum];
@@ -134,8 +135,8 @@ function tokenize(source) {
       // single-char tokens
       if (line[i] === '(') { parenDepth++; tokens.push({ type: 'LPAREN', value: '(', line: lineNum + 1, col: startCol }); i++; continue; }
       if (line[i] === ')') { if (parenDepth > 0) parenDepth--; tokens.push({ type: 'RPAREN', value: ')', line: lineNum + 1, col: startCol }); i++; continue; }
-      if (line[i] === '[') { tokens.push({ type: 'LBRACKET', value: '[', line: lineNum + 1, col: startCol }); i++; continue; }
-      if (line[i] === ']') { tokens.push({ type: 'RBRACKET', value: ']', line: lineNum + 1, col: startCol }); i++; continue; }
+      if (line[i] === '[') { bracketDepth++; tokens.push({ type: 'LBRACKET', value: '[', line: lineNum + 1, col: startCol }); i++; continue; }
+      if (line[i] === ']') { if (bracketDepth > 0) bracketDepth--; tokens.push({ type: 'RBRACKET', value: ']', line: lineNum + 1, col: startCol }); i++; continue; }
       if (line[i] === ',') { tokens.push({ type: 'COMMA', value: ',', line: lineNum + 1, col: startCol }); i++; continue; }
       if (line[i] === '=') { tokens.push({ type: 'COMPARE', value: '=', line: lineNum + 1, col: startCol }); i++; continue; }
       if (line[i] === '{') { tokens.push({ type: 'LBRACE', value: '{', line: lineNum + 1, col: startCol }); i++; continue; }
@@ -185,7 +186,7 @@ function tokenize(source) {
       throw new SyntaxError(`Unexpected character '${line[i]}' at line ${lineNum + 1}, col ${i + 1}`);
     }
 
-    if (parenDepth === 0) {
+    if (parenDepth === 0 && bracketDepth === 0) {
       tokens.push({ type: 'NEWLINE', value: '\n', line: lineNum + 1, col: i });
     }
   }

@@ -229,6 +229,8 @@ html, body {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .files-header {
@@ -797,6 +799,10 @@ html, body {
   overflow: hidden;
   white-space: pre;
   user-select: none;
+}
+
+.repl-focused .screen-content {
+  user-select: text;
 }
 
 /* Phosphor glow for bright colors */
