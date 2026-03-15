@@ -782,54 +782,107 @@ FUNCTION updateTeammateAI
 
     rIdx# = pRoster@[i#]
     spd# = wSpeed@[rIdx#] * 0.3 + 1.5
+    pushStr# = 0.2
+    targetX# = pX@[i#]
+    targetY# = pY@[i#]
 
-    ' If a pass is in flight, skate toward the puck
+    ' If a pass is in flight, skate toward where the puck will be
     IF passInFlight? AND puckOwner# = 0 THEN
       targetX# = puckX# + puckVX# * 3
       targetY# = puckY# + puckVY# * 3
-      targetX# = MAX# A targetX#, B (ICE_LEFT# + 30)
-      targetX# = MIN# A targetX#, B (ICE_RIGHT# - 50)
-      targetY# = MAX# A targetY#, B (ICE_TOP# + 20)
-      targetY# = MIN# A targetY#, B (ICE_BOTTOM# - 50)
-      dx# = targetX# - pX@[i#]
-      dy# = targetY# - pY@[i#]
-      dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
-      IF dist# > 5 THEN
-        pPushing@[i#] = 1
-        pVX@[i#] = pVX@[i#] + (dx# / dist#) * spd# * 0.3
-        pVY@[i#] = pVY@[i#] + (dy# / dist#) * spd# * 0.3
-      END IF
-      IF dx# > 5 THEN
-        pDir@[i#] = 1
-      ELSE IF dx# < -5 THEN
-        pDir@[i#] = -1
-      END IF
-      CONTINUE
-    END IF
+      pushStr# = 0.3
 
-    IF puckX# < CENTER_X# THEN
-      ' Puck in our zone — defensive positioning
-      IF i# = 1 THEN
-        targetX# = puckX# + 80
-        targetY# = 180
-      ELSE IF i# = 2 THEN
-        targetX# = puckX# + 60
-        targetY# = 300
+    ' If puck is loose, closest non-active Whaler chases it
+    ELSE IF puckLoose? AND puckOwner# = 0 THEN
+      closestW# = 0
+      closestWD# = 99999
+      FOR ci# FROM 1 TO 3
+        IF ci# = activeP# OR pState@[ci#] = 2 THEN
+          CONTINUE
+        END IF
+        cdx# = pX@[ci#] - puckX#
+        cdy# = pY@[ci#] - puckY#
+        cd# = SQRT# VALUE (cdx# * cdx# + cdy# * cdy#)
+        IF cd# < closestWD# THEN
+          closestWD# = cd#
+          closestW# = ci#
+        END IF
+      END FOR
+      IF i# = closestW# THEN
+        targetX# = puckX#
+        targetY# = puckY#
+        pushStr# = 0.3
       ELSE
-        targetX# = puckX# + 120
-        targetY# = 240
+        ' Not closest — defend
+        defX# = puckX# - 80
+        IF defX# < GOAL_LEFT_X# + 60 THEN
+          defX# = GOAL_LEFT_X# + 60
+        END IF
+        IF i# = 1 THEN
+          targetX# = defX#
+          targetY# = puckY# - 60
+        ELSE IF i# = 2 THEN
+          targetX# = defX#
+          targetY# = puckY# + 60
+        ELSE
+          targetX# = defX# + 40
+          targetY# = puckY#
+        END IF
       END IF
-    ELSE
-      ' Puck in their zone — offensive positioning
+
+    ' Active player or teammate has the puck — get open for a pass
+    ELSE IF puckOwner# >= 1 AND puckOwner# <= 3 THEN
+      carrierX# = pX@[puckOwner#]
+
+      ' Spread out: skate ahead of the carrier toward opponent goal
       IF i# = 1 THEN
-        targetX# = puckX# + 50
-        targetY# = 160
+        laneY# = 150
       ELSE IF i# = 2 THEN
-        targetX# = puckX# + 50
-        targetY# = 320
+        laneY# = 330
       ELSE
-        targetX# = puckX# - 60
-        targetY# = 240
+        laneY# = 240
+      END IF
+
+      targetX# = carrierX# + 100 + RANDOM# MAX 40
+      targetY# = laneY# + SIN# VALUE (now# * 0.002 + i# * 2) * 40
+
+      ' Stay away from opponents (find nearest and nudge away)
+      nearOppDist# = 99999
+      nearOppY# = targetY#
+      FOR oi# FROM 5 TO 7
+        ox# = pX@[oi#] - targetX#
+        oy# = pY@[oi#] - targetY#
+        od# = SQRT# VALUE (ox# * ox# + oy# * oy#)
+        IF od# < nearOppDist# THEN
+          nearOppDist# = od#
+          nearOppY# = pY@[oi#]
+        END IF
+      END FOR
+      IF nearOppDist# < 80 THEN
+        IF targetY# > nearOppY# THEN
+          targetY# = targetY# + 30
+        ELSE
+          targetY# = targetY# - 30
+        END IF
+      END IF
+      pushStr# = 0.25
+
+    ELSE
+      ' Opponent has puck — defensive positioning
+      defX# = puckX# - 80
+      IF defX# < GOAL_LEFT_X# + 60 THEN
+        defX# = GOAL_LEFT_X# + 60
+      END IF
+
+      IF i# = 1 THEN
+        targetX# = defX#
+        targetY# = puckY# - 60
+      ELSE IF i# = 2 THEN
+        targetX# = defX#
+        targetY# = puckY# + 60
+      ELSE
+        targetX# = defX# + 40
+        targetY# = puckY#
       END IF
     END IF
 
@@ -846,8 +899,8 @@ FUNCTION updateTeammateAI
 
     IF dist# > 10 THEN
       pPushing@[i#] = 1
-      pVX@[i#] = pVX@[i#] + (dx# / dist#) * spd# * 0.2
-      pVY@[i#] = pVY@[i#] + (dy# / dist#) * spd# * 0.2
+      pVX@[i#] = pVX@[i#] + (dx# / dist#) * spd# * pushStr#
+      pVY@[i#] = pVY@[i#] + (dy# / dist#) * spd# * pushStr#
     ELSE
       pPushing@[i#] = 0
     END IF
@@ -869,65 +922,159 @@ FUNCTION updateOpponentAI
 
     rIdx# = pRoster@[i#]
     spd# = oSpeed@[rIdx#] * 0.3 + 1.5
+    pushStr# = 0.2
 
     IF puckOwner# = i# THEN
-      ' This opponent has the puck — skate toward Whalers' goal and shoot
-      targetX# = GOAL_LEFT_X# + 80
-      targetY# = 240
+      ' === This opponent has the puck ===
+      distToGoal# = pX@[i#] - GOAL_LEFT_X#
 
-      ' If close enough to goal, shoot
-      shotDx# = pX@[i#] - GOAL_LEFT_X#
-      IF ABS# VALUE shotDx# < 200 THEN
-        ' Shoot toward left goal
-        sdx# = GOAL_LEFT_X# - puckX#
-        sdy# = 240 - puckY#
-        sDist# = SQRT# VALUE (sdx# * sdx# + sdy# * sdy#)
-        oPower# = SHOT_POWER_MIN# + (SHOT_POWER_MAX# - SHOT_POWER_MIN#) * 0.7
-        rIdx2# = pRoster@[i#]
-        oPower# = oPower# * (0.7 + oShot@[rIdx2#] * 0.03)
-        IF sDist# > 0 THEN
-          puckVX# = (sdx# / sDist#) * oPower#
-          puckVY# = (sdy# / sDist#) * oPower#
-        ELSE
-          puckVX# = 0 - oPower#
-          puckVY# = 0
+      ' Check if a Whaler is close (pressure)
+      underPressure? = NO
+      FOR wi# FROM 1 TO 3
+        wpx# = pX@[wi#] - pX@[i#]
+        wpy# = pY@[wi#] - pY@[i#]
+        wpd# = SQRT# VALUE (wpx# * wpx# + wpy# * wpy#)
+        IF wpd# < 60 THEN
+          underPressure? = YES
         END IF
-        pHasPuck@[i#] = 0
-        puckOwner# = 0
-        puckLoose? = YES
-        puckFreezeUntil# = now# + 200
-        pAnim@[i#] = ANIM_SHOOT#
-        pAnimFrame@[i#] = 1
-        pAnimTimer@[i#] = 0
-      END IF
-    ELSE IF puckOwner# >= 5 AND puckOwner# <= 7 THEN
-      ' Teammate has puck — get open on offense
-      IF i# = 5 THEN
-        targetX# = pX@[puckOwner#] - 80
-        targetY# = 180
-      ELSE IF i# = 6 THEN
-        targetX# = pX@[puckOwner#] - 60
-        targetY# = 300
-      ELSE
-        targetX# = pX@[puckOwner#] - 120
-        targetY# = 240
-      END IF
-    ELSE
-      ' Puck is loose or Whalers have it — chase/defend
-      IF puckLoose? THEN
-        targetX# = puckX#
-        targetY# = puckY#
-      ELSE
-        ' Chase puck carrier
-        targetX# = pX@[puckOwner#]
-        targetY# = pY@[puckOwner#]
+      END FOR
+
+      ' Consider passing to an open teammate
+      IF underPressure? AND RANDOM# MAX 100 < 4 THEN
+        ' Find most open teammate
+        bestPassIdx# = 0
+        bestPassScore# = -99999
+        FOR ti# FROM 5 TO 7
+          IF ti# = i# OR pState@[ti#] = 2 THEN
+            CONTINUE
+          END IF
+          tdx# = pX@[ti#] - pX@[i#]
+          tdy# = pY@[ti#] - pY@[i#]
+          tDist# = SQRT# VALUE (tdx# * tdx# + tdy# * tdy#)
+          IF tDist# < 40 THEN
+            CONTINUE
+          END IF
+          ' How far from nearest Whaler?
+          minWD# = 99999
+          FOR wi# FROM 1 TO 3
+            wx# = pX@[wi#] - pX@[ti#]
+            wy# = pY@[wi#] - pY@[ti#]
+            wd# = SQRT# VALUE (wx# * wx# + wy# * wy#)
+            IF wd# < minWD# THEN
+              minWD# = wd#
+            END IF
+          END FOR
+          sc# = minWD# - tDist# * 0.3
+          IF sc# > bestPassScore# THEN
+            bestPassScore# = sc#
+            bestPassIdx# = ti#
+          END IF
+        END FOR
+
+        IF bestPassIdx# > 0 THEN
+          ' Pass to teammate
+          pdx# = pX@[bestPassIdx#] - puckX#
+          pdy# = pY@[bestPassIdx#] - puckY#
+          pDist# = SQRT# VALUE (pdx# * pdx# + pdy# * pdy#)
+          IF pDist# > 0 THEN
+            puckVX# = (pdx# / pDist#) * PASS_SPEED#
+            puckVY# = (pdy# / pDist#) * PASS_SPEED#
+          END IF
+          pHasPuck@[i#] = 0
+          puckOwner# = 0
+          puckLoose? = YES
+          puckFreezeUntil# = now# + 150
+          CONTINUE
+        END IF
       END IF
 
-      ' Not all opponents chase — closest one chases, others hold lanes
-      ' Find closest opponent to puck
+      ' Shoot if close enough and have a decent angle
+      IF distToGoal# < 250 THEN
+        ' Don't shoot every frame — random chance increases as closer
+        shootChance# = 3
+        IF distToGoal# < 150 THEN
+          shootChance# = 6
+        END IF
+        IF distToGoal# < 100 THEN
+          shootChance# = 12
+        END IF
+        IF RANDOM# MAX 100 < shootChance# THEN
+          sdx# = GOAL_LEFT_X# - puckX#
+          ' Aim slightly off-center for variety
+          goalAimY# = 240 + RANDOM# MAX 40 - 20
+          sdy# = goalAimY# - puckY#
+          sDist# = SQRT# VALUE (sdx# * sdx# + sdy# * sdy#)
+          oPower# = SHOT_POWER_MIN# + (SHOT_POWER_MAX# - SHOT_POWER_MIN#) * 0.7
+          oPower# = oPower# * (0.7 + oShot@[rIdx#] * 0.03)
+          IF sDist# > 0 THEN
+            puckVX# = (sdx# / sDist#) * oPower#
+            puckVY# = (sdy# / sDist#) * oPower#
+          ELSE
+            puckVX# = 0 - oPower#
+            puckVY# = 0
+          END IF
+          pHasPuck@[i#] = 0
+          puckOwner# = 0
+          puckLoose? = YES
+          puckFreezeUntil# = now# + 200
+          pAnim@[i#] = ANIM_SHOOT#
+          pAnimFrame@[i#] = 1
+          pAnimTimer@[i#] = 0
+          CONTINUE
+        END IF
+      END IF
+
+      ' Skate toward goal, weaving slightly to avoid defenders
+      targetX# = GOAL_LEFT_X# + 80
+      targetY# = 240 + SIN# VALUE (now# * 0.003) * 60
+      pushStr# = 0.3
+
+    ELSE IF puckOwner# >= 5 AND puckOwner# <= 7 THEN
+      ' === Teammate has puck — get open for a pass ===
+      carrierX# = pX@[puckOwner#]
+
+      ' Skate ahead of carrier in lanes, weave to stay open
+      IF i# = 5 THEN
+        laneY# = 160
+      ELSE IF i# = 6 THEN
+        laneY# = 320
+      ELSE
+        laneY# = 240
+      END IF
+
+      targetX# = carrierX# - 100 - RANDOM# MAX 30
+      targetY# = laneY# + SIN# VALUE (now# * 0.002 + i# * 2) * 40
+
+      ' Avoid nearest Whaler
+      nearWDist# = 99999
+      nearWY# = targetY#
+      FOR wi# FROM 1 TO 3
+        wx# = pX@[wi#] - targetX#
+        wy# = pY@[wi#] - targetY#
+        wd# = SQRT# VALUE (wx# * wx# + wy# * wy#)
+        IF wd# < nearWDist# THEN
+          nearWDist# = wd#
+          nearWY# = pY@[wi#]
+        END IF
+      END FOR
+      IF nearWDist# < 70 THEN
+        IF targetY# > nearWY# THEN
+          targetY# = targetY# + 25
+        ELSE
+          targetY# = targetY# - 25
+        END IF
+      END IF
+      pushStr# = 0.25
+
+    ELSE
+      ' === Puck is loose or Whalers have it ===
+      ' Closest opponent chases, others play defense
       closestOpp# = 5
       closestDist# = 99999
       FOR ci# FROM 5 TO 7
+        IF pState@[ci#] = 2 THEN
+          CONTINUE
+        END IF
         cdx# = pX@[ci#] - puckX#
         cdy# = pY@[ci#] - puckY#
         cd# = SQRT# VALUE (cdx# * cdx# + cdy# * cdy#)
@@ -937,20 +1084,42 @@ FUNCTION updateOpponentAI
         END IF
       END FOR
 
-      IF i# <> closestOpp# THEN
-        ' Hold defensive position instead
-        IF i# = 5 THEN
-          targetX# = 700
-          targetY# = 240
-        ELSE IF i# = 6 THEN
-          targetX# = 800
-          targetY# = 160
+      IF i# = closestOpp# THEN
+        ' Chase the puck or carrier
+        IF puckLoose? THEN
+          targetX# = puckX#
+          targetY# = puckY#
         ELSE
-          targetX# = 800
-          targetY# = 320
+          targetX# = pX@[puckOwner#]
+          targetY# = pY@[puckOwner#]
         END IF
+        pushStr# = 0.3
+      ELSE
+        ' Defend: position between puck and our goal, spread across lanes
+        defX# = puckX# + 80
+        IF defX# > GOAL_RIGHT_X# - 60 THEN
+          defX# = GOAL_RIGHT_X# - 60
+        END IF
+
+        IF i# = 5 THEN
+          targetX# = defX#
+          targetY# = puckY# - 60
+        ELSE IF i# = 6 THEN
+          targetX# = defX#
+          targetY# = puckY# + 60
+        ELSE
+          targetX# = defX# - 40
+          targetY# = puckY#
+        END IF
+        pushStr# = 0.2
       END IF
     END IF
+
+    ' Clamp targets to ice
+    targetX# = MAX# A targetX#, B (ICE_LEFT# + 30)
+    targetY# = MAX# A targetY#, B (ICE_TOP# + 20)
+    targetX# = MIN# A targetX#, B (ICE_RIGHT# - 50)
+    targetY# = MIN# A targetY#, B (ICE_BOTTOM# - 50)
 
     ' Move toward target
     dx# = targetX# - pX@[i#]
@@ -959,8 +1128,8 @@ FUNCTION updateOpponentAI
 
     IF dist# > 10 THEN
       pPushing@[i#] = 1
-      pVX@[i#] = pVX@[i#] + (dx# / dist#) * spd# * 0.2
-      pVY@[i#] = pVY@[i#] + (dy# / dist#) * spd# * 0.2
+      pVX@[i#] = pVX@[i#] + (dx# / dist#) * spd# * pushStr#
+      pVY@[i#] = pVY@[i#] + (dy# / dist#) * spd# * pushStr#
     ELSE
       pPushing@[i#] = 0
     END IF
