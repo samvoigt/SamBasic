@@ -51,9 +51,23 @@ NUM_PLAYERS# = 8
 PLAYER_FRICTION# = 0.92
 PUCK_FRICTION# = 0.995
 SHOT_CHARGE_TIME# = 800
-SHOT_POWER_MIN# = 5
-SHOT_POWER_MAX# = 15
+SHOT_POWER_MIN# = 16
+SHOT_POWER_MAX# = 40
 PASS_SPEED# = 14
+CHECK_POWER# = 4
+CHECK_RADIUS# = 12
+CHECK_COOLDOWN_MS# = 500
+STUN_DURATION# = 1000
+PLAYER_MAX_SPEED# = 8
+
+' Game states
+STATE_PLAY# = 3
+STATE_FIGHT# = 5
+
+' Fight constants
+FIGHT_CHANCE# = 40
+FIGHT_DURATION# = 8000
+FIGHT_PUNCH_COOLDOWN# = 800
 
 ' ============ SPRITES ============
 ' Run sprites.sam first to write these to localStorage
@@ -102,6 +116,10 @@ oGoalieSplit@[2] = LOADSPRITE# FILE "hockey-o-goalie-split2.spr"
 
 puckSprId# = LOADSPRITE# FILE "hockey-puck.spr"
 
+' Knocked-down sprites
+wKnockedId# = LOADSPRITE# FILE "hockey-w-knocked.spr"
+oKnockedId# = LOADSPRITE# FILE "hockey-o-knocked.spr"
+
 ' ============ ANIMATION CONSTANTS ============
 ' Animation states
 ANIM_SKATE# = 0
@@ -110,6 +128,7 @@ ANIM_GOALIE_IDLE# = 2
 ANIM_GOALIE_GLOVE# = 3
 ANIM_GOALIE_BLOCKER# = 4
 ANIM_GOALIE_SPLIT# = 5
+ANIM_KNOCKED# = 6
 
 ' Timing (in frames at ~60fps)
 SKATE_FRAME_TIME# = 8
@@ -186,6 +205,40 @@ now# = 0
 ' Shot stats per roster slot (1-10)
 wShot@ = [7, 8, 6]
 oShot@ = [6, 5, 7]
+
+' Check stats per roster slot (1-10)
+wCheck@ = [6, 5, 8]
+oCheck@ = [5, 6, 7]
+
+' Fight stats per roster slot (1-10)
+wFight@ = [6, 4, 8]
+oFight@ = [5, 6, 7]
+
+' Check cooldown
+checkCooldown# = 0
+
+' Goalie hold timer (when goalie picked up puck)
+goalieHoldTime# = 0
+
+' Game state
+gameState# = STATE_PLAY#
+
+' Fight state
+fightP1# = 0
+fightP2# = 0
+fightStart# = 0
+fightHP1# = 0
+fightHP2# = 0
+fightCooldown1# = 0
+fightCooldown2# = 0
+fightWinner# = 0
+fightHitTimer1# = 0
+fightHitTimer2# = 0
+fightPunchTimer1# = 0
+fightPunchTimer2# = 0
+fightCenterX# = 0
+fightCenterY# = 0
+fightEndTimer# = 0
 
 ' Initial positions (center-ice faceoff)
 ' Whalers (left side): C at faceoff, wings spread, goalie in net
@@ -314,6 +367,21 @@ FUNCTION drawRink
   SETCOLOR BENCH_SEAT_COLOR&
   DRAWBOX X1 (BENCH_RIGHT_X1# + 3 - camX#), Y1 (BENCH_Y1# + 3), X2 (BENCH_RIGHT_X2# - 3 - camX#), Y2 (BENCH_Y2# - 3), FILL YES
 
+  ' Bench players (drawn before ice so boards cover their lower half)
+  benchY# = 24
+  FOR bp# FROM 0 TO 4
+    ' Home bench — Whalers
+    bpx# = 459 + bp# * 26 - camX#
+    IF bpx# > -40 AND bpx# < 680 THEN
+      DRAWSPRITE SPRITE wSkate@[2], X bpx#, Y benchY#, SCALE 2
+    END IF
+    ' Away bench — Opponents
+    bpx# = 609 + bp# * 26 - camX#
+    IF bpx# > -40 AND bpx# < 680 THEN
+      DRAWSPRITE SPRITE oSkate@[2], X bpx#, Y benchY#, SCALE 2
+    END IF
+  END FOR
+
   ' Ice surface (white rounded rectangle)
   SETCOLOR WHITE&
   ix1# = ICE_LEFT# - camX#
@@ -360,6 +428,12 @@ FUNCTION drawRink
   DRAWCIRCLE X (1000 - camX#), Y 150, RADIUS 3, FILL YES
   DRAWCIRCLE X (1000 - camX#), Y 330, RADIUS 3, FILL YES
 
+  ' Neutral zone faceoff dots (beside each blue line)
+  DRAWCIRCLE X (470 - camX#), Y 150, RADIUS 3, FILL YES
+  DRAWCIRCLE X (470 - camX#), Y 330, RADIUS 3, FILL YES
+  DRAWCIRCLE X (730 - camX#), Y 150, RADIUS 3, FILL YES
+  DRAWCIRCLE X (730 - camX#), Y 330, RADIUS 3, FILL YES
+
   ' Goal creases (filled light blue semicircles)
   ' Left crease: filled circle + white box to mask left half
   SETCOLOR CREASE_COLOR&
@@ -376,6 +450,7 @@ FUNCTION drawRink
   SETCOLOR RED&
   DRAWBOX X1 (GOAL_LEFT_X# - GOAL_W# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_LEFT_X# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
   DRAWBOX X1 (GOAL_RIGHT_X# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_RIGHT_X# + GOAL_W# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
+
 END FUNCTION
 
 FUNCTION updateAnimations
@@ -459,6 +534,12 @@ FUNCTION getPlayerSprite# IDX idx#
     ELSE
       result# = oGoalieSplit@[frame#]
     END IF
+  ELSE IF anim# = ANIM_KNOCKED# THEN
+    IF isWhalers? THEN
+      result# = wKnockedId#
+    ELSE
+      result# = oKnockedId#
+    END IF
   END IF
 
   RETURN result#
@@ -506,8 +587,8 @@ FUNCTION drawPlayers
     ' Draw player
     DRAWSPRITE SPRITE sprId#, X sx#, Y sy#, SCALE PLAYER_SCALE#, FLIPH flip?
 
-    ' Draw stick (skaters only, not goalies)
-    IF idx# <> 4 AND idx# <> 8 THEN
+    ' Draw stick (skaters only, not goalies, knocked-down, or fighters)
+    IF idx# <> 4 AND idx# <> 8 AND pAnim@[idx#] <> ANIM_KNOCKED# AND NOT (gameState# = STATE_FIGHT# AND (idx# = fightP1# OR idx# = fightP2#)) THEN
       SETCOLOR BROWN&
       IF pDir@[idx#] = 1 THEN
         shX# = sx# + 11 * PLAYER_SCALE#
@@ -538,13 +619,13 @@ FUNCTION drawPuck
 END FUNCTION
 
 FUNCTION drawScore
-  ' Display score at top of screen
+  ' Display score at bottom of screen
   SETCOLOR WHITE&
-  PRINTAT 1, 30, "WHR"
-  PRINTAT 1, 34, scoreW#
-  PRINTAT 1, 36, "-"
-  PRINTAT 1, 38, scoreO#
-  PRINTAT 1, 40, "OPP"
+  PRINTAT 25, 30, "WHR"
+  PRINTAT 25, 34, scoreW#
+  PRINTAT 25, 36, "-"
+  PRINTAT 25, 38, scoreO#
+  PRINTAT 25, 40, "OPP"
 END FUNCTION
 
 FUNCTION handleInput
@@ -624,6 +705,13 @@ FUNCTION updatePlayerPhysics
       pVY@[i#] = 0
     END IF
 
+    ' Clamp to max speed
+    pSpd# = SQRT# VALUE (pVX@[i#] * pVX@[i#] + pVY@[i#] * pVY@[i#])
+    IF pSpd# > PLAYER_MAX_SPEED# THEN
+      pVX@[i#] = pVX@[i#] / pSpd# * PLAYER_MAX_SPEED#
+      pVY@[i#] = pVY@[i#] / pSpd# * PLAYER_MAX_SPEED#
+    END IF
+
     ' Update position
     pX@[i#] = pX@[i#] + pVX@[i#]
     pY@[i#] = pY@[i#] + pVY@[i#]
@@ -648,8 +736,11 @@ FUNCTION updatePlayerPhysics
 
     ' Update stun timer
     IF pState@[i#] = 2 THEN
-      IF now# - pStateT@[i#] > 800 THEN
+      IF now# - pStateT@[i#] > STUN_DURATION# THEN
         pState@[i#] = 0
+        pAnim@[i#] = ANIM_SKATE#
+        pAnimFrame@[i#] = 2
+        pAnimTimer@[i#] = 0
       END IF
     END IF
   END FOR
@@ -691,6 +782,30 @@ FUNCTION updateTeammateAI
 
     rIdx# = pRoster@[i#]
     spd# = wSpeed@[rIdx#] * 0.3 + 1.5
+
+    ' If a pass is in flight, skate toward the puck
+    IF passInFlight? AND puckOwner# = 0 THEN
+      targetX# = puckX# + puckVX# * 3
+      targetY# = puckY# + puckVY# * 3
+      targetX# = MAX# A targetX#, B (ICE_LEFT# + 30)
+      targetX# = MIN# A targetX#, B (ICE_RIGHT# - 50)
+      targetY# = MAX# A targetY#, B (ICE_TOP# + 20)
+      targetY# = MIN# A targetY#, B (ICE_BOTTOM# - 50)
+      dx# = targetX# - pX@[i#]
+      dy# = targetY# - pY@[i#]
+      dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
+      IF dist# > 5 THEN
+        pPushing@[i#] = 1
+        pVX@[i#] = pVX@[i#] + (dx# / dist#) * spd# * 0.3
+        pVY@[i#] = pVY@[i#] + (dy# / dist#) * spd# * 0.3
+      END IF
+      IF dx# > 5 THEN
+        pDir@[i#] = 1
+      ELSE IF dx# < -5 THEN
+        pDir@[i#] = -1
+      END IF
+      CONTINUE
+    END IF
 
     IF puckX# < CENTER_X# THEN
       ' Puck in our zone — defensive positioning
@@ -859,6 +974,176 @@ FUNCTION updateOpponentAI
   END FOR
 END FUNCTION
 
+FUNCTION updateGoalieAI
+  FOR gi# FROM 1 TO 2
+    IF gi# = 1 THEN
+      g# = 4
+      goalX# = GOAL_LEFT_X#
+      homeX# = GOAL_LEFT_X# + 15
+      tStart# = 1
+      tEnd# = 3
+      oStart# = 5
+      oEnd# = 7
+      clearDirX# = 1
+      minGX# = GOAL_LEFT_X# - 5
+      maxGX# = GOAL_LEFT_X# + 40
+    ELSE
+      g# = 8
+      goalX# = GOAL_RIGHT_X#
+      homeX# = GOAL_RIGHT_X# - 15
+      tStart# = 5
+      tEnd# = 7
+      oStart# = 1
+      oEnd# = 3
+      clearDirX# = -1
+      minGX# = GOAL_RIGHT_X# - 40
+      maxGX# = GOAL_RIGHT_X# + 5
+    END IF
+
+    IF pState@[g#] = 2 THEN
+      CONTINUE
+    END IF
+
+    minGY# = 240 - GOAL_H# / 2 - 15
+    maxGY# = 240 + GOAL_H# / 2 + 15
+
+    IF puckOwner# = g# THEN
+      ' === Goalie has the puck (made a save) ===
+      holdTime# = now# - goalieHoldTime#
+
+      ' Count nearby opponents
+      nearOpps# = 0
+      FOR oi# FROM oStart# TO oEnd#
+        ox# = pX@[oi#] - pX@[g#]
+        oy# = pY@[oi#] - pY@[g#]
+        od# = SQRT# VALUE (ox# * ox# + oy# * oy#)
+        IF od# < 150 THEN
+          nearOpps# = nearOpps# + 1
+        END IF
+      END FOR
+
+      IF holdTime# < 600 THEN
+        ' Brief hold — drift toward center of crease
+        dy# = 240 - pY@[g#]
+        IF dy# > 5 THEN
+          pVY@[g#] = pVY@[g#] + 0.3
+        ELSE IF dy# < -5 THEN
+          pVY@[g#] = pVY@[g#] - 0.3
+        END IF
+
+      ELSE IF nearOpps# >= 2 AND holdTime# < 1500 THEN
+        ' Too many opponents nearby — move to get separation
+        closeDist# = 99999
+        closeY# = pY@[g#]
+        FOR oi# FROM oStart# TO oEnd#
+          ox# = pX@[oi#] - pX@[g#]
+          oy# = pY@[oi#] - pY@[g#]
+          od# = SQRT# VALUE (ox# * ox# + oy# * oy#)
+          IF od# < closeDist# THEN
+            closeDist# = od#
+            closeY# = pY@[oi#]
+          END IF
+        END FOR
+        ' Move away from closest opponent
+        IF closeY# > pY@[g#] THEN
+          pVY@[g#] = pVY@[g#] - 1.0
+        ELSE
+          pVY@[g#] = pVY@[g#] + 1.0
+        END IF
+
+      ELSE
+        ' Time to pass — find most open teammate
+        bestIdx# = 0
+        bestScore# = -99999
+        FOR ti# FROM tStart# TO tEnd#
+          IF pState@[ti#] = 2 THEN
+            CONTINUE
+          END IF
+          tdx# = pX@[ti#] - pX@[g#]
+          tdy# = pY@[ti#] - pY@[g#]
+          tDist# = SQRT# VALUE (tdx# * tdx# + tdy# * tdy#)
+          IF tDist# < 30 THEN
+            CONTINUE
+          END IF
+          ' How far is this teammate from nearest opponent?
+          minOD# = 99999
+          FOR oi# FROM oStart# TO oEnd#
+            ox# = pX@[oi#] - pX@[ti#]
+            oy# = pY@[oi#] - pY@[ti#]
+            od# = SQRT# VALUE (ox# * ox# + oy# * oy#)
+            IF od# < minOD# THEN
+              minOD# = od#
+            END IF
+          END FOR
+          ' Prefer open teammates, slight preference for closer ones
+          sc# = minOD# - tDist# * 0.3
+          IF sc# > bestScore# THEN
+            bestScore# = sc#
+            bestIdx# = ti#
+          END IF
+        END FOR
+
+        IF bestIdx# > 0 THEN
+          ' Pass to best teammate
+          pdx# = pX@[bestIdx#] - puckX#
+          pdy# = pY@[bestIdx#] - puckY#
+          pDist# = SQRT# VALUE (pdx# * pdx# + pdy# * pdy#)
+          IF pDist# > 0 THEN
+            puckVX# = (pdx# / pDist#) * PASS_SPEED#
+            puckVY# = (pdy# / pDist#) * PASS_SPEED#
+          END IF
+          pHasPuck@[g#] = 0
+          puckOwner# = 0
+          puckLoose? = YES
+          puckFreezeUntil# = now# + 150
+        ELSE
+          ' No good target — clear it forward
+          puckVX# = clearDirX# * PASS_SPEED# * 0.8
+          puckVY# = 0
+          pHasPuck@[g#] = 0
+          puckOwner# = 0
+          puckLoose? = YES
+          puckFreezeUntil# = now# + 150
+        END IF
+      END IF
+
+    ELSE
+      ' === Goalie doesn't have puck — track it ===
+      targetY# = puckY#
+      targetY# = MAX# A targetY#, B minGY#
+      targetY# = MIN# A targetY#, B maxGY#
+
+      dy# = targetY# - pY@[g#]
+      IF dy# > 3 THEN
+        pVY@[g#] = pVY@[g#] + 1.5
+      ELSE IF dy# < -3 THEN
+        pVY@[g#] = pVY@[g#] - 1.5
+      END IF
+
+      ' Stay near goal line
+      dx# = homeX# - pX@[g#]
+      IF dx# > 3 THEN
+        pVX@[g#] = pVX@[g#] + 0.5
+      ELSE IF dx# < -3 THEN
+        pVX@[g#] = pVX@[g#] - 0.5
+      END IF
+    END IF
+
+    ' Clamp goalie to crease area
+    pX@[g#] = MAX# A pX@[g#], B minGX#
+    pX@[g#] = MIN# A pX@[g#], B maxGX#
+    pY@[g#] = MAX# A pY@[g#], B minGY#
+    pY@[g#] = MIN# A pY@[g#], B maxGY#
+
+    ' Face the puck
+    IF puckX# > pX@[g#] THEN
+      pDir@[g#] = 1
+    ELSE
+      pDir@[g#] = -1
+    END IF
+  END FOR
+END FUNCTION
+
 FUNCTION updatePuck
   IF puckOwner# > 0 THEN
     ' Puck attached to carrier (on stick blade)
@@ -958,6 +1243,10 @@ FUNCTION updatePuck
         ' Auto-switch to Whaler who picks up puck
         IF i# >= 1 AND i# <= 3 THEN
           activeP# = i#
+        END IF
+        ' Track when goalie gets the puck
+        IF i# = 4 OR i# = 8 THEN
+          goalieHoldTime# = now#
         END IF
         BREAK
       END IF
@@ -1068,10 +1357,22 @@ FUNCTION handlePassing
     END IF
   END FOR
 
-  ' Aim pass at the target teammate (or fallback to raw direction)
+  ' Aim pass at where the target teammate will be
   IF bestTarget# > 0 THEN
-    passDX# = pX@[bestTarget#] - puckX#
-    passDY# = pY@[bestTarget#] - puckY#
+    ' Estimate travel time: distance / pass speed
+    rawDX# = pX@[bestTarget#] - puckX#
+    rawDY# = pY@[bestTarget#] - puckY#
+    rawDist# = SQRT# VALUE (rawDX# * rawDX# + rawDY# * rawDY#)
+    IF rawDist# > 0 THEN
+      travelFrames# = rawDist# / PASS_SPEED#
+    ELSE
+      travelFrames# = 0
+    END IF
+    ' Lead the target based on their velocity
+    leadX# = pX@[bestTarget#] + pVX@[bestTarget#] * travelFrames# * 0.6
+    leadY# = pY@[bestTarget#] + pVY@[bestTarget#] * travelFrames# * 0.6
+    passDX# = leadX# - puckX#
+    passDY# = leadY# - puckY#
     pDist# = SQRT# VALUE (passDX# * passDX# + passDY# * passDY#)
     IF pDist# > 0 THEN
       passDX# = passDX# / pDist#
@@ -1099,6 +1400,137 @@ FUNCTION handlePassing
 
   passInFlight? = YES
   passTime# = now#
+END FUNCTION
+
+FUNCTION handleChecking
+  ap# = activeP#
+
+  ' Z = check only when active player doesn't have the puck
+  IF puckOwner# = ap# THEN
+    RETURN
+  END IF
+  IF NOT inputShoot? THEN
+    RETURN
+  END IF
+  IF now# < checkCooldown# THEN
+    RETURN
+  END IF
+
+  ' Lunge in facing direction
+  lungeDir# = pDir@[ap#]
+  pVX@[ap#] = pVX@[ap#] + lungeDir# * CHECK_POWER# * 1.5
+  checkCooldown# = now# + CHECK_COOLDOWN_MS#
+
+  ' Check for collision with opponents
+  rIdx# = pRoster@[ap#]
+  checkStat# = wCheck@[rIdx#]
+
+  FOR i# FROM 5 TO 7
+    IF pState@[i#] = 2 THEN
+      CONTINUE
+    END IF
+    dx# = pX@[i#] - pX@[ap#]
+    dy# = pY@[i#] - pY@[ap#]
+    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
+
+    IF dist# < CHECK_RADIUS# * PLAYER_SCALE# THEN
+      ' HIT!
+      hitPower# = checkStat# * 0.5 + 3
+
+      ' Knock opponent back
+      IF dist# > 0 THEN
+        knockX# = dx# / dist# * hitPower#
+        knockY# = dy# / dist# * hitPower#
+      ELSE
+        knockX# = lungeDir# * hitPower#
+        knockY# = 0
+      END IF
+
+      pVX@[i#] = pVX@[i#] + knockX#
+      pVY@[i#] = pVY@[i#] + knockY#
+      pState@[i#] = 2
+      pStateT@[i#] = now#
+      pAnim@[i#] = ANIM_KNOCKED#
+      pAnimFrame@[i#] = 1
+      pAnimTimer@[i#] = 0
+
+      ' If checked player had puck, drop it
+      IF puckOwner# = i# THEN
+        pHasPuck@[i#] = 0
+        puckOwner# = 0
+        puckLoose? = YES
+        puckVX# = knockX# * 0.5
+        puckVY# = knockY# * 0.5
+      END IF
+
+      ' Chance to trigger fight
+      IF RANDOM# MAX 100 < FIGHT_CHANCE# THEN
+        fightP1# = ap#
+        fightP2# = i#
+        startFight
+      END IF
+
+      BREAK
+    END IF
+  END FOR
+END FUNCTION
+
+FUNCTION handleOpponentChecking
+  ' Opponents check the puck carrier if close enough
+  IF puckOwner# < 1 OR puckOwner# > 3 THEN
+    RETURN
+  END IF
+
+  FOR i# FROM 5 TO 7
+    IF pState@[i#] = 2 THEN
+      CONTINUE
+    END IF
+
+    dx# = pX@[puckOwner#] - pX@[i#]
+    dy# = pY@[puckOwner#] - pY@[i#]
+    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
+
+    IF dist# < CHECK_RADIUS# * PLAYER_SCALE# THEN
+      ' Random chance to check (roughly 1 in 30 frames when in range)
+      IF RANDOM# MAX 100 < 3 THEN
+        rIdx# = pRoster@[i#]
+        hitPower# = oCheck@[rIdx#] * 0.5 + 3
+
+        IF dist# > 0 THEN
+          knockX# = dx# / dist# * hitPower#
+          knockY# = dy# / dist# * hitPower#
+        ELSE
+          knockX# = pDir@[i#] * hitPower#
+          knockY# = 0
+        END IF
+
+        carrier# = puckOwner#
+        pVX@[carrier#] = pVX@[carrier#] + knockX#
+        pVY@[carrier#] = pVY@[carrier#] + knockY#
+        pState@[carrier#] = 2
+        pStateT@[carrier#] = now#
+        pAnim@[carrier#] = ANIM_KNOCKED#
+        pAnimFrame@[carrier#] = 1
+        pAnimTimer@[carrier#] = 0
+
+        ' Drop puck
+        pHasPuck@[carrier#] = 0
+        puckOwner# = 0
+        puckLoose? = YES
+        puckVX# = knockX# * 0.5
+        puckVY# = knockY# * 0.5
+
+        ' Chance to trigger fight
+        IF RANDOM# MAX 100 < FIGHT_CHANCE# THEN
+          fightP1# = carrier#
+          fightP2# = i#
+          startFight
+        END IF
+
+        BREAK
+      END IF
+    END IF
+  END FOR
 END FUNCTION
 
 FUNCTION checkGoals
@@ -1137,6 +1569,277 @@ FUNCTION checkGoals
   END IF
 END FUNCTION
 
+' ============ FIGHTING ============
+
+FUNCTION startFight
+  fightHP1# = 100
+  fightHP2# = 100
+  fightCooldown1# = now# + 500
+  fightCooldown2# = now# + 1200
+  fightWinner# = 0
+  fightStart# = now#
+  fightHitTimer1# = 0
+  fightHitTimer2# = 0
+  fightPunchTimer1# = 0
+  fightPunchTimer2# = 0
+  fightEndTimer# = 0
+
+  ' Store fight center for bobbing movement
+  fightCenterX# = (pX@[fightP1#] + pX@[fightP2#]) / 2
+  fightCenterY# = (pY@[fightP1#] + pY@[fightP2#]) / 2
+
+  ' Position fighters facing each other (bodies separate, punches connect)
+  pX@[fightP1#] = fightCenterX# - 14
+  pX@[fightP2#] = fightCenterX# + 14
+  pY@[fightP1#] = fightCenterY#
+  pY@[fightP2#] = fightCenterY#
+  pDir@[fightP1#] = 1
+  pDir@[fightP2#] = -1
+
+  ' Stop all players
+  FOR i# FROM 1 TO NUM_PLAYERS#
+    pVX@[i#] = 0
+    pVY@[i#] = 0
+  END FOR
+
+  ' Drop puck at fight location
+  IF puckOwner# > 0 THEN
+    pHasPuck@[puckOwner#] = 0
+    puckOwner# = 0
+    puckLoose? = YES
+  END IF
+  puckX# = fightCenterX#
+  puckY# = fightCenterY# + 30
+  puckVX# = 0
+  puckVY# = 0
+
+  ' Clear stun on fighters and set idle pose
+  pState@[fightP1#] = 0
+  pState@[fightP2#] = 0
+  pAnim@[fightP1#] = ANIM_SKATE#
+  pAnimFrame@[fightP1#] = 2
+  pAnim@[fightP2#] = ANIM_SKATE#
+  pAnimFrame@[fightP2#] = 2
+
+  ' Camera follows Whaler fighter
+  activeP# = fightP1#
+
+  gameState# = STATE_FIGHT#
+END FUNCTION
+
+FUNCTION updateFight
+  elapsed# = now# - fightStart#
+
+  ' KO decided — hold the knockdown pose, then end
+  IF fightWinner# > 0 THEN
+    IF now# - fightEndTimer# > 800 THEN
+      endFight
+    END IF
+    RETURN
+  END IF
+
+  ' === Fighter movement: bob back and forth ===
+  bobPhase1# = SIN# VALUE (elapsed# * 0.004) * 3
+  bobPhase2# = SIN# VALUE (elapsed# * 0.0035 + 1.5) * 3
+
+  ' Recoil when hit (push away from opponent)
+  recoil1# = 0
+  recoil2# = 0
+  IF fightHitTimer1# > 0 THEN
+    hitAge1# = now# - fightHitTimer1#
+    IF hitAge1# < 300 THEN
+      recoil1# = (300 - hitAge1#) / 300 * -5
+    END IF
+  END IF
+  IF fightHitTimer2# > 0 THEN
+    hitAge2# = now# - fightHitTimer2#
+    IF hitAge2# < 300 THEN
+      recoil2# = (300 - hitAge2#) / 300 * 5
+    END IF
+  END IF
+
+  ' Lunge forward when punching (arm reaches opponent's body)
+  lunge1# = 0
+  lunge2# = 0
+  IF fightPunchTimer1# > 0 AND now# - fightPunchTimer1# < 200 THEN
+    lunge1# = 8
+  END IF
+  IF fightPunchTimer2# > 0 AND now# - fightPunchTimer2# < 200 THEN
+    lunge2# = -8
+  END IF
+
+  pX@[fightP1#] = fightCenterX# - 14 + bobPhase1# + recoil1# + lunge1#
+  pX@[fightP2#] = fightCenterX# + 14 + bobPhase2# + recoil2# + lunge2#
+
+  ' Always face opponent
+  IF pX@[fightP2#] > pX@[fightP1#] THEN
+    pDir@[fightP1#] = 1
+    pDir@[fightP2#] = -1
+  ELSE
+    pDir@[fightP1#] = -1
+    pDir@[fightP2#] = 1
+  END IF
+
+  ' === Player punches (Z button, with cooldown) ===
+  IF inputShoot? AND now# > fightCooldown1# THEN
+    rIdx# = pRoster@[fightP1#]
+    punchPower# = wFight@[rIdx#] * 2 + 5
+    fightHP2# = fightHP2# - punchPower#
+    fightCooldown1# = now# + FIGHT_PUNCH_COOLDOWN#
+    fightPunchTimer1# = now#
+    fightHitTimer2# = now#
+
+    PLAY "T200 L32 O3 C", BACKGROUND YES
+  END IF
+
+  ' === AI punches (slower baseline, faster with better stat) ===
+  oRIdx# = pRoster@[fightP2#]
+  aiPunchInterval# = 1800 - oFight@[oRIdx#] * 80
+  IF aiPunchInterval# < 700 THEN
+    aiPunchInterval# = 700
+  END IF
+
+  IF now# > fightCooldown2# THEN
+    punchPower# = oFight@[oRIdx#] * 2 + 5
+    fightHP1# = fightHP1# - punchPower#
+    fightCooldown2# = now# + aiPunchInterval#
+    fightPunchTimer2# = now#
+    fightHitTimer1# = now#
+
+    PLAY "T200 L32 O3 D", BACKGROUND YES
+  END IF
+
+  ' === Fighter animations (priority: stagger > punch > idle) ===
+  ' Stagger = skate frame 3 (not full knockdown), punch = shoot frame 2
+  IF fightHitTimer1# > 0 AND now# - fightHitTimer1# < 300 THEN
+    pAnim@[fightP1#] = ANIM_SKATE#
+    pAnimFrame@[fightP1#] = 3
+  ELSE IF fightPunchTimer1# > 0 AND now# - fightPunchTimer1# < 200 THEN
+    pAnim@[fightP1#] = ANIM_SHOOT#
+    pAnimFrame@[fightP1#] = 2
+  ELSE
+    pAnim@[fightP1#] = ANIM_SKATE#
+    pAnimFrame@[fightP1#] = 2
+  END IF
+
+  IF fightHitTimer2# > 0 AND now# - fightHitTimer2# < 300 THEN
+    pAnim@[fightP2#] = ANIM_SKATE#
+    pAnimFrame@[fightP2#] = 3
+  ELSE IF fightPunchTimer2# > 0 AND now# - fightPunchTimer2# < 200 THEN
+    pAnim@[fightP2#] = ANIM_SHOOT#
+    pAnimFrame@[fightP2#] = 2
+  ELSE
+    pAnim@[fightP2#] = ANIM_SKATE#
+    pAnimFrame@[fightP2#] = 2
+  END IF
+
+  ' Clamp HP
+  IF fightHP1# < 0 THEN
+    fightHP1# = 0
+  END IF
+  IF fightHP2# < 0 THEN
+    fightHP2# = 0
+  END IF
+
+  ' Check for KO or timeout
+  IF fightHP1# <= 0 THEN
+    fightWinner# = 2
+  ELSE IF fightHP2# <= 0 THEN
+    fightWinner# = 1
+  ELSE IF elapsed# > FIGHT_DURATION# THEN
+    IF fightHP1# >= fightHP2# THEN
+      fightWinner# = 1
+    ELSE
+      fightWinner# = 2
+    END IF
+  END IF
+
+  ' When winner decided, set KO pose on loser + sad trombone
+  IF fightWinner# > 0 THEN
+    fightEndTimer# = now#
+    PLAY "T180 L8 O3 B L8 B- L8 A L4 A-", BACKGROUND YES
+    IF fightWinner# = 1 THEN
+      pAnim@[fightP2#] = ANIM_KNOCKED#
+      pAnimFrame@[fightP2#] = 1
+      pAnim@[fightP1#] = ANIM_SKATE#
+      pAnimFrame@[fightP1#] = 2
+    ELSE
+      pAnim@[fightP1#] = ANIM_KNOCKED#
+      pAnimFrame@[fightP1#] = 1
+      pAnim@[fightP2#] = ANIM_SKATE#
+      pAnimFrame@[fightP2#] = 2
+    END IF
+  END IF
+END FUNCTION
+
+FUNCTION endFight
+  ' Reset fighter states
+  pState@[fightP1#] = 0
+  pState@[fightP2#] = 0
+  pAnim@[fightP1#] = ANIM_SKATE#
+  pAnimFrame@[fightP1#] = 2
+  pAnim@[fightP2#] = ANIM_SKATE#
+  pAnimFrame@[fightP2#] = 2
+
+  ' Reset puck to center
+  puckX# = CENTER_X#
+  puckY# = 240
+  puckVX# = 0
+  puckVY# = 0
+  puckOwner# = 0
+  puckLoose? = YES
+  shotCharging? = NO
+  passInFlight? = NO
+
+  gameState# = STATE_PLAY#
+END FUNCTION
+
+FUNCTION drawFight
+  ' Header text
+  IF fightWinner# = 1 THEN
+    SETCOLOR GREEN&
+    PRINTAT 3, 34, "YOU WIN!"
+  ELSE IF fightWinner# = 2 THEN
+    SETCOLOR RED&
+    PRINTAT 3, 33, "YOU LOSE!"
+  ELSE
+    SETCOLOR RED&
+    PRINTAT 3, 35, "FIGHT!"
+  END IF
+
+  ' Health bars — fixed screen positions, spread apart
+  barW# = 120
+  barH# = 10
+  barY# = 10
+
+  ' Whaler health bar (left side of screen)
+  SETCOLOR DARKGRAY&
+  DRAWBOX X1 40, Y1 barY#, X2 (40 + barW#), Y2 (barY# + barH#), FILL YES
+  SETCOLOR GREEN&
+  fillW# = barW# * fightHP1# / 100
+  IF fillW# > 0 THEN
+    DRAWBOX X1 40, Y1 barY#, X2 (40 + fillW#), Y2 (barY# + barH#), FILL YES
+  END IF
+  SETCOLOR WHITE&
+  PRINTAT 1, 2, "WHR"
+
+  ' Opponent health bar (right side of screen)
+  SETCOLOR DARKGRAY&
+  DRAWBOX X1 (640 - 40 - barW#), Y1 barY#, X2 (640 - 40), Y2 (barY# + barH#), FILL YES
+  SETCOLOR RED&
+  fillW# = barW# * fightHP2# / 100
+  IF fillW# > 0 THEN
+    DRAWBOX X1 (640 - 40 - barW#), Y1 barY#, X2 (640 - 40 - barW# + fillW#), Y2 (barY# + barH#), FILL YES
+  END IF
+  SETCOLOR WHITE&
+  PRINTAT 1, 76, "OPP"
+
+  ' Controls hint
+  IF fightWinner# = 0 THEN
+    PRINTAT 4, 33, "Z = PUNCH"
+  END IF
+END FUNCTION
+
 ' ============ MAIN LOOP ============
 BUFFERENABLED YES
 running? = YES
@@ -1144,33 +1847,50 @@ running? = YES
 WHILE running?
   now# = RUNNINGTIME#
 
-  ' Input
+  ' Input (always read)
   handleInput
 
-  ' Shooting and passing (before movement so puck release happens this frame)
-  handleShooting
-  handlePassing
+  IF gameState# = STATE_PLAY# THEN
+    ' Shooting, passing, and checking
+    handleShooting
+    handlePassing
+    handleChecking
 
-  ' Movement
-  moveActivePlayer
-  updateTeammateAI
-  updateOpponentAI
-  updatePlayerPhysics
+    ' Movement
+    moveActivePlayer
+    updateTeammateAI
+    updateOpponentAI
+    updateGoalieAI
+    updatePlayerPhysics
 
-  ' Puck physics and goals
-  updatePuck
-  checkGoals
+    ' Puck physics, checking, and goals
+    updatePuck
+    handleOpponentChecking
+    checkGoals
 
-  ' Animation and camera
-  updateAnimations
-  updateCamera
+    ' Animation and camera
+    updateAnimations
+    updateCamera
 
-  ' Draw
-  CLEARBUFFER
-  drawRink
-  drawPlayers
-  drawPuck
-  drawScore
+    ' Draw
+    CLEARBUFFER
+    drawRink
+    drawPlayers
+    drawPuck
+    drawScore
+
+  ELSE IF gameState# = STATE_FIGHT# THEN
+    updateFight
+    updateCamera
+
+    ' Draw
+    CLEARBUFFER
+    drawRink
+    drawPlayers
+    drawPuck
+    drawScore
+    drawFight
+  END IF
 
   SHOWBUFFER
   SLEEP 0.016

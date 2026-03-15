@@ -258,13 +258,18 @@ function parse(tokens, existingFunctions) {
     // Array literal as expression: [1, 2, 3] or []
     if (t.type === 'LBRACKET') {
       advance();
+      skipNewlines();
       const items = [];
       if (peek().type !== 'RBRACKET') {
         items.push(parseExpr());
-        while (match('COMMA')) {
+        while (true) {
+          skipNewlines();
+          if (!match('COMMA')) break;
+          skipNewlines();
           items.push(parseExpr());
         }
       }
+      skipNewlines();
       expect('RBRACKET');
       return { type: 'arr_literal', items, line: t.line };
     }
@@ -1550,15 +1555,21 @@ function parse(tokens, existingFunctions) {
         const dimensions = [];
         while (peek().type === 'LBRACKET') {
           advance(); // [
+          skipNewlines();
           const items = [];
           if (peek().type !== 'RBRACKET') {
             items.push(parseExpr());
-            while (match('COMMA')) {
+            while (true) {
+              skipNewlines();
+              if (!match('COMMA')) break;
+              skipNewlines();
               items.push(parseExpr());
             }
           }
+          skipNewlines();
           expect('RBRACKET');
           dimensions.push(items);
+          skipNewlines();
         }
         if (wrappedInParens) expect('RPAREN');
         if (dimensions.length === 1) {
