@@ -52,13 +52,13 @@ PLAYER_FRICTION# = 0.92
 PUCK_FRICTION# = 0.995
 SHOT_CHARGE_TIME# = 800
 SHOT_POWER_MIN# = 16
-SHOT_POWER_MAX# = 40
-PASS_SPEED# = 14
+SHOT_POWER_MAX# = 55
+PASS_SPEED# = 20
 CHECK_POWER# = 4
 CHECK_RADIUS# = 12
 CHECK_COOLDOWN_MS# = 500
 STUN_DURATION# = 1000
-PLAYER_MAX_SPEED# = 8
+PLAYER_MAX_SPEED# = 12
 
 ' Game states
 STATE_PLAY# = 3
@@ -251,7 +251,7 @@ pDir@[2] = 1
 pX@[3] = 500
 pY@[3] = 320
 pDir@[3] = 1
-pX@[4] = 80
+pX@[4] = 70
 pY@[4] = 240
 pDir@[4] = 1
 
@@ -265,7 +265,7 @@ pDir@[6] = -1
 pX@[7] = 700
 pY@[7] = 320
 pDir@[7] = -1
-pX@[8] = 1120
+pX@[8] = 1085
 pY@[8] = 240
 pDir@[8] = -1
 
@@ -296,12 +296,16 @@ FUNCTION collidePuck
   cTopY# = ICE_TOP# + ICE_CORNER_R#
   cBotY# = ICE_BOTTOM# - ICE_CORNER_R#
 
+  ' Corner radius squared for quick check
+  cR2# = ICE_CORNER_R# * ICE_CORNER_R#
+
   ' Top-left corner
   IF puckX# < cLeftX# AND puckY# < cTopY# THEN
     dx# = puckX# - cLeftX#
     dy# = puckY# - cTopY#
-    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
-    IF dist# > ICE_CORNER_R# THEN
+    d2# = dx# * dx# + dy# * dy#
+    IF d2# > cR2# THEN
+      dist# = SQRT# VALUE d2#
       puckX# = cLeftX# + dx# / dist# * ICE_CORNER_R#
       puckY# = cTopY# + dy# / dist# * ICE_CORNER_R#
     END IF
@@ -311,8 +315,9 @@ FUNCTION collidePuck
   IF puckX# > cRightX# AND puckY# < cTopY# THEN
     dx# = puckX# - cRightX#
     dy# = puckY# - cTopY#
-    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
-    IF dist# > ICE_CORNER_R# THEN
+    d2# = dx# * dx# + dy# * dy#
+    IF d2# > cR2# THEN
+      dist# = SQRT# VALUE d2#
       puckX# = cRightX# + dx# / dist# * ICE_CORNER_R#
       puckY# = cTopY# + dy# / dist# * ICE_CORNER_R#
     END IF
@@ -322,8 +327,9 @@ FUNCTION collidePuck
   IF puckX# < cLeftX# AND puckY# > cBotY# THEN
     dx# = puckX# - cLeftX#
     dy# = puckY# - cBotY#
-    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
-    IF dist# > ICE_CORNER_R# THEN
+    d2# = dx# * dx# + dy# * dy#
+    IF d2# > cR2# THEN
+      dist# = SQRT# VALUE d2#
       puckX# = cLeftX# + dx# / dist# * ICE_CORNER_R#
       puckY# = cBotY# + dy# / dist# * ICE_CORNER_R#
     END IF
@@ -333,8 +339,9 @@ FUNCTION collidePuck
   IF puckX# > cRightX# AND puckY# > cBotY# THEN
     dx# = puckX# - cRightX#
     dy# = puckY# - cBotY#
-    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
-    IF dist# > ICE_CORNER_R# THEN
+    d2# = dx# * dx# + dy# * dy#
+    IF d2# > cR2# THEN
+      dist# = SQRT# VALUE d2#
       puckX# = cRightX# + dx# / dist# * ICE_CORNER_R#
       puckY# = cBotY# + dy# / dist# * ICE_CORNER_R#
     END IF
@@ -342,114 +349,151 @@ FUNCTION collidePuck
 END FUNCTION
 
 FUNCTION drawRink
+  ' Screen bounds for culling
+  scrL# = camX# - 80
+  scrR# = camX# + SCREEN_W# + 80
+
   ' Boards (dark gray rounded rectangle)
   SETCOLOR DARKGRAY&
   bx1# = 0 - camX#
-  by1# = RINK_TOP#
   bx2# = RINK_W# - camX#
+  by1# = RINK_TOP#
   by2# = RINK_TOP# + RINK_H#
   DRAWBOX X1 (bx1# + CORNER_R#), Y1 by1#, X2 (bx2# - CORNER_R#), Y2 by2#, FILL YES
   DRAWBOX X1 bx1#, Y1 (by1# + CORNER_R#), X2 bx2#, Y2 (by2# - CORNER_R#), FILL YES
-  DRAWCIRCLE X (bx1# + CORNER_R#), Y (by1# + CORNER_R#), RADIUS CORNER_R#, FILL YES
-  DRAWCIRCLE X (bx2# - CORNER_R#), Y (by1# + CORNER_R#), RADIUS CORNER_R#, FILL YES
-  DRAWCIRCLE X (bx1# + CORNER_R#), Y (by2# - CORNER_R#), RADIUS CORNER_R#, FILL YES
-  DRAWCIRCLE X (bx2# - CORNER_R#), Y (by2# - CORNER_R#), RADIUS CORNER_R#, FILL YES
+  IF CORNER_R# < scrR# THEN
+    DRAWCIRCLE X (bx1# + CORNER_R#), Y (by1# + CORNER_R#), RADIUS CORNER_R#, FILL YES
+    DRAWCIRCLE X (bx1# + CORNER_R#), Y (by2# - CORNER_R#), RADIUS CORNER_R#, FILL YES
+  END IF
+  IF RINK_W# - CORNER_R# > scrL# THEN
+    DRAWCIRCLE X (bx2# - CORNER_R#), Y (by1# + CORNER_R#), RADIUS CORNER_R#, FILL YES
+    DRAWCIRCLE X (bx2# - CORNER_R#), Y (by2# - CORNER_R#), RADIUS CORNER_R#, FILL YES
+  END IF
 
   ' Player benches (top side, between blue lines)
-  ' Home bench (left of center)
-  SETCOLOR BENCH_COLOR&
-  DRAWBOX X1 (BENCH_LEFT_X1# - camX#), Y1 BENCH_Y1#, X2 (BENCH_LEFT_X2# - camX#), Y2 BENCH_Y2#, FILL YES
-  SETCOLOR BENCH_SEAT_COLOR&
-  DRAWBOX X1 (BENCH_LEFT_X1# + 3 - camX#), Y1 (BENCH_Y1# + 3), X2 (BENCH_LEFT_X2# - 3 - camX#), Y2 (BENCH_Y2# - 3), FILL YES
-  ' Away bench (right of center)
-  SETCOLOR BENCH_COLOR&
-  DRAWBOX X1 (BENCH_RIGHT_X1# - camX#), Y1 BENCH_Y1#, X2 (BENCH_RIGHT_X2# - camX#), Y2 BENCH_Y2#, FILL YES
-  SETCOLOR BENCH_SEAT_COLOR&
-  DRAWBOX X1 (BENCH_RIGHT_X1# + 3 - camX#), Y1 (BENCH_Y1# + 3), X2 (BENCH_RIGHT_X2# - 3 - camX#), Y2 (BENCH_Y2# - 3), FILL YES
+  IF BENCH_LEFT_X2# > scrL# AND BENCH_LEFT_X1# < scrR# THEN
+    SETCOLOR BENCH_COLOR&
+    DRAWBOX X1 (BENCH_LEFT_X1# - camX#), Y1 BENCH_Y1#, X2 (BENCH_LEFT_X2# - camX#), Y2 BENCH_Y2#, FILL YES
+    SETCOLOR BENCH_SEAT_COLOR&
+    DRAWBOX X1 (BENCH_LEFT_X1# + 3 - camX#), Y1 (BENCH_Y1# + 3), X2 (BENCH_LEFT_X2# - 3 - camX#), Y2 (BENCH_Y2# - 3), FILL YES
+  END IF
+  IF BENCH_RIGHT_X2# > scrL# AND BENCH_RIGHT_X1# < scrR# THEN
+    SETCOLOR BENCH_COLOR&
+    DRAWBOX X1 (BENCH_RIGHT_X1# - camX#), Y1 BENCH_Y1#, X2 (BENCH_RIGHT_X2# - camX#), Y2 BENCH_Y2#, FILL YES
+    SETCOLOR BENCH_SEAT_COLOR&
+    DRAWBOX X1 (BENCH_RIGHT_X1# + 3 - camX#), Y1 (BENCH_Y1# + 3), X2 (BENCH_RIGHT_X2# - 3 - camX#), Y2 (BENCH_Y2# - 3), FILL YES
+  END IF
 
   ' Bench players (drawn before ice so boards cover their lower half)
   benchY# = 24
   FOR bp# FROM 0 TO 4
-    ' Home bench — Whalers
-    bpx# = 459 + bp# * 26 - camX#
-    IF bpx# > -40 AND bpx# < 680 THEN
-      DRAWSPRITE SPRITE wSkate@[2], X bpx#, Y benchY#, SCALE 2
+    bpx# = 459 + bp# * 26
+    IF bpx# > scrL# AND bpx# < scrR# THEN
+      DRAWSPRITE SPRITE wSkate@[2], X (bpx# - camX#), Y benchY#, SCALE 2
     END IF
-    ' Away bench — Opponents
-    bpx# = 609 + bp# * 26 - camX#
-    IF bpx# > -40 AND bpx# < 680 THEN
-      DRAWSPRITE SPRITE oSkate@[2], X bpx#, Y benchY#, SCALE 2
+    bpx# = 609 + bp# * 26
+    IF bpx# > scrL# AND bpx# < scrR# THEN
+      DRAWSPRITE SPRITE oSkate@[2], X (bpx# - camX#), Y benchY#, SCALE 2
     END IF
   END FOR
 
   ' Ice surface (white rounded rectangle)
   SETCOLOR WHITE&
   ix1# = ICE_LEFT# - camX#
-  iy1# = ICE_TOP#
   ix2# = ICE_RIGHT# - camX#
+  iy1# = ICE_TOP#
   iy2# = ICE_BOTTOM#
   DRAWBOX X1 (ix1# + ICE_CORNER_R#), Y1 iy1#, X2 (ix2# - ICE_CORNER_R#), Y2 iy2#, FILL YES
   DRAWBOX X1 ix1#, Y1 (iy1# + ICE_CORNER_R#), X2 ix2#, Y2 (iy2# - ICE_CORNER_R#), FILL YES
-  DRAWCIRCLE X (ix1# + ICE_CORNER_R#), Y (iy1# + ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
-  DRAWCIRCLE X (ix2# - ICE_CORNER_R#), Y (iy1# + ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
-  DRAWCIRCLE X (ix1# + ICE_CORNER_R#), Y (iy2# - ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
-  DRAWCIRCLE X (ix2# - ICE_CORNER_R#), Y (iy2# - ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
+  IF ICE_LEFT# + ICE_CORNER_R# < scrR# THEN
+    DRAWCIRCLE X (ix1# + ICE_CORNER_R#), Y (iy1# + ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
+    DRAWCIRCLE X (ix1# + ICE_CORNER_R#), Y (iy2# - ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
+  END IF
+  IF ICE_RIGHT# - ICE_CORNER_R# > scrL# THEN
+    DRAWCIRCLE X (ix2# - ICE_CORNER_R#), Y (iy1# + ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
+    DRAWCIRCLE X (ix2# - ICE_CORNER_R#), Y (iy2# - ICE_CORNER_R#), RADIUS ICE_CORNER_R#, FILL YES
+  END IF
 
   ' Goal lines (thin red)
   SETCOLOR RED&
-  DRAWLINE X1 (GOAL_LEFT_X# - camX#), Y1 ICE_TOP#, X2 (GOAL_LEFT_X# - camX#), Y2 ICE_BOTTOM#
-  DRAWLINE X1 (GOAL_RIGHT_X# - camX#), Y1 ICE_TOP#, X2 (GOAL_RIGHT_X# - camX#), Y2 ICE_BOTTOM#
+  IF GOAL_LEFT_X# > scrL# AND GOAL_LEFT_X# < scrR# THEN
+    DRAWLINE X1 (GOAL_LEFT_X# - camX#), Y1 ICE_TOP#, X2 (GOAL_LEFT_X# - camX#), Y2 ICE_BOTTOM#
+  END IF
+  IF GOAL_RIGHT_X# > scrL# AND GOAL_RIGHT_X# < scrR# THEN
+    DRAWLINE X1 (GOAL_RIGHT_X# - camX#), Y1 ICE_TOP#, X2 (GOAL_RIGHT_X# - camX#), Y2 ICE_BOTTOM#
+  END IF
 
-  ' Center red line (thick)
-  lx# = CENTER_X# - camX#
-  DRAWBOX X1 (lx# - LINE_HALF#), Y1 ICE_TOP#, X2 (lx# + LINE_HALF#), Y2 ICE_BOTTOM#, FILL YES
+  ' Center red line
+  IF CENTER_X# > scrL# AND CENTER_X# < scrR# THEN
+    lx# = CENTER_X# - camX#
+    DRAWBOX X1 (lx# - LINE_HALF#), Y1 ICE_TOP#, X2 (lx# + LINE_HALF#), Y2 ICE_BOTTOM#, FILL YES
+  END IF
 
-  ' Blue lines (thick)
+  ' Blue lines
   SETCOLOR BLUE&
-  lx# = BLUE_LEFT_X# - camX#
-  DRAWBOX X1 (lx# - LINE_HALF#), Y1 ICE_TOP#, X2 (lx# + LINE_HALF#), Y2 ICE_BOTTOM#, FILL YES
-  lx# = BLUE_RIGHT_X# - camX#
-  DRAWBOX X1 (lx# - LINE_HALF#), Y1 ICE_TOP#, X2 (lx# + LINE_HALF#), Y2 ICE_BOTTOM#, FILL YES
+  IF BLUE_LEFT_X# > scrL# AND BLUE_LEFT_X# < scrR# THEN
+    lx# = BLUE_LEFT_X# - camX#
+    DRAWBOX X1 (lx# - LINE_HALF#), Y1 ICE_TOP#, X2 (lx# + LINE_HALF#), Y2 ICE_BOTTOM#, FILL YES
+  END IF
+  IF BLUE_RIGHT_X# > scrL# AND BLUE_RIGHT_X# < scrR# THEN
+    lx# = BLUE_RIGHT_X# - camX#
+    DRAWBOX X1 (lx# - LINE_HALF#), Y1 ICE_TOP#, X2 (lx# + LINE_HALF#), Y2 ICE_BOTTOM#, FILL YES
+  END IF
 
   ' Center circle and dot
   SETCOLOR RED&
-  cx# = CENTER_X# - camX#
-  cy# = 240
-  DRAWCIRCLE X cx#, Y cy#, RADIUS 60, FILL NO
-  DRAWCIRCLE X cx#, Y cy#, RADIUS 3, FILL YES
+  IF CENTER_X# > scrL# AND CENTER_X# < scrR# THEN
+    cx# = CENTER_X# - camX#
+    DRAWCIRCLE X cx#, Y 240, RADIUS 60, FILL NO
+    DRAWCIRCLE X cx#, Y 240, RADIUS 3, FILL YES
+  END IF
 
-  ' Faceoff circles and dots (4 zone dots)
-  DRAWCIRCLE X (200 - camX#), Y 150, RADIUS 60, FILL NO
-  DRAWCIRCLE X (200 - camX#), Y 330, RADIUS 60, FILL NO
-  DRAWCIRCLE X (1000 - camX#), Y 150, RADIUS 60, FILL NO
-  DRAWCIRCLE X (1000 - camX#), Y 330, RADIUS 60, FILL NO
-  DRAWCIRCLE X (200 - camX#), Y 150, RADIUS 3, FILL YES
-  DRAWCIRCLE X (200 - camX#), Y 330, RADIUS 3, FILL YES
-  DRAWCIRCLE X (1000 - camX#), Y 150, RADIUS 3, FILL YES
-  DRAWCIRCLE X (1000 - camX#), Y 330, RADIUS 3, FILL YES
+  ' Faceoff circles and dots
+  IF 200 > scrL# AND 200 < scrR# THEN
+    DRAWCIRCLE X (200 - camX#), Y 150, RADIUS 60, FILL NO
+    DRAWCIRCLE X (200 - camX#), Y 330, RADIUS 60, FILL NO
+    DRAWCIRCLE X (200 - camX#), Y 150, RADIUS 3, FILL YES
+    DRAWCIRCLE X (200 - camX#), Y 330, RADIUS 3, FILL YES
+  END IF
+  IF 1000 > scrL# AND 1000 < scrR# THEN
+    DRAWCIRCLE X (1000 - camX#), Y 150, RADIUS 60, FILL NO
+    DRAWCIRCLE X (1000 - camX#), Y 330, RADIUS 60, FILL NO
+    DRAWCIRCLE X (1000 - camX#), Y 150, RADIUS 3, FILL YES
+    DRAWCIRCLE X (1000 - camX#), Y 330, RADIUS 3, FILL YES
+  END IF
 
-  ' Neutral zone faceoff dots (beside each blue line)
-  DRAWCIRCLE X (470 - camX#), Y 150, RADIUS 3, FILL YES
-  DRAWCIRCLE X (470 - camX#), Y 330, RADIUS 3, FILL YES
-  DRAWCIRCLE X (730 - camX#), Y 150, RADIUS 3, FILL YES
-  DRAWCIRCLE X (730 - camX#), Y 330, RADIUS 3, FILL YES
+  ' Neutral zone faceoff dots
+  IF 470 > scrL# AND 470 < scrR# THEN
+    DRAWCIRCLE X (470 - camX#), Y 150, RADIUS 3, FILL YES
+    DRAWCIRCLE X (470 - camX#), Y 330, RADIUS 3, FILL YES
+  END IF
+  IF 730 > scrL# AND 730 < scrR# THEN
+    DRAWCIRCLE X (730 - camX#), Y 150, RADIUS 3, FILL YES
+    DRAWCIRCLE X (730 - camX#), Y 330, RADIUS 3, FILL YES
+  END IF
 
-  ' Goal creases (filled light blue semicircles)
-  ' Left crease: filled circle + white box to mask left half
+  ' Goal creases
   SETCOLOR CREASE_COLOR&
-  DRAWCIRCLE X (GOAL_LEFT_X# - camX#), Y 240, RADIUS 25, FILL YES
-  SETCOLOR WHITE&
-  DRAWBOX X1 (GOAL_LEFT_X# - 26 - camX#), Y1 214, X2 (GOAL_LEFT_X# - camX#), Y2 266, FILL YES
-  ' Right crease: filled circle + white box to mask right half
+  IF GOAL_LEFT_X# > scrL# AND GOAL_LEFT_X# < scrR# THEN
+    DRAWCIRCLE X (GOAL_LEFT_X# - camX#), Y 240, RADIUS 25, FILL YES
+    SETCOLOR WHITE&
+    DRAWBOX X1 (GOAL_LEFT_X# - 26 - camX#), Y1 214, X2 (GOAL_LEFT_X# - camX#), Y2 266, FILL YES
+  END IF
   SETCOLOR CREASE_COLOR&
-  DRAWCIRCLE X (GOAL_RIGHT_X# - camX#), Y 240, RADIUS 25, FILL YES
-  SETCOLOR WHITE&
-  DRAWBOX X1 (GOAL_RIGHT_X# - camX#), Y1 214, X2 (GOAL_RIGHT_X# + 26 - camX#), Y2 266, FILL YES
+  IF GOAL_RIGHT_X# > scrL# AND GOAL_RIGHT_X# < scrR# THEN
+    DRAWCIRCLE X (GOAL_RIGHT_X# - camX#), Y 240, RADIUS 25, FILL YES
+    SETCOLOR WHITE&
+    DRAWBOX X1 (GOAL_RIGHT_X# - camX#), Y1 214, X2 (GOAL_RIGHT_X# + 26 - camX#), Y2 266, FILL YES
+  END IF
 
   ' Goal nets
   SETCOLOR RED&
-  DRAWBOX X1 (GOAL_LEFT_X# - GOAL_W# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_LEFT_X# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
-  DRAWBOX X1 (GOAL_RIGHT_X# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_RIGHT_X# + GOAL_W# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
+  IF GOAL_LEFT_X# > scrL# AND GOAL_LEFT_X# < scrR# THEN
+    DRAWBOX X1 (GOAL_LEFT_X# - GOAL_W# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_LEFT_X# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
+  END IF
+  IF GOAL_RIGHT_X# > scrL# AND GOAL_RIGHT_X# < scrR# THEN
+    DRAWBOX X1 (GOAL_RIGHT_X# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_RIGHT_X# + GOAL_W# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
+  END IF
 
 END FUNCTION
 
@@ -546,20 +590,8 @@ FUNCTION getPlayerSprite# IDX idx#
 END FUNCTION
 
 FUNCTION drawPlayers
-  ' Sort by Y for depth (bubble sort, only 8 elements)
-  sortOrder@ = [1, 2, 3, 4, 5, 6, 7, 8]
-  FOR i# FROM 1 TO 7
-    FOR j# FROM 1 TO 8 - i#
-      IF pY@[sortOrder@[j#]] > pY@[sortOrder@[j# + 1]] THEN
-        temp# = sortOrder@[j#]
-        sortOrder@[j#] = sortOrder@[j# + 1]
-        sortOrder@[j# + 1] = temp#
-      END IF
-    END FOR
-  END FOR
-
   FOR i# FROM 1 TO 8
-    idx# = sortOrder@[i#]
+    idx# = i#
     sx# = pX@[idx#] - camX#
     sy# = pY@[idx#]
 
@@ -590,18 +622,50 @@ FUNCTION drawPlayers
     ' Draw stick (skaters only, not goalies, knocked-down, or fighters)
     IF idx# <> 4 AND idx# <> 8 AND pAnim@[idx#] <> ANIM_KNOCKED# AND NOT (gameState# = STATE_FIGHT# AND (idx# = fightP1# OR idx# = fightP2#)) THEN
       SETCOLOR BROWN&
+
+      ' Hand position (where stick shaft starts)
       IF pDir@[idx#] = 1 THEN
         shX# = sx# + 11 * PLAYER_SCALE#
-        shY# = sy# + 10 * PLAYER_SCALE#
-        stX# = sx# + 14 * PLAYER_SCALE#
-        stY# = sy# + 13 * PLAYER_SCALE#
       ELSE
         shX# = sx# + 5 * PLAYER_SCALE#
-        shY# = sy# + 10 * PLAYER_SCALE#
-        stX# = sx# - 2 * PLAYER_SCALE#
-        stY# = sy# + 13 * PLAYER_SCALE#
       END IF
+      shY# = sy# + 10 * PLAYER_SCALE#
+
+      ' Stick end position depends on state
+      isCharging? = (idx# = activeP# AND shotCharging?)
+      isShooting? = (pAnim@[idx#] = ANIM_SHOOT#)
+
+      IF isCharging? THEN
+        ' Wind-up: stick raised behind the player
+        IF pDir@[idx#] = 1 THEN
+          stX# = sx# + 5 * PLAYER_SCALE#
+          stY# = sy# + 5 * PLAYER_SCALE#
+        ELSE
+          stX# = sx# + 11 * PLAYER_SCALE#
+          stY# = sy# + 5 * PLAYER_SCALE#
+        END IF
+      ELSE IF isShooting? THEN
+        ' Follow-through: stick extended far forward and low
+        IF pDir@[idx#] = 1 THEN
+          stX# = sx# + 17 * PLAYER_SCALE#
+          stY# = sy# + 14 * PLAYER_SCALE#
+        ELSE
+          stX# = sx# - 5 * PLAYER_SCALE#
+          stY# = sy# + 14 * PLAYER_SCALE#
+        END IF
+      ELSE
+        ' Normal: stick forward and down
+        IF pDir@[idx#] = 1 THEN
+          stX# = sx# + 14 * PLAYER_SCALE#
+          stY# = sy# + 13 * PLAYER_SCALE#
+        ELSE
+          stX# = sx# - 2 * PLAYER_SCALE#
+          stY# = sy# + 13 * PLAYER_SCALE#
+        END IF
+      END IF
+
       DRAWLINE X1 shX#, Y1 shY#, X2 stX#, Y2 stY#
+      ' Blade
       IF pDir@[idx#] = 1 THEN
         DRAWLINE X1 stX#, Y1 stY#, X2 (stX# + 2 * PLAYER_SCALE#), Y2 stY#
       ELSE
@@ -705,9 +769,10 @@ FUNCTION updatePlayerPhysics
       pVY@[i#] = 0
     END IF
 
-    ' Clamp to max speed
-    pSpd# = SQRT# VALUE (pVX@[i#] * pVX@[i#] + pVY@[i#] * pVY@[i#])
-    IF pSpd# > PLAYER_MAX_SPEED# THEN
+    ' Clamp to max speed (only SQRT when actually over limit)
+    pSpd2# = pVX@[i#] * pVX@[i#] + pVY@[i#] * pVY@[i#]
+    IF pSpd2# > PLAYER_MAX_SPEED# * PLAYER_MAX_SPEED# THEN
+      pSpd# = SQRT# VALUE pSpd2#
       pVX@[i#] = pVX@[i#] / pSpd# * PLAYER_MAX_SPEED#
       pVY@[i#] = pVY@[i#] / pSpd# * PLAYER_MAX_SPEED#
     END IF
@@ -752,7 +817,7 @@ FUNCTION switchActivePlayer
     RETURN
   END IF
 
-  bestDist# = 99999
+  bestDist2# = 99999999
   bestP# = activeP#
 
   FOR i# FROM 1 TO 3
@@ -761,9 +826,9 @@ FUNCTION switchActivePlayer
     END IF
     dx# = pX@[i#] - puckX#
     dy# = pY@[i#] - puckY#
-    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
-    IF dist# < bestDist# THEN
-      bestDist# = dist#
+    d2# = dx# * dx# + dy# * dy#
+    IF d2# < bestDist2# THEN
+      bestDist2# = d2#
       bestP# = i#
     END IF
   END FOR
@@ -795,14 +860,14 @@ FUNCTION updateTeammateAI
     ' If puck is loose, closest non-active Whaler chases it
     ELSE IF puckLoose? AND puckOwner# = 0 THEN
       closestW# = 0
-      closestWD# = 99999
+      closestWD# = 9999999
       FOR ci# FROM 1 TO 3
         IF ci# = activeP# OR pState@[ci#] = 2 THEN
           CONTINUE
         END IF
         cdx# = pX@[ci#] - puckX#
         cdy# = pY@[ci#] - puckY#
-        cd# = SQRT# VALUE (cdx# * cdx# + cdy# * cdy#)
+        cd# = cdx# * cdx# + cdy# * cdy#
         IF cd# < closestWD# THEN
           closestWD# = cd#
           closestW# = ci#
@@ -813,7 +878,6 @@ FUNCTION updateTeammateAI
         targetY# = puckY#
         pushStr# = 0.3
       ELSE
-        ' Not closest — defend
         defX# = puckX# - 80
         IF defX# < GOAL_LEFT_X# + 60 THEN
           defX# = GOAL_LEFT_X# + 60
@@ -834,7 +898,6 @@ FUNCTION updateTeammateAI
     ELSE IF puckOwner# >= 1 AND puckOwner# <= 3 THEN
       carrierX# = pX@[puckOwner#]
 
-      ' Spread out: skate ahead of the carrier toward opponent goal
       IF i# = 1 THEN
         laneY# = 150
       ELSE IF i# = 2 THEN
@@ -843,22 +906,22 @@ FUNCTION updateTeammateAI
         laneY# = 240
       END IF
 
-      targetX# = carrierX# + 100 + RANDOM# MAX 40
+      targetX# = carrierX# + 100 + SIN# VALUE (now# * 0.001 + i# * 3) * 30
       targetY# = laneY# + SIN# VALUE (now# * 0.002 + i# * 2) * 40
 
-      ' Stay away from opponents (find nearest and nudge away)
-      nearOppDist# = 99999
+      ' Stay away from nearest opponent (squared distance, no SQRT)
+      nearOppD2# = 9999999
       nearOppY# = targetY#
       FOR oi# FROM 5 TO 7
         ox# = pX@[oi#] - targetX#
         oy# = pY@[oi#] - targetY#
-        od# = SQRT# VALUE (ox# * ox# + oy# * oy#)
-        IF od# < nearOppDist# THEN
-          nearOppDist# = od#
+        od2# = ox# * ox# + oy# * oy#
+        IF od2# < nearOppD2# THEN
+          nearOppD2# = od2#
           nearOppY# = pY@[oi#]
         END IF
       END FOR
-      IF nearOppDist# < 80 THEN
+      IF nearOppD2# < 6400 THEN
         IF targetY# > nearOppY# THEN
           targetY# = targetY# + 30
         ELSE
@@ -868,12 +931,10 @@ FUNCTION updateTeammateAI
       pushStr# = 0.25
 
     ELSE
-      ' Opponent has puck — defensive positioning
       defX# = puckX# - 80
       IF defX# < GOAL_LEFT_X# + 60 THEN
         defX# = GOAL_LEFT_X# + 60
       END IF
-
       IF i# = 1 THEN
         targetX# = defX#
         targetY# = puckY# - 60
@@ -892,12 +953,13 @@ FUNCTION updateTeammateAI
     targetX# = MIN# A targetX#, B (ICE_RIGHT# - 50)
     targetY# = MIN# A targetY#, B (ICE_BOTTOM# - 50)
 
-    ' Move toward target
+    ' Move toward target (skip SQRT if close)
     dx# = targetX# - pX@[i#]
     dy# = targetY# - pY@[i#]
-    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
+    d2# = dx# * dx# + dy# * dy#
 
-    IF dist# > 10 THEN
+    IF d2# > 100 THEN
+      dist# = SQRT# VALUE d2#
       pPushing@[i#] = 1
       pVX@[i#] = pVX@[i#] + (dx# / dist#) * spd# * pushStr#
       pVY@[i#] = pVY@[i#] + (dy# / dist#) * spd# * pushStr#
@@ -905,7 +967,6 @@ FUNCTION updateTeammateAI
       pPushing@[i#] = 0
     END IF
 
-    ' Update facing
     IF dx# > 5 THEN
       pDir@[i#] = 1
     ELSE IF dx# < -5 THEN
@@ -928,51 +989,35 @@ FUNCTION updateOpponentAI
       ' === This opponent has the puck ===
       distToGoal# = pX@[i#] - GOAL_LEFT_X#
 
-      ' Check if a Whaler is close (pressure)
+      ' Check if a Whaler is close (pressure) — squared dist, no SQRT
       underPressure? = NO
       FOR wi# FROM 1 TO 3
         wpx# = pX@[wi#] - pX@[i#]
         wpy# = pY@[wi#] - pY@[i#]
-        wpd# = SQRT# VALUE (wpx# * wpx# + wpy# * wpy#)
-        IF wpd# < 60 THEN
+        IF wpx# * wpx# + wpy# * wpy# < 3600 THEN
           underPressure? = YES
         END IF
       END FOR
 
-      ' Consider passing to an open teammate
+      ' Consider passing when under pressure (low chance per frame)
       IF underPressure? AND RANDOM# MAX 100 < 4 THEN
-        ' Find most open teammate
+        ' Find closest open teammate (simplified — no nested Whaler loop)
         bestPassIdx# = 0
-        bestPassScore# = -99999
+        bestPassD2# = 9999999
         FOR ti# FROM 5 TO 7
           IF ti# = i# OR pState@[ti#] = 2 THEN
             CONTINUE
           END IF
           tdx# = pX@[ti#] - pX@[i#]
           tdy# = pY@[ti#] - pY@[i#]
-          tDist# = SQRT# VALUE (tdx# * tdx# + tdy# * tdy#)
-          IF tDist# < 40 THEN
-            CONTINUE
-          END IF
-          ' How far from nearest Whaler?
-          minWD# = 99999
-          FOR wi# FROM 1 TO 3
-            wx# = pX@[wi#] - pX@[ti#]
-            wy# = pY@[wi#] - pY@[ti#]
-            wd# = SQRT# VALUE (wx# * wx# + wy# * wy#)
-            IF wd# < minWD# THEN
-              minWD# = wd#
-            END IF
-          END FOR
-          sc# = minWD# - tDist# * 0.3
-          IF sc# > bestPassScore# THEN
-            bestPassScore# = sc#
+          td2# = tdx# * tdx# + tdy# * tdy#
+          IF td2# > 1600 AND td2# < bestPassD2# THEN
+            bestPassD2# = td2#
             bestPassIdx# = ti#
           END IF
         END FOR
 
         IF bestPassIdx# > 0 THEN
-          ' Pass to teammate
           pdx# = pX@[bestPassIdx#] - puckX#
           pdy# = pY@[bestPassIdx#] - puckY#
           pDist# = SQRT# VALUE (pdx# * pdx# + pdy# * pdy#)
@@ -988,9 +1033,8 @@ FUNCTION updateOpponentAI
         END IF
       END IF
 
-      ' Shoot if close enough and have a decent angle
+      ' Shoot if close enough
       IF distToGoal# < 250 THEN
-        ' Don't shoot every frame — random chance increases as closer
         shootChance# = 3
         IF distToGoal# < 150 THEN
           shootChance# = 6
@@ -1000,7 +1044,6 @@ FUNCTION updateOpponentAI
         END IF
         IF RANDOM# MAX 100 < shootChance# THEN
           sdx# = GOAL_LEFT_X# - puckX#
-          ' Aim slightly off-center for variety
           goalAimY# = 240 + RANDOM# MAX 40 - 20
           sdy# = goalAimY# - puckY#
           sDist# = SQRT# VALUE (sdx# * sdx# + sdy# * sdy#)
@@ -1024,16 +1067,15 @@ FUNCTION updateOpponentAI
         END IF
       END IF
 
-      ' Skate toward goal, weaving slightly to avoid defenders
+      ' Skate toward goal, weaving to avoid defenders
       targetX# = GOAL_LEFT_X# + 80
       targetY# = 240 + SIN# VALUE (now# * 0.003) * 60
       pushStr# = 0.3
 
     ELSE IF puckOwner# >= 5 AND puckOwner# <= 7 THEN
-      ' === Teammate has puck — get open for a pass ===
+      ' === Teammate has puck — get open ===
       carrierX# = pX@[puckOwner#]
 
-      ' Skate ahead of carrier in lanes, weave to stay open
       IF i# = 5 THEN
         laneY# = 160
       ELSE IF i# = 6 THEN
@@ -1042,22 +1084,22 @@ FUNCTION updateOpponentAI
         laneY# = 240
       END IF
 
-      targetX# = carrierX# - 100 - RANDOM# MAX 30
+      targetX# = carrierX# - 100 + SIN# VALUE (now# * 0.001 + i# * 3) * 25
       targetY# = laneY# + SIN# VALUE (now# * 0.002 + i# * 2) * 40
 
-      ' Avoid nearest Whaler
-      nearWDist# = 99999
+      ' Avoid nearest Whaler — squared distance
+      nearWD2# = 9999999
       nearWY# = targetY#
       FOR wi# FROM 1 TO 3
         wx# = pX@[wi#] - targetX#
         wy# = pY@[wi#] - targetY#
-        wd# = SQRT# VALUE (wx# * wx# + wy# * wy#)
-        IF wd# < nearWDist# THEN
-          nearWDist# = wd#
+        wd2# = wx# * wx# + wy# * wy#
+        IF wd2# < nearWD2# THEN
+          nearWD2# = wd2#
           nearWY# = pY@[wi#]
         END IF
       END FOR
-      IF nearWDist# < 70 THEN
+      IF nearWD2# < 4900 THEN
         IF targetY# > nearWY# THEN
           targetY# = targetY# + 25
         ELSE
@@ -1067,25 +1109,23 @@ FUNCTION updateOpponentAI
       pushStr# = 0.25
 
     ELSE
-      ' === Puck is loose or Whalers have it ===
-      ' Closest opponent chases, others play defense
+      ' === Puck loose or Whalers have it ===
       closestOpp# = 5
-      closestDist# = 99999
+      closestD2# = 9999999
       FOR ci# FROM 5 TO 7
         IF pState@[ci#] = 2 THEN
           CONTINUE
         END IF
         cdx# = pX@[ci#] - puckX#
         cdy# = pY@[ci#] - puckY#
-        cd# = SQRT# VALUE (cdx# * cdx# + cdy# * cdy#)
-        IF cd# < closestDist# THEN
-          closestDist# = cd#
+        cd2# = cdx# * cdx# + cdy# * cdy#
+        IF cd2# < closestD2# THEN
+          closestD2# = cd2#
           closestOpp# = ci#
         END IF
       END FOR
 
       IF i# = closestOpp# THEN
-        ' Chase the puck or carrier
         IF puckLoose? THEN
           targetX# = puckX#
           targetY# = puckY#
@@ -1095,12 +1135,10 @@ FUNCTION updateOpponentAI
         END IF
         pushStr# = 0.3
       ELSE
-        ' Defend: position between puck and our goal, spread across lanes
         defX# = puckX# + 80
         IF defX# > GOAL_RIGHT_X# - 60 THEN
           defX# = GOAL_RIGHT_X# - 60
         END IF
-
         IF i# = 5 THEN
           targetX# = defX#
           targetY# = puckY# - 60
@@ -1111,7 +1149,6 @@ FUNCTION updateOpponentAI
           targetX# = defX# - 40
           targetY# = puckY#
         END IF
-        pushStr# = 0.2
       END IF
     END IF
 
@@ -1121,12 +1158,13 @@ FUNCTION updateOpponentAI
     targetX# = MIN# A targetX#, B (ICE_RIGHT# - 50)
     targetY# = MIN# A targetY#, B (ICE_BOTTOM# - 50)
 
-    ' Move toward target
+    ' Move toward target (skip SQRT if close)
     dx# = targetX# - pX@[i#]
     dy# = targetY# - pY@[i#]
-    dist# = SQRT# VALUE (dx# * dx# + dy# * dy#)
+    d2# = dx# * dx# + dy# * dy#
 
-    IF dist# > 10 THEN
+    IF d2# > 100 THEN
+      dist# = SQRT# VALUE d2#
       pPushing@[i#] = 1
       pVX@[i#] = pVX@[i#] + (dx# / dist#) * spd# * pushStr#
       pVY@[i#] = pVY@[i#] + (dy# / dist#) * spd# * pushStr#
@@ -1134,7 +1172,6 @@ FUNCTION updateOpponentAI
       pPushing@[i#] = 0
     END IF
 
-    ' Update facing
     IF dx# > 5 THEN
       pDir@[i#] = 1
     ELSE IF dx# < -5 THEN
@@ -1147,137 +1184,52 @@ FUNCTION updateGoalieAI
   FOR gi# FROM 1 TO 2
     IF gi# = 1 THEN
       g# = 4
-      goalX# = GOAL_LEFT_X#
-      homeX# = GOAL_LEFT_X# + 15
-      tStart# = 1
-      tEnd# = 3
-      oStart# = 5
-      oEnd# = 7
+      homeX# = GOAL_LEFT_X# + 5
       clearDirX# = 1
-      minGX# = GOAL_LEFT_X# - 5
-      maxGX# = GOAL_LEFT_X# + 40
+      minGX# = GOAL_LEFT_X# - 15
+      maxGX# = GOAL_LEFT_X# + 25
+      ' Shot coming toward this goal = puck moving left
+      shotComing? = (puckLoose? AND puckVX# < -3 AND puckX# < 300)
     ELSE
       g# = 8
-      goalX# = GOAL_RIGHT_X#
-      homeX# = GOAL_RIGHT_X# - 15
-      tStart# = 5
-      tEnd# = 7
-      oStart# = 1
-      oEnd# = 3
+      homeX# = GOAL_RIGHT_X# - 55
       clearDirX# = -1
-      minGX# = GOAL_RIGHT_X# - 40
-      maxGX# = GOAL_RIGHT_X# + 5
+      minGX# = GOAL_RIGHT_X# - 75
+      maxGX# = GOAL_RIGHT_X# - 35
+      ' Shot coming toward this goal = puck moving right
+      shotComing? = (puckLoose? AND puckVX# > 3 AND puckX# > 900)
     END IF
 
     IF pState@[g#] = 2 THEN
       CONTINUE
     END IF
 
-    minGY# = 240 - GOAL_H# / 2 - 15
-    maxGY# = 240 + GOAL_H# / 2 + 15
+    minGY# = 240 - GOAL_H# / 2 - 30
+    maxGY# = 240 + GOAL_H# / 2 - 30
 
     IF puckOwner# = g# THEN
-      ' === Goalie has the puck (made a save) ===
+      ' === Goalie has puck — hold briefly then clear it ===
       holdTime# = now# - goalieHoldTime#
-
-      ' Count nearby opponents
-      nearOpps# = 0
-      FOR oi# FROM oStart# TO oEnd#
-        ox# = pX@[oi#] - pX@[g#]
-        oy# = pY@[oi#] - pY@[g#]
-        od# = SQRT# VALUE (ox# * ox# + oy# * oy#)
-        IF od# < 150 THEN
-          nearOpps# = nearOpps# + 1
-        END IF
-      END FOR
-
-      IF holdTime# < 600 THEN
-        ' Brief hold — drift toward center of crease
+      IF holdTime# < 500 THEN
+        ' Brief hold — drift toward center
         dy# = 240 - pY@[g#]
         IF dy# > 5 THEN
           pVY@[g#] = pVY@[g#] + 0.3
         ELSE IF dy# < -5 THEN
           pVY@[g#] = pVY@[g#] - 0.3
         END IF
-
-      ELSE IF nearOpps# >= 2 AND holdTime# < 1500 THEN
-        ' Too many opponents nearby — move to get separation
-        closeDist# = 99999
-        closeY# = pY@[g#]
-        FOR oi# FROM oStart# TO oEnd#
-          ox# = pX@[oi#] - pX@[g#]
-          oy# = pY@[oi#] - pY@[g#]
-          od# = SQRT# VALUE (ox# * ox# + oy# * oy#)
-          IF od# < closeDist# THEN
-            closeDist# = od#
-            closeY# = pY@[oi#]
-          END IF
-        END FOR
-        ' Move away from closest opponent
-        IF closeY# > pY@[g#] THEN
-          pVY@[g#] = pVY@[g#] - 1.0
-        ELSE
-          pVY@[g#] = pVY@[g#] + 1.0
-        END IF
-
       ELSE
-        ' Time to pass — find most open teammate
-        bestIdx# = 0
-        bestScore# = -99999
-        FOR ti# FROM tStart# TO tEnd#
-          IF pState@[ti#] = 2 THEN
-            CONTINUE
-          END IF
-          tdx# = pX@[ti#] - pX@[g#]
-          tdy# = pY@[ti#] - pY@[g#]
-          tDist# = SQRT# VALUE (tdx# * tdx# + tdy# * tdy#)
-          IF tDist# < 30 THEN
-            CONTINUE
-          END IF
-          ' How far is this teammate from nearest opponent?
-          minOD# = 99999
-          FOR oi# FROM oStart# TO oEnd#
-            ox# = pX@[oi#] - pX@[ti#]
-            oy# = pY@[oi#] - pY@[ti#]
-            od# = SQRT# VALUE (ox# * ox# + oy# * oy#)
-            IF od# < minOD# THEN
-              minOD# = od#
-            END IF
-          END FOR
-          ' Prefer open teammates, slight preference for closer ones
-          sc# = minOD# - tDist# * 0.3
-          IF sc# > bestScore# THEN
-            bestScore# = sc#
-            bestIdx# = ti#
-          END IF
-        END FOR
-
-        IF bestIdx# > 0 THEN
-          ' Pass to best teammate
-          pdx# = pX@[bestIdx#] - puckX#
-          pdy# = pY@[bestIdx#] - puckY#
-          pDist# = SQRT# VALUE (pdx# * pdx# + pdy# * pdy#)
-          IF pDist# > 0 THEN
-            puckVX# = (pdx# / pDist#) * PASS_SPEED#
-            puckVY# = (pdy# / pDist#) * PASS_SPEED#
-          END IF
-          pHasPuck@[g#] = 0
-          puckOwner# = 0
-          puckLoose? = YES
-          puckFreezeUntil# = now# + 150
-        ELSE
-          ' No good target — clear it forward
-          puckVX# = clearDirX# * PASS_SPEED# * 0.8
-          puckVY# = 0
-          pHasPuck@[g#] = 0
-          puckOwner# = 0
-          puckLoose? = YES
-          puckFreezeUntil# = now# + 150
-        END IF
+        ' Clear it forward
+        puckVX# = clearDirX# * PASS_SPEED# * 0.8
+        puckVY# = (RANDOM# MAX 60 - 30) * 0.1
+        pHasPuck@[g#] = 0
+        puckOwner# = 0
+        puckLoose? = YES
+        puckFreezeUntil# = now# + 150
       END IF
 
     ELSE
-      ' === Goalie doesn't have puck — track it ===
+      ' === Track puck Y, stay at home X ===
       targetY# = puckY#
       targetY# = MAX# A targetY#, B minGY#
       targetY# = MIN# A targetY#, B maxGY#
@@ -1295,6 +1247,20 @@ FUNCTION updateGoalieAI
         pVX@[g#] = pVX@[g#] + 0.5
       ELSE IF dx# < -3 THEN
         pVX@[g#] = pVX@[g#] - 0.5
+      END IF
+
+      ' Trigger random save animation when a shot is incoming
+      IF shotComing? AND pAnim@[g#] = ANIM_GOALIE_IDLE# THEN
+        saveType# = RANDOM# MAX 3
+        IF saveType# = 1 THEN
+          pAnim@[g#] = ANIM_GOALIE_GLOVE#
+        ELSE IF saveType# = 2 THEN
+          pAnim@[g#] = ANIM_GOALIE_BLOCKER#
+        ELSE
+          pAnim@[g#] = ANIM_GOALIE_SPLIT#
+        END IF
+        pAnimFrame@[g#] = 1
+        pAnimTimer@[g#] = 0
       END IF
     END IF
 
@@ -1566,6 +1532,11 @@ FUNCTION handlePassing
   puckOwner# = 0
   puckLoose? = YES
   puckFreezeUntil# = now# + 150
+
+  ' Trigger swing animation
+  pAnim@[ap#] = ANIM_SHOOT#
+  pAnimFrame@[ap#] = 1
+  pAnimTimer@[ap#] = 0
 
   passInFlight? = YES
   passTime# = now#

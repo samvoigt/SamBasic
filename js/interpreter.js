@@ -249,7 +249,7 @@ class Interpreter {
         }
 
         this._stmtCount++;
-        if (this._stmtCount % 100 === 0) {
+        if (this._stmtCount % 2000 === 0) {
           await this.yieldToEventLoop();
         }
 
@@ -308,7 +308,7 @@ class Interpreter {
         }
 
         this._stmtCount++;
-        if (this._stmtCount % 100 === 0) {
+        if (this._stmtCount % 2000 === 0) {
           await this.yieldToEventLoop();
         }
       }
@@ -897,14 +897,14 @@ class Interpreter {
             if (e instanceof ContinueSignal) {
               // skip to next iteration
               this._stmtCount++;
-              if (this._stmtCount % 100 === 0) await this.yieldToEventLoop();
+              if (this._stmtCount % 2000 === 0) await this.yieldToEventLoop();
               continue;
             }
             throw e;
           }
 
           this._stmtCount++;
-          if (this._stmtCount % 100 === 0) {
+          if (this._stmtCount % 2000 === 0) {
             await this.yieldToEventLoop();
           }
           if (this.paused) {
@@ -923,14 +923,14 @@ class Interpreter {
             if (e instanceof ContinueSignal) {
               // skip to condition re-check
               this._stmtCount++;
-              if (this._stmtCount % 100 === 0) await this.yieldToEventLoop();
+              if (this._stmtCount % 2000 === 0) await this.yieldToEventLoop();
               continue;
             }
             throw e;
           }
 
           this._stmtCount++;
-          if (this._stmtCount % 100 === 0) {
+          if (this._stmtCount % 2000 === 0) {
             await this.yieldToEventLoop();
           }
           if (this.paused) {
@@ -948,7 +948,7 @@ class Interpreter {
             if (e instanceof BreakSignal) break;
             if (e instanceof ContinueSignal) {
               this._stmtCount++;
-              if (this._stmtCount % 100 === 0) await this.yieldToEventLoop();
+              if (this._stmtCount % 2000 === 0) await this.yieldToEventLoop();
               if (await this.evalExpr(stmt.condition)) break;
               continue;
             }
@@ -956,7 +956,7 @@ class Interpreter {
           }
 
           this._stmtCount++;
-          if (this._stmtCount % 100 === 0) {
+          if (this._stmtCount % 2000 === 0) {
             await this.yieldToEventLoop();
           }
           if (this.paused) {
@@ -1492,7 +1492,7 @@ class Interpreter {
       }
 
       this._stmtCount++;
-      if (this._stmtCount % 100 === 0) {
+      if (this._stmtCount % 2000 === 0) {
         await this.yieldToEventLoop();
       }
 
@@ -1787,7 +1787,7 @@ class Interpreter {
       }
 
       this._stmtCount++;
-      if (this._stmtCount % 100 === 0) {
+      if (this._stmtCount % 2000 === 0) {
         await this.yieldToEventLoop();
       }
 
