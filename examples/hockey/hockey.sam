@@ -31,7 +31,7 @@ LINE_HALF# = 2
 CORNER_R# = 60
 ICE_CORNER_R# = 48
 CREASE_COLOR& = {.r# = 153, .g# = 204, .b# = 255}
-INDICATOR_COLOR& = {.r# = 130, .g# = 200, .b# = 255}
+INDICATOR_COLOR& = {.r# = 130, .g# = 200, .b# = 255, .a# = 100}
 
 ' Benches (along top boards, between blue lines)
 BENCH_Y1# = 8
