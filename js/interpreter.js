@@ -182,6 +182,10 @@ class Interpreter {
     const r = Math.max(0, Math.min(255, Math.floor(obj['r#'] || 0)));
     const g = Math.max(0, Math.min(255, Math.floor(obj['g#'] || 0)));
     const b = Math.max(0, Math.min(255, Math.floor(obj['b#'] || 0)));
+    if (obj['a#'] !== undefined) {
+      const a = Math.max(0, Math.min(255, Math.floor(obj['a#'])));
+      return '#' + r.toString(16).padStart(2, '0') + g.toString(16).padStart(2, '0') + b.toString(16).padStart(2, '0') + a.toString(16).padStart(2, '0');
+    }
     return '#' + r.toString(16).padStart(2, '0') + g.toString(16).padStart(2, '0') + b.toString(16).padStart(2, '0');
   }
 

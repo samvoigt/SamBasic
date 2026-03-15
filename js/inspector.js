@@ -28,6 +28,20 @@ class Inspector {
 
   update() {
     const interp = this._interp;
+
+    // Only show variables when paused/stepping, not during free execution
+    if (interp.running && !interp.paused) {
+      if (this._lastSnapshot !== '__running__') {
+        this._lastSnapshot = '__running__';
+        this._list.innerHTML = '';
+        const hint = document.createElement('div');
+        hint.className = 'inspector-empty';
+        hint.textContent = 'Pause to inspect variables';
+        this._list.appendChild(hint);
+      }
+      return;
+    }
+
     const inFunction = interp.callStack.length > 0;
     const stores = [
       { map: interp.numVars, suffix: '#' },

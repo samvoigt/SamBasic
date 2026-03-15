@@ -394,12 +394,13 @@ class Screen {
           }
           continue;
         }
-        // Color struct with r#, g#, b# keys
+        // Color struct with r#, g#, b# (and optional a#) keys
         if (typeof cell === 'object' && cell !== null) {
           const red = cell['r#'] !== undefined ? cell['r#'] : (cell['R#'] !== undefined ? cell['R#'] : 0);
           const green = cell['g#'] !== undefined ? cell['g#'] : (cell['G#'] !== undefined ? cell['G#'] : 0);
           const blue = cell['b#'] !== undefined ? cell['b#'] : (cell['B#'] !== undefined ? cell['B#'] : 0);
-          ctx.fillStyle = `rgb(${red},${green},${blue})`;
+          const alpha = cell['a#'] !== undefined ? cell['a#'] : (cell['A#'] !== undefined ? cell['A#'] : 255);
+          ctx.fillStyle = `rgba(${red},${green},${blue},${alpha / 255})`;
           ctx.fillRect(c, r, 1, 1);
         }
       }
