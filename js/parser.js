@@ -440,6 +440,12 @@ function parse(tokens, existingFunctions) {
     if (t.type === 'KEYWORD' && t.value === 'SETCOLOR') {
       return parseSetcolor();
     }
+    if (t.type === 'KEYWORD' && t.value === 'SETBACKGROUND') {
+      return parseSetbackground();
+    }
+    if (t.type === 'KEYWORD' && t.value === 'SETSCREENBACKGROUND') {
+      return parseSetscreenbackground();
+    }
     if (t.type === 'KEYWORD' && t.value === 'BEEP') {
       advance();
       return { type: 'beep', line: t.line };
@@ -842,6 +848,7 @@ function parse(tokens, existingFunctions) {
         'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'END',
         'FOR', 'FROM', 'TO', 'STEP',
         'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',
+        'SETBACKGROUND', 'SETSCREENBACKGROUND',
         'AND', 'OR', 'NOT',
         'FUNCTION', 'RETURN', 'BREAK', 'CONTINUE', 'OPTIONAL', 'REFERENCE',
         'STRUCT',
@@ -887,8 +894,9 @@ function parse(tokens, existingFunctions) {
     const resolved = resolveBuiltinArgs(args, [
       { name: 'TEXT', required: true },
       { name: 'COLOR', required: false },
+      { name: 'BACKGROUND', required: false },
     ], t.line);
-    return { type: 'print', expr: resolved.TEXT, withColor: resolved.COLOR || null, line: t.line };
+    return { type: 'print', expr: resolved.TEXT, withColor: resolved.COLOR || null, withBg: resolved.BACKGROUND || null, line: t.line };
   }
 
   function parsePrintAt() {
@@ -899,8 +907,9 @@ function parse(tokens, existingFunctions) {
       { name: 'COL', required: true },
       { name: 'TEXT', required: true },
       { name: 'COLOR', required: false },
+      { name: 'BACKGROUND', required: false },
     ], t.line);
-    return { type: 'printat', row: resolved.ROW, col: resolved.COL, expr: resolved.TEXT, withColor: resolved.COLOR || null, line: t.line };
+    return { type: 'printat', row: resolved.ROW, col: resolved.COL, expr: resolved.TEXT, withColor: resolved.COLOR || null, withBg: resolved.BACKGROUND || null, line: t.line };
   }
 
   function parseSetcolor() {
@@ -910,6 +919,31 @@ function parse(tokens, existingFunctions) {
       { name: 'COLOR', required: true },
     ], t.line);
     return { type: 'setcolor', expr: resolved.COLOR, line: t.line };
+  }
+
+  // SETBACKGROUND <color&> | SETBACKGROUND NONE
+  // NONE is a bare IDENT mode, following the TRIM LEFT/RIGHT precedent, so it
+  // doesn't have to become a reserved keyword.
+  function parseSetbackground() {
+    const t = advance(); // SETBACKGROUND
+    if (peek().type === 'IDENT' && peek().value.toUpperCase() === 'NONE') {
+      advance();
+      return { type: 'setbackground', expr: null, line: t.line };
+    }
+    const args = parseKeywordArgs();
+    const resolved = resolveBuiltinArgs(args, [
+      { name: 'COLOR', required: true },
+    ], t.line);
+    return { type: 'setbackground', expr: resolved.COLOR, line: t.line };
+  }
+
+  function parseSetscreenbackground() {
+    const t = advance(); // SETSCREENBACKGROUND
+    const args = parseKeywordArgs();
+    const resolved = resolveBuiltinArgs(args, [
+      { name: 'COLOR', required: true },
+    ], t.line);
+    return { type: 'setscreenbackground', expr: resolved.COLOR, line: t.line };
   }
 
   function parsePlay() {

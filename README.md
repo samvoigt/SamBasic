@@ -355,7 +355,14 @@ Members are prefixed with `.` and must include a type suffix (`#`, `$`, `@`, `&`
 ```
 SETCOLOR GREEN&                   ' Set global text color
 SETCOLOR COLOR myColor&           ' Named parameter form
+SETBACKGROUND BLUE&               ' Default background for later prints
+SETBACKGROUND NONE                ' Back to transparent
+SETSCREENBACKGROUND BLUE&         ' Fill the whole screen
+PRINT "Bar" COLOR BLACK& BACKGROUND LIGHTGRAY&   ' Inline, one print only
 ```
+
+Text with no background of its own is transparent, so the screen background shows through and
+`CLEARSCREEN` keeps the field. See [color-reference.md](docs/color-reference.md).
 
 Colors are structs with `.r#`, `.g#`, `.b#` members (0–255). The 16 EGA colors are built-in:
 
@@ -616,3 +623,6 @@ See `docs/3d-reference.md` for the full reference.
 ### Screen
 
 The screen is 80 columns by 25 rows. Printing past line 25 scrolls the screen up.
+
+`SETSCREENBACKGROUND` sets the color of the whole screen. It survives `CLEARSCREEN`, and any
+text printed without its own `BACKGROUND` sits on top of it rather than covering it.

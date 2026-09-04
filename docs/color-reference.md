@@ -59,6 +59,58 @@ PRINT "This uses the previous global color"
 PRINTAT 5, 10, "Score: 100" COLOR LIGHTGREEN&
 ```
 
+### Background colors
+
+Text has a background as well as a foreground, at three levels. When a print runs, its
+background is resolved in this order:
+
+| Level | Statement | Applies to |
+|-------|-----------|------------|
+| Per string | `PRINTAT 1, 1, bar$ BACKGROUND LIGHTGRAY&` | Only the cells that print writes |
+| Global default | `SETBACKGROUND LIGHTGRAY&` | Cells written by later prints, until changed |
+| Screen | `SETSCREENBACKGROUND BLUE&` | The whole screen, behind every cell that has no background of its own |
+
+A cell with no background of its own is **transparent** — the screen background shows
+through. That is the default, so text printed without a `BACKGROUND` sits on the field
+rather than punching a hole in it:
+
+```
+SETSCREENBACKGROUND BLUE&
+CLEARSCREEN
+PRINTAT 1, 1, "This sits on the blue field"
+PRINTAT 2, 1, " Status " COLOR BLACK& BACKGROUND LIGHTGRAY&
+```
+
+Because cells stay transparent, changing the screen background later moves everything that
+never named one:
+
+```
+SETSCREENBACKGROUND GREEN&     ' line 1 turns green, the gray status bar does not
+```
+
+`CLEARSCREEN` clears the text but keeps the screen background, so the field survives a clear.
+
+Use `SETBACKGROUND` to set a default for a run of prints, and `SETBACKGROUND NONE` to go back
+to transparent:
+
+```
+SETBACKGROUND RED&
+PRINT "White on red"
+PRINT "Also white on red"
+SETBACKGROUND NONE
+PRINT "Back on the screen background"
+```
+
+Backgrounds accept the same color structs as `SETCOLOR`, including the optional `.a#` alpha
+channel, so a background can be translucent:
+
+```
+PRINTAT 5, 5, " dimmed " BACKGROUND {.r# = 0, .g# = 0, .b# = 0, .a# = 128}
+```
+
+**Note:** a screen background makes the text layer opaque, which hides the graphics canvas.
+Text backgrounds and `DRAWLINE`/`DRAWBOX` graphics aren't meant to be combined.
+
 ### Custom colors
 
 ```

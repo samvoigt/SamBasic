@@ -97,10 +97,10 @@ class Repl {
     const col = this._promptCol + this._cursorPos;
     if (col >= this.screen.cols) return;
     if (this._cursorVisible) {
-      this.screen.buffer[row][col] = { char: '\u2588', color: this.screen.globalColor };
+      this.screen.setCellChar(row, col, '\u2588');
     } else {
       const ch = this._cursorPos < this._inputBuffer.length ? this._inputBuffer[this._cursorPos] : ' ';
-      this.screen.buffer[row][col] = { char: ch, color: this.screen.globalColor };
+      this.screen.setCellChar(row, col, ch);
     }
     this.screen.render();
   }
@@ -110,7 +110,7 @@ class Repl {
     const col = this._promptCol + this._cursorPos;
     if (col < this.screen.cols) {
       const ch = this._cursorPos < this._inputBuffer.length ? this._inputBuffer[this._cursorPos] : ' ';
-      this.screen.buffer[row][col] = { char: ch, color: this.screen.globalColor };
+      this.screen.setCellChar(row, col, ch);
     }
   }
 
@@ -119,12 +119,12 @@ class Repl {
     for (let i = 0; i < this._inputBuffer.length; i++) {
       const col = this._promptCol + i;
       if (col < this.screen.cols) {
-        this.screen.buffer[row][col] = { char: this._inputBuffer[i], color: this.screen.globalColor };
+        this.screen.setCellChar(row, col, this._inputBuffer[i]);
       }
     }
     // Clear any trailing characters
     for (let col = this._promptCol + this._inputBuffer.length; col < this.screen.cols; col++) {
-      this.screen.buffer[row][col] = { char: ' ', color: this.screen.globalColor };
+      this.screen.setCellChar(row, col, ' ');
     }
   }
 
@@ -317,7 +317,7 @@ class Repl {
     this._clearCursor();
     const row = this.screen.cursorRow;
     for (let c = this._promptCol; c < this.screen.cols; c++) {
-      this.screen.buffer[row][c] = { char: ' ', color: this.screen.globalColor };
+      this.screen.setCellChar(row, c, ' ');
     }
     // Write new input
     this._inputBuffer = text.slice(0, this.screen.cols - this._promptCol - 1);

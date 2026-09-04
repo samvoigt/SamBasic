@@ -211,9 +211,21 @@ PRINT "Hello"                          ' prints + newline
 PRINT "Score: " + score#              ' auto-coerces number
 PRINTAT 5, 10, "Hi"                    ' row 5, col 10 (1-indexed)
 PRINTAT 1, 1, "Red!" COLOR RED&        ' inline color
+PRINTAT 1, 1, "Bar" BACKGROUND BLUE&   ' inline background color
 MOVECURSOR 3, 1                        ' move cursor (1-indexed)
-CLEARSCREEN                            ' clear all text
+CLEARSCREEN                            ' clear all text (keeps the screen background)
 ```
+
+Backgrounds:
+
+```
+SETSCREENBACKGROUND BLUE&              ' fill the whole screen
+SETBACKGROUND LIGHTGRAY&               ' default background for later prints
+SETBACKGROUND NONE                     ' back to transparent
+```
+
+Cells with no background of their own are transparent, so the screen background shows
+through. See [color-reference.md](color-reference.md) for the full model.
 
 Screen is **80 columns x 25 rows**. Text wraps and scrolls automatically.
 

@@ -28,6 +28,12 @@ const VGA_PALETTE = (() => {
 const COLS = 80;
 const ROWS = 25;
 
+// All screen cells are built here so new fields can't be missed by a caller.
+// bg === null means transparent: the screen background shows through.
+function makeCell(char = ' ', color = DEFAULT_COLOR, bg = null) {
+  return { char, color, bg };
+}
+
 class Screen {
   constructor(el) {
     this.el = el;
@@ -36,6 +42,8 @@ class Screen {
     this.cursorRow = 0;
     this.cursorCol = 0;
     this.globalColor = DEFAULT_COLOR;
+    this.globalBg = null;    // SETBACKGROUND - default bg for subsequent prints
+    this.screenBg = null;    // SETSCREENBACKGROUND - the field behind transparent cells
     this.buffer = [];
 
     // Graphics state
@@ -58,20 +66,31 @@ class Screen {
     for (let r = 0; r < this.rows; r++) {
       const row = [];
       for (let c = 0; c < this.cols; c++) {
-        row.push({ char: ' ', color: DEFAULT_COLOR });
+        row.push(makeCell());
       }
       buf.push(row);
     }
     return buf;
   }
 
+  // CLEARSCREEN. Deliberately preserves screenBg: the field is a property of the
+  // screen, not of the text on it, so clearing fills with the field rather than
+  // wiping it. Use reset() to drop the field as well.
   clear() {
     this.globalColor = DEFAULT_COLOR;
+    this.globalBg = null;
     this.buffer = this._makeEmptyTextBuffer();
     this.cursorRow = 0;
     this.cursorCol = 0;
     this.resetGraphics();
     this.render();
+  }
+
+  // Full reset for a new program run or a machine reset: clear() plus the field.
+  reset() {
+    this.screenBg = null;
+    if (this.el) this.el.style.background = '';
+    this.clear();
   }
 
   resetGraphics() {
@@ -149,10 +168,11 @@ class Screen {
     if (this.backTextBuffer) {
       for (let r = 0; r < this.rows; r++) {
         for (let c = 0; c < this.cols; c++) {
-          this.buffer[r][c] = {
-            char: this.backTextBuffer[r][c].char,
-            color: this.backTextBuffer[r][c].color,
-          };
+          this.buffer[r][c] = makeCell(
+            this.backTextBuffer[r][c].char,
+            this.backTextBuffer[r][c].color,
+            this.backTextBuffer[r][c].bg,
+          );
         }
       }
     }
@@ -172,12 +192,37 @@ class Screen {
     this.globalColor = hexStr;
   }
 
+  // SETBACKGROUND - default background for subsequent prints. null = transparent.
+  setBackground(hexOrNull) {
+    this.globalBg = hexOrNull;
+  }
+
+  // SETSCREENBACKGROUND - the field. Not stored per cell: one inline CSS background
+  // that shows through wherever a cell's bg is null. Must repaint itself, since it
+  // changes no cell.
+  setScreenBackground(hexOrNull) {
+    this.screenBg = hexOrNull;
+    if (this.el) this.el.style.background = hexOrNull || '';
+    this.render();
+  }
+
+  // Overwrite a cell's character while preserving whatever background is under it.
+  // Used by INPUT$ and the REPL, which would otherwise punch holes in a colored field.
+  setCellChar(row, col, ch, color) {
+    const rowCells = this.buffer[row];
+    if (!rowCells) return;
+    const cell = rowCells[col];
+    if (!cell) return;
+    cell.char = ch;
+    cell.color = color || this.globalColor;
+  }
+
   scroll() {
     const buf = this._activeTextBuffer;
     buf.shift();
     const row = [];
     for (let c = 0; c < this.cols; c++) {
-      row.push({ char: ' ', color: this.globalColor });
+      row.push(makeCell(' ', this.globalColor));
     }
     buf.push(row);
   }
@@ -203,31 +248,32 @@ class Screen {
     }
   }
 
-  writeChar(ch, color) {
+  writeChar(ch, color, bg) {
     const c = color || this.globalColor;
+    const b = bg === undefined ? this.globalBg : bg;
     if (ch === '\n') {
       this.newline();
       return;
     }
     const buf = this._activeTextBuffer;
     if (this.cursorRow < this.rows && this.cursorCol < this.cols) {
-      buf[this.cursorRow][this.cursorCol] = { char: ch, color: c };
+      buf[this.cursorRow][this.cursorCol] = makeCell(ch, c, b);
     }
     this.advanceCursor();
   }
 
-  print(text, color) {
+  print(text, color, bg) {
     const str = String(text);
     for (const ch of str) {
-      this.writeChar(ch, color);
+      this.writeChar(ch, color, bg);
     }
     this.newline();
   }
 
-  printInline(text, color) {
+  printInline(text, color, bg) {
     const str = String(text);
     for (const ch of str) {
-      this.writeChar(ch, color);
+      this.writeChar(ch, color, bg);
     }
   }
 
@@ -238,17 +284,18 @@ class Screen {
     if (c >= 0 && c < this.cols) this.cursorCol = c;
   }
 
-  printAt(row, col, text, color) {
+  printAt(row, col, text, color, bg) {
     const r = row - 1;
     const c = col - 1;
     if (r < 0 || r >= this.rows || c < 0) return;
     const clr = color || this.globalColor;
+    const bgc = bg === undefined ? this.globalBg : bg;
     const str = String(text);
     const buf = this._activeTextBuffer;
     let writeCol = c;
     for (const ch of str) {
       if (writeCol >= this.cols) break;
-      buf[r][writeCol] = { char: ch, color: clr };
+      buf[r][writeCol] = makeCell(ch, clr, bgc);
       writeCol++;
     }
     this.cursorRow = r;
@@ -263,15 +310,21 @@ class Screen {
       while (i < this.cols) {
         const cell = this.buffer[r][i];
         const color = cell.color;
+        const bg = cell.bg;
         let run = '';
-        while (i < this.cols && this.buffer[r][i].color === color) {
+        while (i < this.cols &&
+               this.buffer[r][i].color === color &&
+               this.buffer[r][i].bg === bg) {
           run += this.escapeHtml(this.buffer[r][i].char);
           i++;
         }
-        if (color === DEFAULT_COLOR) {
+        if (color === DEFAULT_COLOR && bg === null) {
           line += run;
         } else {
-          line += `<span style="color:${color}">${run}</span>`;
+          let style = '';
+          if (color !== DEFAULT_COLOR) style += `color:${color};`;
+          if (bg !== null) style += `background-color:${bg};`;
+          line += `<span style="${style}">${run}</span>`;
         }
       }
       lines.push(line);

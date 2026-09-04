@@ -281,7 +281,7 @@ btnReset.addEventListener('click', async () => {
       interpreter.stop();
     }
     audio.stopBackground();
-    crtScreen.clear();
+    crtScreen.reset();
     repl.deactivate();
     repl.resetState();
     setRunning(false);
@@ -649,7 +649,7 @@ async function runBootSequence() {
 
   } finally {
     setResetLed(false);
-    crtScreen.clear();
+    crtScreen.reset();
   }
 }
 

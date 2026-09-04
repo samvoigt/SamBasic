@@ -177,7 +177,7 @@ class Interpreter {
 
   _colorStructToHex(obj, line) {
     if (typeof obj !== 'object' || obj === null) {
-      throw new Error(`SETCOLOR/COLOR requires a color struct with .r#, .g#, .b# members${line ? ' at line ' + line : ''}`);
+      throw new Error(`SETCOLOR/SETBACKGROUND/COLOR/BACKGROUND requires a color struct with .r#, .g#, .b# members${line ? ' at line ' + line : ''}`);
     }
     const r = Math.max(0, Math.min(255, Math.floor(obj['r#'] || 0)));
     const g = Math.max(0, Math.min(255, Math.floor(obj['g#'] || 0)));
@@ -199,7 +199,7 @@ class Interpreter {
   async run() {
     this.running = true;
     this.paused = false;
-    this.screen.clear();
+    this.screen.reset();
     this.pc = 0;
     this._stmtCount = 0;
     this._startTime = performance.now();
@@ -807,7 +807,11 @@ class Interpreter {
         if (stmt.withColor) {
           color = this._colorStructToHex(await this.evalExpr(stmt.withColor), stmt.line);
         }
-        this.screen.print(val, color);
+        let bg;
+        if (stmt.withBg) {
+          bg = this._colorStructToHex(await this.evalExpr(stmt.withBg), stmt.line);
+        }
+        this.screen.print(val, color, bg);
         this.screen.render();
         break;
       }
@@ -825,7 +829,11 @@ class Interpreter {
         if (stmt.withColor) {
           color = this._colorStructToHex(await this.evalExpr(stmt.withColor), stmt.line);
         }
-        this.screen.printAt(row, col, val, color);
+        let bg;
+        if (stmt.withBg) {
+          bg = this._colorStructToHex(await this.evalExpr(stmt.withBg), stmt.line);
+        }
+        this.screen.printAt(row, col, val, color, bg);
         this.screen.render();
         break;
       }
@@ -969,6 +977,21 @@ class Interpreter {
       case 'setcolor': {
         const colorVal = await this.evalExpr(stmt.expr);
         this.screen.setColor(this._colorStructToHex(colorVal, stmt.line));
+        break;
+      }
+      case 'setbackground': {
+        // SETBACKGROUND NONE parses to a null expression: transparent.
+        if (stmt.expr === null) {
+          this.screen.setBackground(null);
+        } else {
+          const bgVal = await this.evalExpr(stmt.expr);
+          this.screen.setBackground(this._colorStructToHex(bgVal, stmt.line));
+        }
+        break;
+      }
+      case 'setscreenbackground': {
+        const bgVal = await this.evalExpr(stmt.expr);
+        this.screen.setScreenBackground(this._colorStructToHex(bgVal, stmt.line));
         break;
       }
       case 'beep': {
@@ -1838,7 +1861,7 @@ class Interpreter {
             this._inputBuffer = this._inputBuffer.slice(0, -1);
             // Clear the character
             const col = cursorStartCol + this._inputBuffer.length;
-            this.screen.buffer[cursorRow][col] = { char: ' ', color: this.screen.globalColor };
+            this.screen.setCellChar(cursorRow, col, ' ');
             this._showInputCursor(cursorRow, col);
             this.screen.render();
           }
@@ -1850,7 +1873,7 @@ class Interpreter {
           const col = cursorStartCol + this._inputBuffer.length;
           if (col < this.screen.cols - 1) {
             this._inputBuffer += e.key;
-            this.screen.buffer[cursorRow][col] = { char: e.key, color: this.screen.globalColor };
+            this.screen.setCellChar(cursorRow, col, e.key);
             this._showInputCursor(cursorRow, col + 1);
             this.screen.render();
           }
@@ -1864,14 +1887,14 @@ class Interpreter {
 
   _showInputCursor(row, col) {
     if (col < this.screen.cols) {
-      this.screen.buffer[row][col] = { char: '\u2588', color: this.screen.globalColor };
+      this.screen.setCellChar(row, col, '\u2588');
       this.screen.render();
     }
   }
 
   _clearInputCursor(row, col) {
     if (col < this.screen.cols) {
-      this.screen.buffer[row][col] = { char: ' ', color: this.screen.globalColor };
+      this.screen.setCellChar(row, col, ' ');
     }
   }
 

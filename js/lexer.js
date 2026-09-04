@@ -3,6 +3,7 @@ const KEYWORDS = new Set([
   'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'END',
   'FOR', 'FROM', 'TO', 'STEP',
   'WHILE', 'LOOP', 'WHEN', 'SETCOLOR', 'BEEP', 'PLAY',
+  'SETBACKGROUND', 'SETSCREENBACKGROUND',
   'AND', 'OR', 'NOT',
   'SINE', 'SQUARE', 'SAWTOOTH', 'TRIANGLE',
   'PLAYPOLY',
