@@ -138,9 +138,9 @@ Single-line syntax continues to work unchanged.
 
 | Statement | Example | Notes |
 |-----------|---------|-------|
-| `APPEND` | `APPEND items@, value` | Add to end |
-| `INSERT` | `INSERT items@, 2, value` | Insert at index (1-based) |
-| `REMOVE` | `REMOVE items@, 3` | Remove at index (1-based) |
+| `APPEND` | `APPEND items@ value` | Add to end |
+| `INSERT` | `INSERT items@ 2, value` | Insert at index (1-based) |
+| `REMOVE` | `REMOVE items@ 3` | Remove at index (1-based) |
 | `SORT` | `SORT items@` | Sort ascending in place |
 | `SORT` | `SORT DESCENDING items@` | Sort descending |
 | `LENGTH#` | `n# = LENGTH# items@` | Number of elements |
@@ -198,7 +198,7 @@ Defaults: `#` → 0, `$` → `""`, `@` → `[]`, `&` → `{}`, `?` → 0.
 
 ```
 FUNCTION fill arr@, REFERENCE val#
-  APPEND arr@, val#
+  APPEND arr@ val#
 END FUNCTION
 ```
 

@@ -248,7 +248,7 @@ PRINT LENGTH# scores@    ' 4
 scores@[2] = 99
 
 ' Add to the end
-APPEND scores@, 42
+APPEND scores@ 42
 
 ' Loop through all items
 FOR i# FROM 1 TO LENGTH# scores@

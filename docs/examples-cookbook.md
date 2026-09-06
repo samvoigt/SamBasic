@@ -61,9 +61,9 @@ FOR i# FROM 1 TO LENGTH# names@
 END FOR
 
 ' Modify
-APPEND names@, "Diana"
-INSERT names@, 2, "Zoe"
-REMOVE names@, 1
+APPEND names@ "Diana"
+INSERT names@ 2, "Zoe"
+REMOVE names@ 1
 SORT names@
 ```
 
@@ -136,7 +136,7 @@ PRINT greet$ NAME "World"
 
 ```
 FUNCTION addItem list@, REFERENCE item$
-  APPEND list@, item$
+  APPEND list@ item$
 END FUNCTION
 
 items@ = []
