@@ -152,6 +152,14 @@ x# = SIGN# -42                ' -1
 
 `SQRT#` errors if the value is negative. `LOG#` errors if the value is not positive. `SIN#` and `COS#` use radians. `SIGN#` returns -1, 0, or 1.
 
+### Collision Detection
+
+```
+hit? = BOXCOLLIDES? X1 0, Y1 0, W1 50, H1 50, X2 30, Y2 30, W2 50, H2 50
+```
+
+`BOXCOLLIDES?` returns `YES` if two axis-aligned rectangles overlap. Each box is defined by its top-left corner (X, Y) and dimensions (W, H).
+
 ### Control Flow
 
 **If / Else If / Else:**
