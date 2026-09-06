@@ -172,6 +172,15 @@ WHILE x# < 100
 END WHILE
 ```
 
+**Loop (do-while):**
+```
+LOOP
+  PRINT "enter a number > 10"
+  x# = INPUT$
+END LOOP WHEN x# > 10
+```
+The body executes at least once. The `WHEN` condition is checked after each pass — if true, the loop exits; if false, it repeats. `WHEN` must be on the same line as `END LOOP`.
+
 **Break and Continue:**
 ```
 FOR i# FROM 1 TO 100
