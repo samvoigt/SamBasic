@@ -49,6 +49,10 @@ class Screen {
     // Graphics state
     this.graphicsEnabled = false;
     this.bufferEnabled = false;
+
+    // Render coalescing: many writes per frame, one DOM rebuild.
+    this._renderPending = false;
+    this._renderFrame = null;
     this.frontCanvas = null;
     this.frontCtx = null;
     this.backCanvas = null;
@@ -176,7 +180,7 @@ class Screen {
         }
       }
     }
-    this._doRender();
+    this.renderNow();
   }
 
   clearBuffer(colorHex) {
@@ -332,8 +336,47 @@ class Screen {
     this.el.innerHTML = lines.join('\n');
   }
 
+  // "The screen changed." Cheap and idempotent: at most one rebuild per frame,
+  // however many times this is called. The browser only paints when JavaScript
+  // yields, so rebuilding on every write just discarded work nobody saw.
   render() {
     if (this.bufferEnabled) return;
+    this._scheduleRender();
+  }
+
+  _scheduleRender() {
+    if (this._renderPending) return;
+    if (typeof requestAnimationFrame !== 'function') {
+      this._doRender();
+      return;
+    }
+    this._renderPending = true;
+    const flush = () => {
+      this._renderPending = false;
+      this._renderFrame = null;
+      this._doRender();
+    };
+    // Browsers pause requestAnimationFrame in hidden tabs. Frames are deferred,
+    // not dropped, so the screen would still catch up on return - but until then
+    // the DOM would not reflect the buffer, which is a surprising contract for
+    // anything reading the screen. Fall back to a timer while hidden.
+    if (typeof document !== 'undefined' && document.hidden) {
+      this._renderFrame = null;
+      setTimeout(flush, 0);
+      return;
+    }
+    this._renderFrame = requestAnimationFrame(flush);
+  }
+
+  // "The screen must be correct right now." Cancels any pending frame so the
+  // rebuild happens once, not twice.
+  renderNow() {
+    if (this._renderPending && this._renderFrame !== null &&
+        typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this._renderFrame);
+    }
+    this._renderPending = false;
+    this._renderFrame = null;
     this._doRender();
   }
 

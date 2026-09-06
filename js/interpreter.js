@@ -340,6 +340,7 @@ class Interpreter {
 
     this._closeAllFiles();
     this.running = false;
+    this.screen.renderNow();   // the program's last output must be on screen
   }
 
   async execRepl(ast, labels, functions) {
@@ -441,6 +442,7 @@ class Interpreter {
       this._keyWaitResolve = null;
       resolve();
     }
+    this.screen.renderNow();   // leave the halted screen in its last state
   }
 
   _closeAllFiles() {
