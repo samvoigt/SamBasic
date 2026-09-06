@@ -531,6 +531,9 @@ DRAWBOX 10, 10, 100, 80, YES         ' Filled rectangle (FILL YES/NO)
 DRAWBOX 10, 10, 100, 80              ' Outline only (FILL defaults to NO)
 DRAWCIRCLE 320, 240, 50, YES         ' Filled circle (X, Y, RADIUS, FILL)
 DRAWCIRCLE 320, 240, 50              ' Outline only
+DRAWPATH POINTS pts@                  ' Draw connected line segments from [[x,y], ...] array
+DRAWPATH POINTS pts@, FILL YES        ' Filled polygon
+DRAWPATH POINTS pts@, CLOSE YES       ' Close path back to first point
 ```
 
 All draw commands support named parameters:
@@ -577,8 +580,24 @@ FOR r# FROM 1 TO 4
 END FOR
 id# = CREATESPRITE# rows@
 
-DRAWSPRITE SPRITE id#, X 100, Y 50   ' Draw sprite at pixel position
+DRAWSPRITE SPRITE id#, X 100, Y 50              ' Draw sprite at pixel position
+DRAWSPRITE SPRITE id#, X 100, Y 50, SCALE 2     ' Draw scaled (uniform)
+DRAWSPRITE SPRITE id#, X 100, Y 50, FLIPH YES   ' Flip horizontally
+DRAWSPRITE SPRITE id#, X 0, Y 0, FLIPV YES, SCALEX 2, SCALEY 1.5, ANGLE 45
 ```
+
+Additional sprite parameters: `SCALE` (uniform), `SCALEX`/`SCALEY` (independent), `FLIPH`/`FLIPV` (mirror), `ANGLE` (rotation in degrees).
+
+**Sprite sheets and files:**
+```
+ids@ = CREATESPRITESHEET@ DATA pixels@, TILEWIDTH 16, TILEHEIGHT 16
+id# = LOADSPRITE# FILE "player.spr"
+ids@ = LOADSPRITESHEET@ FILE "tiles.spr", TILEWIDTH 16, TILEHEIGHT 16
+w# = SPRITEWIDTH# SPRITE id#
+h# = SPRITEHEIGHT# SPRITE id#
+```
+
+`CREATESPRITESHEET@` divides a 2D color array into tiles and returns an array of sprite IDs. `LOADSPRITE#` and `LOADSPRITESHEET@` load from `.spr` files stored in the local filesystem.
 
 **Reset behavior:** When a program starts (or `CLEARSCREEN` is called), all graphics state is reset — the canvas is hidden, buffering is disabled, and sprites are cleared.
 
