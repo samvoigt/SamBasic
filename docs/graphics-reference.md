@@ -190,7 +190,7 @@ frameCount# = LENGTH# walkFrames@
 BUFFERENABLED YES
 WHILE 1 = 1
   IF RUNNINGTIME# - lastAnim# > 150 THEN
-    frame# = frame# MOD frameCount# + 1
+    frame# = frame# % frameCount# + 1
     lastAnim# = RUNNINGTIME#
   END IF
   CLEARBUFFER

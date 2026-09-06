@@ -299,9 +299,11 @@ function parse(tokens, existingFunctions) {
 
   // --- Built-in keyword argument helpers ---
 
-  function parseKeywordArgs() {
+  function parseKeywordArgs(paramDefs) {
+    const limit = paramDefs ? paramDefs.length : Infinity;
     const args = [];
     while (!atLineEnd()) {
+      if (args.length >= limit && peek().type !== 'IDENT') break;
       if (peek().type === 'IDENT' && !isKnownFunction(peek())) {
         const label = advance().value.toUpperCase();
         const value = parseExpr();
@@ -1427,6 +1429,7 @@ function parse(tokens, existingFunctions) {
   };
 
   function parseAssignBuiltinKeyword(varToken, line) {
+    const startPos = pos;
     const kw = advance(); // consume the keyword
     const keyword = kw.value;
     const paramDefs = BUILTIN_KEYWORD_PARAMS[keyword];
@@ -1438,7 +1441,26 @@ function parse(tokens, existingFunctions) {
       mode = advance().value.toUpperCase();
     }
 
-    const args = parseKeywordArgs();
+    const args = parseKeywordArgs(paramDefs);
+
+    // Nothing was left for the call to absorb, yet the line continues with an
+    // operator: the arithmetic applies to the result, not to an argument.
+    // Rewind and let the expression parser handle the whole right-hand side,
+    // where a built-in call binds as an atom.
+    if (args.length < paramDefs.length + 1 &&
+        (peek().type === 'OP' || peek().type === 'COMPARE')) {
+      pos = startPos;
+      const value = parseExpr();
+      if (varToken.type === 'NUM_VAR') return { type: 'assign_num', name: varToken.value, value, line };
+      if (varToken.type === 'BOOL_VAR') return { type: 'assign_bool', name: varToken.value, value, line };
+      if (varToken.type === 'STR_VAR') return { type: 'assign_str', name: varToken.value, value, line };
+      // Arrays and structs have no such form; restore and report normally.
+      pos = startPos;
+      advance();
+      const reArgs = parseKeywordArgs(paramDefs);
+      resolveBuiltinArgs(reArgs, paramDefs, line);
+    }
+
     const resolved = resolveBuiltinArgs(args, paramDefs, line);
 
     const varTypeMap = { 'NUM_VAR': 'num', 'STR_VAR': 'str', 'BOOL_VAR': 'bool', 'STRUCT_VAR': 'struct', 'ARR_VAR': 'arr' };

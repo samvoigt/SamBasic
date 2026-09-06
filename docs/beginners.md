@@ -308,7 +308,7 @@ FUNCTION shout$ text$
   RETURN text$ + "!!!"
 END FUNCTION
 
-PRINT shout$ "wow"      ' wow!!!
+PRINT (shout$ "wow")    ' wow!!!
 ```
 
 Functions with no return value have no symbol:

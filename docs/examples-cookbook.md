@@ -112,10 +112,10 @@ FUNCTION factorial# n#
   IF n# <= 1 THEN
     RETURN 1
   END IF
-  RETURN n# * factorial# n# - 1
+  RETURN n# * (factorial# n# - 1)
 END FUNCTION
 
-PRINT factorial# 5    ' 120
+PRINT (factorial# 5)    ' 120
 ```
 
 ## Function with Named Parameters
@@ -128,8 +128,8 @@ FUNCTION greet$ NAME n$, OPTIONAL TITLE t$
   RETURN "Hello, " + t$ + " " + n$ + "!"
 END FUNCTION
 
-PRINT greet$ NAME "Smith", TITLE "Dr."
-PRINT greet$ NAME "World"
+PRINT (greet$ NAME "Smith", TITLE "Dr.")
+PRINT (greet$ NAME "World")
 ```
 
 ## Function with REFERENCE
