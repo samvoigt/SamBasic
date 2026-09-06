@@ -431,6 +431,28 @@ STOPPLAY                          ' Stop background audio
 
 **PLAY string syntax:** Notes `A`-`G`, sharps `#`/`+`, flats `-`, octave `O4`, length `L8`, tempo `T120`, rest `R4`, percussion `P4` (white noise hit), dotted notes `.`, octave up/down `>`/`<`.
 
+**Synthesizer** — create and manipulate individual tone channels for real-time audio:
+```
+tone# = GENERATETONE# FREQ 440, WAVE SINE   ' Create tone (SINE/SQUARE/SAWTOOTH/TRIANGLE)
+tone# = GENERATETONE# FREQ 440, WAVE "NOISE" ' White noise (as a string, not a keyword)
+TONEON tone#                                ' Start playing
+TONEOFF tone#                               ' Stop playing
+
+TONEFREQ tone#, 880                         ' Set frequency
+TONEFREQ tone#, 880, 0.5                    ' Glide to frequency over 0.5 seconds
+TONEWAVE tone#, SQUARE                      ' Change waveform
+TONEVOLUME tone#, 0.5                       ' Set volume (0–1)
+TONEDETUNE tone#, 50                        ' Detune in cents
+
+TONEENVELOPE tone#, 0.1, 0.2, 0.7, 0.5    ' ADSR: attack, decay, sustain, release
+TONEFILTER tone#, "LOWPASS", 2000, 5        ' Filter type, cutoff Hz, resonance
+                                            ' Types: "LOWPASS", "HIGHPASS", "BANDPASS", "NONE"
+
+DELETETONE tone#                            ' Delete a tone channel
+CLEARTONES                                  ' Delete all tone channels
+SYNTHVOLUME 0.8                             ' Set master synth volume (0–1)
+```
+
 ### Other
 
 ```
