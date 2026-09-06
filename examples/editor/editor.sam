@@ -1,0 +1,289 @@
+' ============================================================
+'  EDITOR.SAM - a QBASIC EDIT.COM-style text editor
+'  Phase 1: chrome, document model, cursor movement.
+'  No editing yet - typing arrives in Phase 2.
+' ============================================================
+'
+' House rules this file follows, all of them learned the hard way:
+'   - Arithmetic inside a nested built-in's argument needs parentheses:
+'       MIN# PAGE_COLS#, (LENGTH# line$ - leftCol# + 1)
+'   - In an assignment, parenthesise a built-in call if anything follows it:
+'       cursorCol# = (LENGTH# line$) + 1
+'   - Array statements take no comma after the array: APPEND lines@ value
+'   - WHEN must sit on the same line as END LOOP
+
+' ============ LAYOUT ============
+MENU_ROW# = 1
+TOP_BORDER_ROW# = 2
+TEXT_TOP# = 3
+TEXT_BOTTOM# = 22
+BOTTOM_BORDER_ROW# = 23
+STATUS_ROW# = 25
+
+TEXT_LEFT# = 2
+TEXT_RIGHT# = 79
+PAGE_ROWS# = 20
+PAGE_COLS# = 78
+SCROLLBAR_COL# = 80
+
+HSCROLL_LEFT# = 4
+HSCROLL_RIGHT# = 76
+
+' ============ DOCUMENT ============
+lines@ = []
+APPEND lines@ "' Welcome to EDITOR.SAM"
+APPEND lines@ "'"
+APPEND lines@ "' Phase 1: the frame, the document and the cursor."
+APPEND lines@ "' Arrow keys, Home, End, PgUp and PgDn all move."
+APPEND lines@ "' Typing arrives in Phase 2. ESC quits."
+APPEND lines@ ""
+APPEND lines@ "' This next line is deliberately far wider than the 78 columns the"
+APPEND lines@ "' window can show, so that horizontal scrolling has something to do:"
+APPEND lines@ "' ....+....1....+....2....+....3....+....4....+....5....+....6....+....7....+....8....+....9....+...10 <- end"
+APPEND lines@ ""
+FOR i# FROM 1 TO 30
+  APPEND lines@ ("' filler line " + TOSTRING$ i#)
+END FOR
+
+filename$ = ""
+modified? = NO
+
+' ============ VIEW ============
+cursorRow# = 1
+cursorCol# = 1
+topLine# = 1
+leftCol# = 1
+desiredCol# = 1
+insertMode? = YES
+blinkOn? = YES
+quit? = NO
+maxVisibleLen# = 1
+
+' ============ CURSOR AND SCROLLING ============
+
+' The cursor is always inside the document, and may sit one column past the
+' end of a line - that is where Phase 2 will append.
+FUNCTION clampCursor
+  IF cursorRow# < 1 THEN
+    cursorRow# = 1
+  END IF
+  IF cursorRow# > (LENGTH# lines@) THEN
+    cursorRow# = LENGTH# lines@
+  END IF
+  cur$ = lines@[cursorRow#]
+  IF cursorCol# < 1 THEN
+    cursorCol# = 1
+  END IF
+  maxCol# = (LENGTH# cur$) + 1
+  IF cursorCol# > maxCol# THEN
+    cursorCol# = maxCol#
+  END IF
+END FUNCTION
+
+' The only place topLine# and leftCol# ever change.
+FUNCTION scrollIntoView
+  IF cursorRow# < topLine# THEN
+    topLine# = cursorRow#
+  END IF
+  IF cursorRow# > (topLine# + PAGE_ROWS# - 1) THEN
+    topLine# = cursorRow# - PAGE_ROWS# + 1
+  END IF
+  IF topLine# < 1 THEN
+    topLine# = 1
+  END IF
+  IF cursorCol# < leftCol# THEN
+    leftCol# = cursorCol#
+  END IF
+  IF cursorCol# > (leftCol# + PAGE_COLS# - 1) THEN
+    leftCol# = cursorCol# - PAGE_COLS# + 1
+  END IF
+  IF leftCol# < 1 THEN
+    leftCol# = 1
+  END IF
+END FUNCTION
+
+' ============ DRAWING ============
+
+FUNCTION drawMenuBar
+  FILLTEXT MENU_ROW#, 1, MENU_ROW#, 80 BACKGROUND LIGHTGRAY&
+  PRINTAT MENU_ROW#, 2, "File  Edit  Search  Options" COLOR BLACK& BACKGROUND LIGHTGRAY&
+END FUNCTION
+
+FUNCTION drawFrame
+  titleText$ = "UNTITLED"
+  IF filename$ <> "" THEN
+    titleText$ = filename$
+  END IF
+  IF modified? THEN
+    titleText$ = titleText$ + " *"
+  END IF
+  title$ = " " + titleText$ + " "
+  titleCol# = 1 + FLOOR# ((80 - LENGTH# title$) / 2)
+  PRINTAT TOP_BORDER_ROW#, 1, "╔" + REPEAT$ "═", 78 + "╗" COLOR WHITE&
+  PRINTAT TOP_BORDER_ROW#, titleCol#, title$ COLOR WHITE&
+  PRINTAT BOTTOM_BORDER_ROW#, 1, "╚" + REPEAT$ "═", 78 + "╝" COLOR WHITE&
+END FUNCTION
+
+FUNCTION drawText
+  ' Clear the field first, or short lines leave the previous frame behind.
+  FILLTEXT TEXT_TOP#, 1, TEXT_BOTTOM#, 80, " "
+  FILLTEXT TEXT_TOP#, 1, TEXT_BOTTOM#, 1, "║" COLOR WHITE&
+  maxVisibleLen# = 1
+  FOR r# FROM 0 TO PAGE_ROWS# - 1
+    docLine# = topLine# + r#
+    IF docLine# <= (LENGTH# lines@) THEN
+      line$ = lines@[docLine#]
+      len# = LENGTH# line$
+      IF len# > maxVisibleLen# THEN
+        maxVisibleLen# = len#
+      END IF
+      IF len# >= leftCol# THEN
+        visible$ = SUBSTRING$ line$, leftCol#, MIN# PAGE_COLS#, (len# - leftCol# + 1)
+        PRINTAT TEXT_TOP# + r#, TEXT_LEFT#, visible$ COLOR LIGHTGRAY&
+      END IF
+    END IF
+  END FOR
+END FUNCTION
+
+FUNCTION drawScrollbars
+  ' Vertical: column 80 replaces the right border, as in QBasic.
+  PRINTAT TEXT_TOP#, SCROLLBAR_COL#, "▲" COLOR WHITE&
+  PRINTAT TEXT_BOTTOM#, SCROLLBAR_COL#, "▼" COLOR WHITE&
+  trackTop# = TEXT_TOP# + 1
+  trackBottom# = TEXT_BOTTOM# - 1
+  FILLTEXT trackTop#, SCROLLBAR_COL#, trackBottom#, SCROLLBAR_COL#, "░" COLOR WHITE&
+  maxTop# = MAX# 1, ((LENGTH# lines@) - PAGE_ROWS# + 1)
+  vfrac# = 0
+  IF maxTop# > 1 THEN
+    vfrac# = (topLine# - 1) / (maxTop# - 1)
+  END IF
+  thumbRow# = trackTop# + FLOOR# (vfrac# * (trackBottom# - trackTop#))
+  PRINTAT thumbRow#, SCROLLBAR_COL#, "█" COLOR WHITE&
+
+  ' Horizontal: inside the bottom border.
+  PRINTAT BOTTOM_BORDER_ROW#, HSCROLL_LEFT#, "◄" COLOR WHITE&
+  PRINTAT BOTTOM_BORDER_ROW#, HSCROLL_RIGHT#, "►" COLOR WHITE&
+  htrackLeft# = HSCROLL_LEFT# + 1
+  htrackRight# = HSCROLL_RIGHT# - 1
+  FILLTEXT BOTTOM_BORDER_ROW#, htrackLeft#, BOTTOM_BORDER_ROW#, htrackRight#, "░" COLOR WHITE&
+  maxLeft# = MAX# 1, (maxVisibleLen# - PAGE_COLS# + 1)
+  hfrac# = 0
+  IF maxLeft# > 1 THEN
+    hfrac# = (leftCol# - 1) / (maxLeft# - 1)
+  END IF
+  thumbCol# = htrackLeft# + FLOOR# (hfrac# * (htrackRight# - htrackLeft#))
+  PRINTAT BOTTOM_BORDER_ROW#, thumbCol#, "█" COLOR WHITE&
+END FUNCTION
+
+FUNCTION drawStatus
+  FILLTEXT STATUS_ROW#, 1, STATUS_ROW#, 80 BACKGROUND LIGHTGRAY&
+  PRINTAT STATUS_ROW#, 2, "ESC=Quit" COLOR BLACK& BACKGROUND LIGHTGRAY&
+  mode$ = "OVR"
+  IF insertMode? THEN
+    mode$ = "INS"
+  END IF
+  info$ = "Ln " + TOSTRING$ cursorRow# + "   Col " + TOSTRING$ cursorCol# + "   " + mode$
+  PRINTAT STATUS_ROW#, 60, info$ COLOR BLACK& BACKGROUND LIGHTGRAY&
+END FUNCTION
+
+' Reprint the character under the cursor with its colours swapped, so the
+' cursor reads over text and over empty field alike.
+FUNCTION drawCursor
+  IF blinkOn? THEN
+    scrRow# = TEXT_TOP# + cursorRow# - topLine#
+    scrCol# = TEXT_LEFT# + cursorCol# - leftCol#
+    under$ = " "
+    IF cursorRow# <= (LENGTH# lines@) THEN
+      cl$ = lines@[cursorRow#]
+      IF cursorCol# <= (LENGTH# cl$) THEN
+        under$ = SUBSTRING$ cl$, cursorCol#, 1
+      END IF
+    END IF
+    PRINTAT scrRow#, scrCol#, under$ COLOR BLUE& BACKGROUND LIGHTGRAY&
+  END IF
+END FUNCTION
+
+FUNCTION draw
+  drawMenuBar
+  drawFrame
+  drawText
+  drawScrollbars
+  drawStatus
+  drawCursor
+END FUNCTION
+
+' ============ KEYS ============
+
+FUNCTION handleKey
+  vertical? = NO
+  IF keyName$ = "ArrowUp" THEN
+    cursorRow# = cursorRow# - 1
+    vertical? = YES
+  END IF
+  IF keyName$ = "ArrowDown" THEN
+    cursorRow# = cursorRow# + 1
+    vertical? = YES
+  END IF
+  IF keyName$ = "ArrowLeft" THEN
+    cursorCol# = cursorCol# - 1
+  END IF
+  IF keyName$ = "ArrowRight" THEN
+    cursorCol# = cursorCol# + 1
+  END IF
+  IF keyName$ = "Home" THEN
+    cursorCol# = 1
+  END IF
+  IF keyName$ = "End" THEN
+    endLine$ = lines@[cursorRow#]
+    cursorCol# = (LENGTH# endLine$) + 1
+  END IF
+  IF keyName$ = "PageUp" THEN
+    cursorRow# = cursorRow# - PAGE_ROWS#
+    vertical? = YES
+  END IF
+  IF keyName$ = "PageDown" THEN
+    cursorRow# = cursorRow# + PAGE_ROWS#
+    vertical? = YES
+  END IF
+  IF keyName$ = "Insert" THEN
+    insertMode? = NOT insertMode?
+  END IF
+  IF keyName$ = "Escape" THEN
+    quit? = YES
+  END IF
+  ' Moving down a column of short lines and back out again should return to
+  ' the column you were in, so vertical moves aim at desiredCol# and only
+  ' horizontal moves change it.
+  IF vertical? THEN
+    cursorCol# = desiredCol#
+  END IF
+  clampCursor
+  IF NOT vertical? THEN
+    desiredCol# = cursorCol#
+  END IF
+  scrollIntoView
+END FUNCTION
+
+' ============ MAIN ============
+
+SETSCREENBACKGROUND BLUE&
+CLEARSCREEN
+clampCursor
+scrollIntoView
+draw
+
+LOOP
+  k& = WAITKEY& TIMEOUT 0.4
+  keyName$ = k&.key$
+  IF keyName$ = "" THEN
+    blinkOn? = NOT blinkOn?
+  ELSE
+    blinkOn? = YES
+    handleKey
+  END IF
+  draw
+END LOOP WHEN quit?
+
+SETSCREENBACKGROUND BLACK&
+CLEARSCREEN
+PRINT "Editor closed."
