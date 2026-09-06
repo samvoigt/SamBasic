@@ -392,7 +392,7 @@ PRINT "Bar" COLOR BLACK& BACKGROUND LIGHTGRAY&   ' Inline, one print only
 Text with no background of its own is transparent, so the screen background shows through and
 `CLEARSCREEN` keeps the field. See [color-reference.md](docs/color-reference.md).
 
-Colors are structs with `.r#`, `.g#`, `.b#` members (0–255). The 16 EGA colors are built-in:
+Colors are structs with `.r#`, `.g#`, `.b#` members (0–255) and an optional `.a#` alpha channel (0–255, default 255). The 16 EGA colors are built-in:
 
 `BLACK&`, `BLUE&`, `GREEN&`, `CYAN&`, `RED&`, `MAGENTA&`, `BROWN&`, `LIGHTGRAY&`, `DARKGRAY&`, `LIGHTBLUE&`, `LIGHTGREEN&`, `LIGHTCYAN&`, `LIGHTRED&`, `LIGHTMAGENTA&`, `YELLOW&`, `WHITE&`
 
@@ -461,6 +461,7 @@ x# = RANDOM# MAX 50               ' Named parameter form
 SLEEP 2                            ' Pause execution for 2 seconds
 SLEEP 0.5                          ' Pause for 500ms (fractional seconds)
 t# = RUNNINGTIME#                  ' Milliseconds since program started
+ch$ = READSCREEN$ ROW 1, COLUMN 1 ' Read character from text grid position
 ```
 
 ### File I/O
