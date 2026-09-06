@@ -31,11 +31,15 @@ python utils/abc2play.py -i input.sam -o output.abc
 
 2. **Parser** (`js/parser.js`) — Recursive descent parser producing AST nodes. Expression precedence climbing from `parseExpr()` down through `parseOr/And/Not/Comparison/AddSub/MulDiv/Power/Unary/Atom`. Pre-pass collects function names for forward references. Built-in function params defined in `BUILTIN_KEYWORD_PARAMS`.
 
-3. **Interpreter** (`js/interpreter.js`) — Async execution loop with `execStmt()`/`evalExpr()`. Control flow via exception signals (`GotoSignal`, `BreakSignal`, `ContinueSignal`, `ReturnSignal`). Yields to event loop every 100 statements. Variables stored in separate maps by type (`numVars`, `strVars`, `arrVars`, `structVars`, `boolVars`).
+3. **Interpreter** (`js/interpreter.js`) — Async execution loop with `execStmt()`/`evalExpr()`. Control flow via exception signals (`GotoSignal`, `BreakSignal`, `ContinueSignal`, `ReturnSignal`). Yields to event loop every 2000 statements. Variables stored in separate maps by type (`numVars`, `strVars`, `arrVars`, `structVars`, `boolVars`).
+  - Two keyboard models coexist: `GETKEY$`/`GETALLKEYS@` poll what is *held*, while `WAITKEY&`/`GETKEYPRESS&` read a lossless 64-entry queue of key *presses* carrying modifier state. `WAITKEY&` blocks (with an optional `TIMEOUT`), so `stop()` must release it. `INPUT$` closes the queue while it owns the keyboard.
 
 ### Subsystems
 
 - **Screen** (`js/screen.js`) — 80×25 text grid + 640×480 graphics canvas. Double buffering: `SHOWBUFFER` copies back→front and auto-renders 3D if a scene exists. Text and graphics are separate layers composited together.
+  - Cells are `{char, color, bg}`. A `bg` of `null` is transparent, showing the screen background (`SETSCREENBACKGROUND`, one inline CSS property) through it. Build cells with `makeCell()`; to overwrite a character while keeping its background, use `setCellChar()`.
+  - `clear()` is `CLEARSCREEN` and keeps the screen background; `reset()` is the machine reset and drops it.
+  - `render()` requests a frame — many writes cost one DOM rebuild. `renderNow()` forces a synchronous one (end of `run()`, `stop()`, `SHOWBUFFER`). Hidden tabs fall back to a timer, since browsers pause `requestAnimationFrame`.
 
 - **3D Engine** (`js/3d.js`) — Retained-mode scene graph (`Scene3D` class). Objects have position/rotation/scale transforms. Groups enable hierarchies. Rendering: depth-first traversal → MVP matrix per object → perspective projection → painter's algorithm depth sort → wireframe draw via callbacks. `SHOWBUFFER` implicitly calls `_renderScene3D()`.
 
