@@ -94,17 +94,21 @@ Labels are global at the top level, function-scoped inside functions.
 
 ### Calling a function inside an expression
 
-A call with arguments needs parentheses anywhere other than a bare statement or the right-hand
-side of an assignment:
+A call with arguments needs parentheses everywhere except two places: as a bare statement, and
+as the whole right-hand side of a **plain variable** assignment.
 
 ```
-x# = add# 3, 4              ' assignment - bare call is fine
+x# = add# 3, 4              ' plain variable assignment - bare call is fine
 sortItems data@             ' statement - bare call is fine
 
 PRINT (add# 3, 4)           ' inside an expression - parentheses required
 RETURN n# * (factorial# n# - 1)
 IF (add# 1, 1) = 2 THEN
+items@[1] = (greet$ "Sam")  ' array element - parentheses required, even for one argument
 ```
+
+Assigning to an **array element** is not the plain-variable case, so it needs parentheses even
+with a single argument. Built-in calls do not: `items@[1] = SUBSTRING$ s$, 2, 2` is fine.
 
 Function names may not be language keywords, so a sorting helper cannot be called `sort`.
 
