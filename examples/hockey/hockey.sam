@@ -61,8 +61,17 @@ STUN_DURATION# = 1000
 PLAYER_MAX_SPEED# = 12
 
 ' Game states
+STATE_FACEOFF# = 2
 STATE_PLAY# = 3
+STATE_GOAL# = 4
 STATE_FIGHT# = 5
+STATE_PERIOD_END# = 6
+STATE_GAME_OVER# = 7
+
+' Clock
+PERIOD_GAME_SECONDS# = 1200
+CLOCK_RATIO# = 10
+NUM_PERIODS# = 3
 
 ' Fight constants
 FIGHT_CHANCE# = 8
@@ -221,7 +230,19 @@ checkCooldown# = 0
 goalieHoldTime# = 0
 
 ' Game state
-gameState# = STATE_PLAY#
+gameState# = STATE_FACEOFF#
+period# = 1
+clockTime# = PERIOD_GAME_SECONDS#
+lastClockTick# = 0
+goalCellyStart# = 0
+lastGoalTeam# = 0
+periodEndStart# = 0
+faceoffWait# = 0
+
+' Faceoff dot locations
+faceDotX@ = [600, 200, 200, 1000, 1000]
+faceDotY@ = [240, 150, 330, 150, 330]
+faceoffDot# = 1
 
 ' Fight state
 fightP1# = 0
@@ -487,12 +508,43 @@ FUNCTION drawRink
   END IF
 
   ' Goal nets
-  SETCOLOR RED&
+  goalTop# = 240 - GOAL_H# / 2
+  goalBot# = 240 + GOAL_H# / 2
+
+  ' Left goal net
   IF GOAL_LEFT_X# > scrL# AND GOAL_LEFT_X# < scrR# THEN
-    DRAWBOX X1 (GOAL_LEFT_X# - GOAL_W# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_LEFT_X# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
+    lnx1# = GOAL_LEFT_X# - GOAL_W# - camX#
+    lnx2# = GOAL_LEFT_X# - camX#
+    ' White fill for net background
+    SETCOLOR WHITE&
+    DRAWBOX X1 lnx1#, Y1 goalTop#, X2 lnx2#, Y2 goalBot#, FILL YES
+    ' Net mesh lines
+    SETCOLOR LIGHTGRAY&
+    FOR ny# FROM goalTop# TO goalBot# STEP 8
+      DRAWLINE X1 lnx1#, Y1 ny#, X2 lnx2#, Y2 ny#
+    END FOR
+    DRAWLINE X1 (lnx1# + lnx2#) / 2, Y1 goalTop#, X2 (lnx1# + lnx2#) / 2, Y2 goalBot#
+    ' Red frame
+    SETCOLOR RED&
+    DRAWBOX X1 lnx1#, Y1 goalTop#, X2 lnx2#, Y2 goalBot#, FILL NO
   END IF
+
+  ' Right goal net
   IF GOAL_RIGHT_X# > scrL# AND GOAL_RIGHT_X# < scrR# THEN
-    DRAWBOX X1 (GOAL_RIGHT_X# - camX#), Y1 (240 - GOAL_H# / 2), X2 (GOAL_RIGHT_X# + GOAL_W# - camX#), Y2 (240 + GOAL_H# / 2), FILL NO
+    rnx1# = GOAL_RIGHT_X# - camX#
+    rnx2# = GOAL_RIGHT_X# + GOAL_W# - camX#
+    ' White fill for net background
+    SETCOLOR WHITE&
+    DRAWBOX X1 rnx1#, Y1 goalTop#, X2 rnx2#, Y2 goalBot#, FILL YES
+    ' Net mesh lines
+    SETCOLOR LIGHTGRAY&
+    FOR ny# FROM goalTop# TO goalBot# STEP 8
+      DRAWLINE X1 rnx1#, Y1 ny#, X2 rnx2#, Y2 ny#
+    END FOR
+    DRAWLINE X1 (rnx1# + rnx2#) / 2, Y1 goalTop#, X2 (rnx1# + rnx2#) / 2, Y2 goalBot#
+    ' Red frame
+    SETCOLOR RED&
+    DRAWBOX X1 rnx1#, Y1 goalTop#, X2 rnx2#, Y2 goalBot#, FILL NO
   END IF
 
 END FUNCTION
@@ -683,13 +735,17 @@ FUNCTION drawPuck
 END FUNCTION
 
 FUNCTION drawScore
-  ' Display score at bottom of screen
   SETCOLOR WHITE&
-  PRINTAT 25, 30, "WHR"
-  PRINTAT 25, 34, scoreW#
-  PRINTAT 25, 36, "-"
-  PRINTAT 25, 38, scoreO#
-  PRINTAT 25, 40, "OPP"
+  PRINTAT 25, 28, "WHR"
+  PRINTAT 25, 32, scoreW#
+  PRINTAT 25, 34, "-"
+  PRINTAT 25, 36, scoreO#
+  PRINTAT 25, 38, "OPP"
+  cl$ = clockString$
+  PRINTAT 25, 42, cl$
+  dispP# = MIN# A period#, B NUM_PERIODS#
+  PRINTAT 25, 50, "P"
+  PRINTAT 25, 51, dispP#
 END FUNCTION
 
 FUNCTION handleInput
@@ -1675,20 +1731,14 @@ END FUNCTION
 
 FUNCTION checkGoals
   ' Whalers defend LEFT goal, opponent defends RIGHT
+  scored? = NO
 
   ' Check right goal (opponent's goal — Whalers score)
   IF puckX# > GOAL_RIGHT_X# + GOAL_W# THEN
     IF puckY# > 240 - GOAL_H# / 2 AND puckY# < 240 + GOAL_H# / 2 THEN
       scoreW# = scoreW# + 1
-      ' Reset puck to center
-      puckOwner# = 0
-      puckLoose? = YES
-      puckX# = 600
-      puckY# = 240
-      puckVX# = 0
-      puckVY# = 0
-      shotCharging? = NO
-      passInFlight? = NO
+      lastGoalTeam# = 1
+      scored? = YES
     END IF
   END IF
 
@@ -1696,16 +1746,224 @@ FUNCTION checkGoals
   IF puckX# < GOAL_LEFT_X# - GOAL_W# THEN
     IF puckY# > 240 - GOAL_H# / 2 AND puckY# < 240 + GOAL_H# / 2 THEN
       scoreO# = scoreO# + 1
-      ' Reset puck to center
-      puckOwner# = 0
-      puckLoose? = YES
-      puckX# = 600
-      puckY# = 240
-      puckVX# = 0
-      puckVY# = 0
-      shotCharging? = NO
-      passInFlight? = NO
+      lastGoalTeam# = 2
+      scored? = YES
     END IF
+  END IF
+
+  IF scored? THEN
+    ' Clear puck state — puck stays where it is (in the net)
+    FOR i# FROM 1 TO NUM_PLAYERS#
+      pHasPuck@[i#] = 0
+    END FOR
+    puckOwner# = 0
+    puckLoose? = YES
+    puckVX# = 0
+    puckVY# = 0
+    puckFreezeUntil# = now# + 99999
+    shotCharging? = NO
+    passInFlight? = NO
+
+    ' Go to goal celebration
+    goalCellyStart# = now#
+    gameState# = STATE_GOAL#
+    ' Goal horn — long low blast
+    PLAYPOLY ["T90 L2 O4 C" WAVE "sawtooth"] ["T90 L2 O4 E" WAVE "sawtooth"] ["T90 L2 O4 G" WAVE "sawtooth"], BACKGROUND YES, REPEAT YES
+  END IF
+END FUNCTION
+
+' ============ FACEOFFS ============
+
+FUNCTION setNearestFaceoffDot
+  bestD2# = 99999999
+  FOR fd# FROM 1 TO 5
+    dx# = puckX# - faceDotX@[fd#]
+    dy# = puckY# - faceDotY@[fd#]
+    d2# = dx# * dx# + dy# * dy#
+    IF d2# < bestD2# THEN
+      bestD2# = d2#
+      faceoffDot# = fd#
+    END IF
+  END FOR
+END FUNCTION
+
+FUNCTION setupFaceoff
+  fx# = faceDotX@[faceoffDot#]
+  fy# = faceDotY@[faceoffDot#]
+
+  ' Centers at faceoff dot
+  pX@[1] = fx# - 15
+  pY@[1] = fy#
+  pDir@[1] = 1
+  pX@[5] = fx# + 15
+  pY@[5] = fy#
+  pDir@[5] = -1
+
+  ' Wings spread out
+  pX@[2] = fx# - 60
+  pY@[2] = fy# - 40
+  pDir@[2] = 1
+  pX@[3] = fx# - 60
+  pY@[3] = fy# + 40
+  pDir@[3] = 1
+
+  pX@[6] = fx# + 60
+  pY@[6] = fy# - 40
+  pDir@[6] = -1
+  pX@[7] = fx# + 60
+  pY@[7] = fy# + 40
+  pDir@[7] = -1
+
+  ' Goalies at their nets
+  pX@[4] = GOAL_LEFT_X# + 5
+  pY@[4] = 210
+  pDir@[4] = 1
+  pX@[8] = GOAL_RIGHT_X# - 55
+  pY@[8] = 210
+  pDir@[8] = -1
+
+  ' Clear all velocities and states
+  FOR i# FROM 1 TO NUM_PLAYERS#
+    pVX@[i#] = 0
+    pVY@[i#] = 0
+    pState@[i#] = 0
+    pAnim@[i#] = ANIM_SKATE#
+    IF i# = 4 OR i# = 8 THEN
+      pAnim@[i#] = ANIM_GOALIE_IDLE#
+    END IF
+  END FOR
+
+  ' Puck at faceoff dot, frozen until drop
+  puckX# = fx#
+  puckY# = fy#
+  puckVX# = 0
+  puckVY# = 0
+  puckOwner# = 0
+  puckLoose? = YES
+  puckFreezeUntil# = now# + 99999
+
+  activeP# = 1
+  faceoffWait# = now#
+END FUNCTION
+
+FUNCTION updateFaceoff
+  ' Wait 1.5 seconds then drop puck
+  IF now# - faceoffWait# > 1500 THEN
+    puckFreezeUntil# = now#
+    lastClockTick# = now#
+    gameState# = STATE_PLAY#
+  END IF
+END FUNCTION
+
+' ============ CLOCK ============
+
+FUNCTION updateClock
+  IF gameState# <> STATE_PLAY# THEN
+    RETURN
+  END IF
+
+  IF now# - lastClockTick# >= 100 THEN
+    elapsed# = (now# - lastClockTick#) / 1000
+    clockTime# = clockTime# - elapsed# * CLOCK_RATIO#
+    lastClockTick# = now#
+
+    IF clockTime# <= 0 THEN
+      clockTime# = 0
+      period# = period# + 1
+      IF period# > NUM_PERIODS# THEN
+        gameState# = STATE_GAME_OVER#
+      ELSE
+        periodEndStart# = now#
+        gameState# = STATE_PERIOD_END#
+      END IF
+    END IF
+  END IF
+END FUNCTION
+
+FUNCTION clockString$
+  minutes# = FLOOR# VALUE (clockTime# / 60)
+  seconds# = FLOOR# VALUE (clockTime# - minutes# * 60)
+  m$ = TOSTRING$ minutes#
+  s$ = TOSTRING$ seconds#
+  IF seconds# < 10 THEN
+    s$ = "0" + s$
+  END IF
+  RETURN m$ + ":" + s$
+END FUNCTION
+
+' ============ GOAL CELEBRATION ============
+
+FUNCTION updateGoalCelly
+  IF now# - goalCellyStart# > 3000 THEN
+    STOPPLAY
+    faceoffDot# = 1
+    setupFaceoff
+    gameState# = STATE_FACEOFF#
+  END IF
+END FUNCTION
+
+FUNCTION drawGoalCelly
+  ' Flash "GOAL!" text
+  flash# = FLOOR# VALUE ((now# - goalCellyStart#) / 200)
+  IF flash# % 2 = 0 THEN
+    SETCOLOR RED&
+  ELSE
+    SETCOLOR WHITE&
+  END IF
+
+  IF lastGoalTeam# = 1 THEN
+    PRINTAT 10, 30, "WHALERS GOAL!"
+  ELSE
+    PRINTAT 10, 30, "OPPONENT GOAL!"
+  END IF
+
+  ' Goal light — flashing red circle behind the net
+  lightOn? = (flash# % 2 = 0)
+  IF lightOn? THEN
+    SETCOLOR RED&
+  ELSE
+    SETCOLOR DARKRED&
+  END IF
+  IF lastGoalTeam# = 1 THEN
+    ' Whalers scored — light behind right goal
+    DRAWCIRCLE X (GOAL_RIGHT_X# + 20 - camX#), Y 240, RADIUS 12, FILL YES
+  ELSE
+    ' Opponent scored — light behind left goal
+    DRAWCIRCLE X (GOAL_LEFT_X# - 20 - camX#), Y 240, RADIUS 12, FILL YES
+  END IF
+END FUNCTION
+
+' ============ PERIOD END ============
+
+FUNCTION updatePeriodEnd
+  IF now# - periodEndStart# > 3000 THEN
+    clockTime# = PERIOD_GAME_SECONDS#
+    faceoffDot# = 1
+    setupFaceoff
+    gameState# = STATE_FACEOFF#
+  END IF
+END FUNCTION
+
+FUNCTION drawPeriodEnd
+  SETCOLOR WHITE&
+  p# = period# - 1
+  PRINTAT 10, 32, "END OF PERIOD"
+  PRINTAT 12, 36, p#
+  PRINTAT 14, 30, "WHR " + TOSTRING$ scoreW# + " - " + TOSTRING$ scoreO# + " OPP"
+END FUNCTION
+
+' ============ GAME OVER ============
+
+FUNCTION drawGameOver
+  SETCOLOR WHITE&
+  PRINTAT 8, 34, "GAME OVER"
+  PRINTAT 10, 30, "WHR " + TOSTRING$ scoreW# + " - " + TOSTRING$ scoreO# + " OPP"
+  IF scoreW# > scoreO# THEN
+    PRINTAT 12, 32, "WHALERS WIN!"
+  ELSE IF scoreO# > scoreW# THEN
+    PRINTAT 12, 31, "OPPONENT WINS!"
+  ELSE
+    PRINTAT 12, 36, "TIE GAME"
   END IF
 END FUNCTION
 
@@ -1921,17 +2179,12 @@ FUNCTION endFight
   pAnim@[fightP2#] = ANIM_SKATE#
   pAnimFrame@[fightP2#] = 2
 
-  ' Reset puck to center
-  puckX# = CENTER_X#
-  puckY# = 240
-  puckVX# = 0
-  puckVY# = 0
-  puckOwner# = 0
-  puckLoose? = YES
+  ' Faceoff at nearest dot
   shotCharging? = NO
   passInFlight? = NO
-
-  gameState# = STATE_PLAY#
+  setNearestFaceoffDot
+  setupFaceoff
+  gameState# = STATE_FACEOFF#
 END FUNCTION
 
 FUNCTION drawFight
@@ -1984,52 +2237,83 @@ END FUNCTION
 BUFFERENABLED YES
 running? = YES
 
+' Start with a faceoff
+setupFaceoff
+
 WHILE running?
   now# = RUNNINGTIME#
 
   ' Input (always read)
   handleInput
 
-  IF gameState# = STATE_PLAY# THEN
-    ' Shooting, passing, and checking
+  IF gameState# = STATE_FACEOFF# THEN
+    updateFaceoff
+    updateCamera
+
+    CLEARBUFFER
+    drawRink
+    drawPlayers
+    drawPuck
+    drawScore
+
+  ELSE IF gameState# = STATE_PLAY# THEN
     handleShooting
     handlePassing
     handleChecking
 
-    ' Movement
     moveActivePlayer
     updateTeammateAI
     updateOpponentAI
     updateGoalieAI
     updatePlayerPhysics
 
-    ' Puck physics, checking, and goals
     updatePuck
     handleOpponentChecking
     checkGoals
+    updateClock
 
-    ' Animation and camera
     updateAnimations
     updateCamera
 
-    ' Draw
     CLEARBUFFER
     drawRink
     drawPlayers
     drawPuck
     drawScore
 
+  ELSE IF gameState# = STATE_GOAL# THEN
+    updateGoalCelly
+    updateCamera
+
+    CLEARBUFFER
+    drawRink
+    drawPlayers
+    drawPuck
+    drawScore
+    drawGoalCelly
+
   ELSE IF gameState# = STATE_FIGHT# THEN
     updateFight
     updateCamera
 
-    ' Draw
     CLEARBUFFER
     drawRink
     drawPlayers
     drawPuck
     drawScore
     drawFight
+
+  ELSE IF gameState# = STATE_PERIOD_END# THEN
+    updatePeriodEnd
+
+    CLEARBUFFER
+    drawPeriodEnd
+    drawScore
+
+  ELSE IF gameState# = STATE_GAME_OVER# THEN
+    CLEARBUFFER
+    drawGameOver
+    drawScore
   END IF
 
   SHOWBUFFER
