@@ -1323,6 +1323,8 @@ function parse(tokens, existingFunctions) {
     INPUT: [{ name: 'TEXT', required: false }],
     GETKEY: [],
     GETALLKEYS: [],
+    WAITKEY: [{ name: 'TIMEOUT', required: false }],
+    GETKEYPRESS: [],
     RANDOM: [{ name: 'MAX', required: true }],
     LENGTH: [{ name: 'VALUE', required: true }],
     SUBSTRING: [{ name: 'TEXT', required: true }, { name: 'START', required: true }, { name: 'LENGTH', required: true }],

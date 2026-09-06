@@ -79,6 +79,9 @@ CLEARSCREEN                               ' Clear the screen
 name$ = INPUT$ "What is your name? "  ' Prompt and store result
 x# = INPUT$                           ' Input with no prompt
 k$ = GETKEY$                           ' Read currently pressed key (non-blocking)
+key& = WAITKEY&                        ' Wait for a keypress; .key$ .shift? .ctrl? .alt?
+key& = WAITKEY& TIMEOUT 0.5            ' ...but give up after 0.5s (.key$ = "")
+key& = GETKEYPRESS&                    ' Oldest queued keypress, non-blocking
 ```
 
 ### String Functions

@@ -20,12 +20,37 @@ class Interpreter {
     this.audio = audio;
     this.reset();
 
-    // Key state for GETKEY / GETALLKEYS
+    // Key state for GETKEY / GETALLKEYS (held-key polling, unchanged)
     this.currentKey = '';
     this.pressedKeys = new Set();
+
+    // Key event queue for WAITKEY / GETKEYPRESS. Unlike currentKey this is lossless,
+    // records modifier state at press time, and lets OS auto-repeat through as
+    // repeated entries.
+    this.keyQueue = [];
+    this.keyQueueMax = 64;
+    this._keyWaitResolve = null;
+    this._keyWaitTimer = null;
+
     this._keydownHandler = (e) => {
       this.currentKey = e.key;
       this.pressedKeys.add(e.key);
+
+      // INPUT$ installs its own handler and owns the keyboard while it runs. Queuing
+      // here too would replay everything typed at the prompt on the next WAITKEY.
+      if (this._inputHandler) return;
+
+      if (this.running) this._preventDefaultForOwnedKey(e);
+
+      // On overflow drop the newest, so what is kept stays in order.
+      if (this.keyQueue.length < this.keyQueueMax) {
+        this.keyQueue.push({ key: e.key, shift: !!e.shiftKey, ctrl: !!e.ctrlKey, alt: !!e.altKey });
+      }
+      if (this._keyWaitResolve) {
+        const resolve = this._keyWaitResolve;
+        this._keyWaitResolve = null;
+        resolve();
+      }
     };
     this._keyupHandler = (e) => {
       this.currentKey = '';
@@ -189,6 +214,56 @@ class Interpreter {
     return '#' + r.toString(16).padStart(2, '0') + g.toString(16).padStart(2, '0') + b.toString(16).padStart(2, '0');
   }
 
+  // Keys a full-screen program owns. F1/F5/F11/F12 are the browser's and stay unbound.
+  static get OWNED_KEYS() {
+    return new Set([
+      'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+      'PageUp', 'PageDown', 'Home', 'End', 'Tab', 'Backspace', ' ',
+      'F2', 'F3', 'F4', 'F6', 'F7', 'F8', 'F9', 'F10',
+    ]);
+  }
+
+  _preventDefaultForOwnedKey(e) {
+    // Never steal keys from a real text field - the code editor must stay usable
+    // while a program runs.
+    const t = e.target;
+    if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable)) return;
+    if (Interpreter.OWNED_KEYS.has(e.key)) e.preventDefault();
+  }
+
+  _makeKeyStruct(ev) {
+    return ev
+      ? { 'key$': ev.key, 'shift?': ev.shift ? 1 : 0, 'ctrl?': ev.ctrl ? 1 : 0, 'alt?': ev.alt ? 1 : 0 }
+      : { 'key$': '', 'shift?': 0, 'ctrl?': 0, 'alt?': 0 };
+  }
+
+  _shiftKeyEvent() {
+    return this._makeKeyStruct(this.keyQueue.shift());
+  }
+
+  // Resolves when a key arrives, when the timeout expires, or when the program is
+  // stopped (which resolves null so the caller can bail out).
+  _waitForKey(timeoutSeconds) {
+    return new Promise(resolve => {
+      this._keyWaitResolve = () => {
+        if (this._keyWaitTimer) {
+          clearTimeout(this._keyWaitTimer);
+          this._keyWaitTimer = null;
+        }
+        resolve(this.running ? true : null);
+      };
+      if (timeoutSeconds !== null && timeoutSeconds !== undefined) {
+        this._keyWaitTimer = setTimeout(() => {
+          this._keyWaitTimer = null;
+          if (this._keyWaitResolve) {
+            this._keyWaitResolve = null;
+            resolve(this.running ? true : null);
+          }
+        }, Math.max(0, timeoutSeconds * 1000));
+      }
+    });
+  }
+
   load(ast, labels, functions) {
     this.reset();
     this.ast = ast;
@@ -199,6 +274,7 @@ class Interpreter {
   async run() {
     this.running = true;
     this.paused = false;
+    this.keyQueue.length = 0;
     this.screen.reset();
     this.pc = 0;
     this._stmtCount = 0;
@@ -356,6 +432,15 @@ class Interpreter {
       this._inputResolve(null);
       this._inputResolve = null;
     }
+    if (this._keyWaitTimer) {
+      clearTimeout(this._keyWaitTimer);
+      this._keyWaitTimer = null;
+    }
+    if (this._keyWaitResolve) {
+      const resolve = this._keyWaitResolve;
+      this._keyWaitResolve = null;
+      resolve();
+    }
   }
 
   _closeAllFiles() {
@@ -508,6 +593,17 @@ class Interpreter {
         return this.currentKey;
       case 'GETALLKEYS':
         return Array.from(this.pressedKeys);
+      case 'GETKEYPRESS':
+        return this._shiftKeyEvent();
+      case 'WAITKEY': {
+        if (this.keyQueue.length) return this._shiftKeyEvent();
+        const timeout = params.TIMEOUT !== undefined && params.TIMEOUT !== null
+          ? await this.evalExpr(params.TIMEOUT)
+          : null;
+        const got = await this._waitForKey(timeout);
+        if (got === null) return null;   // stopped
+        return this._shiftKeyEvent();    // empty struct if this was a timeout
+      }
       case 'RANDOM': {
         const max = Math.floor(await this.evalExpr(params.MAX));
         return Math.floor(Math.random() * (max + 1));
@@ -843,7 +939,7 @@ class Interpreter {
       }
       case 'assign_builtin': {
         const result = await this.evalBuiltinKeyword(stmt.keyword, stmt.params, stmt.mode, stmt.line);
-        if (result === null && stmt.keyword === 'INPUT') return; // stopped
+        if (result === null && (stmt.keyword === 'INPUT' || stmt.keyword === 'WAITKEY')) return; // stopped
         // Type coercion based on varType
         switch (stmt.varType) {
           case 'num': {
@@ -861,6 +957,12 @@ class Interpreter {
           case 'arr':
             if (!Array.isArray(result)) throw new Error(`${stmt.keyword}: expected an array at line ${stmt.line}`);
             this.arrVars[stmt.name] = result;
+            break;
+          case 'struct':
+            if (typeof result !== 'object' || result === null || Array.isArray(result)) {
+              throw new Error(`${stmt.keyword}: expected a struct at line ${stmt.line}`);
+            }
+            this.structVars[stmt.name] = result;
             break;
           default:
             throw new Error(`Cannot assign ${stmt.keyword} result to ${stmt.varType} variable at line ${stmt.line}`);

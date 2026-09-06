@@ -186,6 +186,49 @@ Key names match JavaScript `event.key`:
 - Enter: `"Enter"`
 - Escape: `"Escape"`
 
+### WAITKEY& / GETKEYPRESS&
+
+`GETKEY$` reports the key that is *held right now*. That suits games, but it drops keystrokes
+typed faster than the program's loop, never repeats a held key, and reports modifiers through a
+separate `GETALLKEYS@` call that can be sampled at a different instant.
+
+`WAITKEY&` and `GETKEYPRESS&` read from a lossless queue of key *presses* instead, and return a
+struct so the key and its modifiers arrive together.
+
+```
+k& = WAITKEY&                     ' blocks until a key is pressed
+k& = WAITKEY& TIMEOUT 0.5         ' blocks up to 0.5 seconds
+k& = GETKEYPRESS&                 ' non-blocking: oldest queued key, or empty
+```
+
+| Member | Type | Meaning |
+|--------|------|---------|
+| `.key$` | string | Key name, same as `GETKEY$` (`"a"`, `"ArrowUp"`, `"Enter"`). `""` if nothing arrived |
+| `.shift?` | boolean | Modifier state at the moment the key went down |
+| `.ctrl?` | boolean | |
+| `.alt?` | boolean | |
+
+```
+k& = WAITKEY&
+IF k&.key$ = "ArrowRight" AND k&.shift? THEN
+  PRINT "select right"
+END IF
+```
+
+Because every keydown is queued, holding a key repeats it, and nothing is lost while your
+program is busy drawing. `WAITKEY&` with no `TIMEOUT` blocks until a key arrives, so an
+interactive program needs no `SLEEP` loop:
+
+```
+LOOP
+  k& = WAITKEY& TIMEOUT 0.3       ' wakes up to blink a cursor
+END LOOP WHEN k&.key$ = "Escape"
+```
+
+The queue holds 64 presses; beyond that further keys are ignored until the program reads some.
+It is cleared when a program starts. `GETKEY$` and `GETALLKEYS@` are unaffected — use them when
+you want to know what is being held, not what was typed.
+
 ## Time
 
 ### RUNNINGTIME#
@@ -287,6 +330,8 @@ Returns `1` if the file exists in localStorage, `0` otherwise.
 | `TOSTRING$` | string | value |
 | `INPUT$` | string | [prompt$] |
 | `GETKEY$` | string | (none) |
+| `WAITKEY&` | struct | [TIMEOUT seconds#] |
+| `GETKEYPRESS&` | struct | (none) |
 | `RUNNINGTIME#` | number | (none) |
 | `OPEN#` | number | FILE name$, MODE keyword |
 | `READFILELINE$` | string | FILE handle# |

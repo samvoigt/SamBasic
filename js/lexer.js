@@ -43,6 +43,7 @@ const TYPED_KEYWORDS = {
   MOUSEY: '#',
   MOUSEBUTTON: '#',
   GETALLKEYS: '@',
+  WAITKEY: '&', GETKEYPRESS: '&',
 };
 
 
