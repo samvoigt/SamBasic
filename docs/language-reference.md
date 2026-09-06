@@ -204,6 +204,23 @@ END FUNCTION
 
 Arrays, strings, and structs are **deep-copied** by default. Use `REFERENCE` to pass by reference.
 
+## Built-in Calls Inside Other Calls
+
+A built-in used inside another call's argument list takes only its own parameters, and leaves
+everything after them to the enclosing call:
+
+```
+PRINTAT 1, 1, REPEAT$ "═", 78 COLOR WHITE&     ' COLOR belongs to PRINTAT
+PRINTAT 5, 3 + LENGTH# line$, "_" COLOR YELLOW&
+FILLTEXT 3, 1, 3, LENGTH# s$, "░"
+```
+
+`REPEAT$` takes two arguments and stops, so `COLOR` reaches `PRINTAT`. `LENGTH#` takes one, so
+the comma after it separates `PRINTAT`'s arguments rather than starting a second argument to
+`LENGTH#`.
+
+A statement is different: it owns its whole line, so `PRINT "x" COLOR RED&` reads to the end.
+
 ## Output
 
 ```

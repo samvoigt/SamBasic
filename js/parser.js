@@ -231,7 +231,7 @@ function parse(tokens, existingFunctions) {
           (peek().value.toUpperCase() === 'LEFT' || peek().value.toUpperCase() === 'RIGHT')) {
         mode = advance().value.toUpperCase();
       }
-      const args = parseKeywordArgsForExpr();
+      const args = parseKeywordArgsForExpr(paramDefs);
       const resolved = resolveBuiltinArgs(args, paramDefs, t.line);
       return { type: 'builtin_call', keyword, params: resolved, mode, line: t.line };
     }
@@ -320,7 +320,14 @@ function parse(tokens, existingFunctions) {
 
   // Like parseKeywordArgs but for expression context: each arg value is parsed
   // with parseUnary() so operators like + - * / don't get consumed as arguments.
-  function parseKeywordArgsForExpr() {
+  //
+  // A builtin here may be nested inside another call's argument list, so unlike the
+  // statement scanner it must know when to stop: a statement owns its whole line, a
+  // nested call owns only its own parameters. paramDefs is what tells it apart.
+  function parseKeywordArgsForExpr(paramDefs) {
+    const defs = paramDefs || [];
+    const names = new Set(defs.map(d => d.name));
+    const limit = defs.length;
     const args = [];
     while (!atLineEnd()) {
       const p = peek();
@@ -333,17 +340,30 @@ function parse(tokens, existingFunctions) {
         break;
       }
       if (p.type === 'IDENT' && !isKnownFunction(p)) {
+        // A label this builtin doesn't have belongs to an enclosing call.
+        if (!names.has(p.value.toUpperCase())) break;
         const label = advance().value.toUpperCase();
         const value = parseUnary();
         args.push({ label, value });
       } else {
+        // Once every parameter is accounted for, what follows is the caller's.
+        if (args.length >= limit) break;
         const value = parseUnary();
         args.push({ label: null, value });
       }
-      if (!match('COMMA')) {
-        if (!atLineEnd() && peek().type === 'IDENT' && !isKnownFunction(peek())) continue;
-        break;
+      // Only take a separating comma when another argument can still follow it.
+      // Consuming one and then stopping would eat the enclosing call's separator.
+      if (peek().type === 'COMMA') {
+        const after = tokens[pos + 1];
+        const nextIsOurLabel = after && after.type === 'IDENT' && !isKnownFunction(after) &&
+          names.has(String(after.value).toUpperCase());
+        if (args.length >= limit && !nextIsOurLabel) break;
+        advance();
+        continue;
       }
+      if (!atLineEnd() && peek().type === 'IDENT' && !isKnownFunction(peek()) &&
+          names.has(peek().value.toUpperCase())) continue;
+      break;
     }
     return args;
   }
