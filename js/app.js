@@ -365,14 +365,7 @@ btnTowerPower.addEventListener('click', togglePower);
 // === Local Files Panel ===
 
 function refreshFileList() {
-  const keys = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key.startsWith('sambasic_file:')) {
-      keys.push(key.slice('sambasic_file:'.length));
-    }
-  }
-  keys.sort((a, b) => a.localeCompare(b));
+  const keys = listSamBasicFiles();
 
   filesList.innerHTML = '';
   if (keys.length === 0) {
@@ -424,7 +417,7 @@ fileInputUpload.addEventListener('change', (e) => {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
-    localStorage.setItem('sambasic_file:' + file.name, reader.result);
+    localStorage.setItem(SAMBASIC_FILE_PREFIX + file.name, reader.result);
     refreshFileList();
   };
   reader.readAsText(file);
@@ -433,7 +426,7 @@ fileInputUpload.addEventListener('change', (e) => {
 
 btnDownload.addEventListener('click', () => {
   if (!selectedFile) return;
-  const content = localStorage.getItem('sambasic_file:' + selectedFile);
+  const content = localStorage.getItem(SAMBASIC_FILE_PREFIX + selectedFile);
   if (content == null) return;
   const blob = new Blob([content], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
@@ -446,7 +439,7 @@ btnDownload.addEventListener('click', () => {
 
 btnRemove.addEventListener('click', () => {
   if (!selectedFile) return;
-  localStorage.removeItem('sambasic_file:' + selectedFile);
+  localStorage.removeItem(SAMBASIC_FILE_PREFIX + selectedFile);
   selectedFile = null;
   refreshFileList();
 });

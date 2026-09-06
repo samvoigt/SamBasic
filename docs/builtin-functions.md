@@ -58,6 +58,25 @@ s$ = TRIM$ LEFT "  hello  "     ' "hello  "
 s$ = TRIM$ RIGHT "  hello  "    ' "  hello"
 ```
 
+### REPEAT$
+
+```
+edge$ = REPEAT$ "═", 78          ' a 78-character rule
+blank$ = REPEAT$ " ", 80         ' a full-width blank
+```
+
+Repeats `TEXT` `COUNT` times. A `COUNT` of 0 gives `""`. Negative counts are an error, as is a
+result over 100,000 characters.
+
+Replaces the usual character-at-a-time loop:
+
+```
+edge$ = ""
+FOR i# FROM 1 TO 78
+  edge$ = edge$ + "═"
+END FOR
+```
+
 ## Math Functions
 
 ### ABS#
@@ -293,6 +312,21 @@ CLOSE f#
 
 Closes the file handle. For WRITE/APPEND modes, this saves the content to localStorage.
 
+### LISTFILES@
+
+```
+names@ = LISTFILES@
+FOR i# FROM 1 TO LENGTH# names@
+  PRINT names@[i#]
+END FOR
+```
+
+Every stored file name, sorted, with the `sambasic_file:` prefix stripped. Returns an empty
+array when nothing is stored — that is a normal state, not an error.
+
+These are the same files the IDE's file panel shows, so a program can list, open and write
+files that the IDE then loads and runs.
+
 ### FILEEXISTS?
 
 ```
@@ -338,4 +372,6 @@ Returns `1` if the file exists in localStorage, `0` otherwise.
 | `READFILECHARACTER$` | string | FILE handle# |
 | `ENDOFFILE?` | boolean | handle# |
 | `FILEEXISTS?` | boolean | name$ |
+| `LISTFILES@` | array | (none) |
+| `REPEAT$` | string | text$, count# |
 | `CREATESPRITE#` | number | data2D@ |

@@ -1,3 +1,19 @@
+// Files live in localStorage under this prefix. Shared with app.js, which loads later.
+const SAMBASIC_FILE_PREFIX = 'sambasic_file:';
+
+// Every stored file name, prefix stripped, sorted. Empty list when nothing is stored.
+function listSamBasicFiles() {
+  const names = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(SAMBASIC_FILE_PREFIX)) {
+      names.push(key.slice(SAMBASIC_FILE_PREFIX.length));
+    }
+  }
+  names.sort((a, b) => a.localeCompare(b));
+  return names;
+}
+
 class GotoSignal {
   constructor(label) {
     this.label = label;
@@ -449,14 +465,14 @@ class Interpreter {
     for (const handle of Object.keys(this.fileHandles)) {
       const fh = this.fileHandles[handle];
       if (fh.mode === 'write' || fh.mode === 'append') {
-        localStorage.setItem('sambasic_file:' + fh.name, fh.content);
+        localStorage.setItem(SAMBASIC_FILE_PREFIX + fh.name, fh.content);
       }
     }
     this.fileHandles = {};
   }
 
   async _loadFileContent(fileName, line) {
-    const stored = localStorage.getItem('sambasic_file:' + fileName);
+    const stored = localStorage.getItem(SAMBASIC_FILE_PREFIX + fileName);
     if (stored !== null) return stored;
     try {
       const resp = await fetch(fileName);
@@ -595,6 +611,19 @@ class Interpreter {
         return this.currentKey;
       case 'GETALLKEYS':
         return Array.from(this.pressedKeys);
+      case 'LISTFILES':
+        return listSamBasicFiles();
+      case 'REPEAT': {
+        const text = String(await this.evalExpr(params.TEXT));
+        const count = Math.floor(await this.evalExpr(params.COUNT));
+        if (count < 0) {
+          throw new Error(`REPEAT: COUNT must not be negative (got ${count}) at line ${line}`);
+        }
+        if (text.length * count > 100000) {
+          throw new Error(`REPEAT: result would be ${text.length * count} characters, over the 100000 limit at line ${line}`);
+        }
+        return text.repeat(count);
+      }
       case 'GETKEYPRESS':
         return this._shiftKeyEvent();
       case 'WAITKEY': {
@@ -668,11 +697,11 @@ class Interpreter {
         }
         let content = '';
         if (fileMode === 'read') {
-          const stored = localStorage.getItem('sambasic_file:' + fileName);
+          const stored = localStorage.getItem(SAMBASIC_FILE_PREFIX + fileName);
           if (stored === null) throw new Error(`File '${fileName}' not found at line ${line}`);
           content = stored;
         } else if (fileMode === 'append') {
-          const stored = localStorage.getItem('sambasic_file:' + fileName);
+          const stored = localStorage.getItem(SAMBASIC_FILE_PREFIX + fileName);
           if (stored !== null) content = stored;
         }
         const handle = this.nextFileHandle++;
@@ -737,7 +766,7 @@ class Interpreter {
         return Math.floor(performance.now() - this._startTime);
       case 'FILEEXISTS': {
         const fileName = String(await this.evalExpr(params.FILE));
-        return localStorage.getItem('sambasic_file:' + fileName) !== null ? 1 : 0;
+        return localStorage.getItem(SAMBASIC_FILE_PREFIX + fileName) !== null ? 1 : 0;
       }
       case 'CREATESPRITE': {
         const data = await this.evalExpr(params.DATA);
@@ -1091,6 +1120,24 @@ class Interpreter {
           const bgVal = await this.evalExpr(stmt.expr);
           this.screen.setBackground(this._colorStructToHex(bgVal, stmt.line));
         }
+        break;
+      }
+      case 'filltext': {
+        const row1 = Math.floor(await this.evalExpr(stmt.row1));
+        const col1 = Math.floor(await this.evalExpr(stmt.col1));
+        const row2 = Math.floor(await this.evalExpr(stmt.row2));
+        const col2 = Math.floor(await this.evalExpr(stmt.col2));
+        const ch = stmt.character ? String(await this.evalExpr(stmt.character)) : ' ';
+        let color = null;
+        if (stmt.withColor) {
+          color = this._colorStructToHex(await this.evalExpr(stmt.withColor), stmt.line);
+        }
+        let bg;
+        if (stmt.withBg) {
+          bg = this._colorStructToHex(await this.evalExpr(stmt.withBg), stmt.line);
+        }
+        this.screen.fillText(row1, col1, row2, col2, ch, color, bg);
+        this.screen.render();
         break;
       }
       case 'setscreenbackground': {
@@ -1539,7 +1586,7 @@ class Interpreter {
         const fh = this.fileHandles[handle];
         if (!fh) throw new Error(`Invalid file handle at line ${stmt.line}`);
         if (fh.mode === 'write' || fh.mode === 'append') {
-          localStorage.setItem('sambasic_file:' + fh.name, fh.content);
+          localStorage.setItem(SAMBASIC_FILE_PREFIX + fh.name, fh.content);
         }
         delete this.fileHandles[handle];
         break;

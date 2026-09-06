@@ -216,6 +216,19 @@ MOVECURSOR 3, 1                        ' move cursor (1-indexed)
 CLEARSCREEN                            ' clear all text (keeps the screen background)
 ```
 
+Filling a region:
+
+```
+FILLTEXT 3, 2, 22, 79, "░"                     ' rows 3-22, columns 2-79
+FILLTEXT 1, 1, 25, 80 BACKGROUND BLUE&         ' spaces: clears to a color
+FILLTEXT 1, 1, 1, 80, " " COLOR BLACK& BACKGROUND LIGHTGRAY&
+```
+
+Arguments are `row1, col1, row2, col2 [, CHARACTER] [COLOR c&] [BACKGROUND b&]`. Corners are
+inclusive and their order does not matter. Regions off the edge of the screen are clipped
+rather than reported as errors. `CHARACTER` defaults to a space, and only its first character
+is used.
+
 Backgrounds:
 
 ```

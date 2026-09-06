@@ -387,6 +387,7 @@ SETBACKGROUND BLUE&               ' Default background for later prints
 SETBACKGROUND NONE                ' Back to transparent
 SETSCREENBACKGROUND BLUE&         ' Fill the whole screen
 PRINT "Bar" COLOR BLACK& BACKGROUND LIGHTGRAY&   ' Inline, one print only
+FILLTEXT 1, 1, 25, 80, "░"        ' Fill a region of the text grid
 ```
 
 Text with no background of its own is transparent, so the screen background shows through and
@@ -461,6 +462,7 @@ x# = RANDOM# MAX 50               ' Named parameter form
 SLEEP 2                            ' Pause execution for 2 seconds
 SLEEP 0.5                          ' Pause for 500ms (fractional seconds)
 t# = RUNNINGTIME#                  ' Milliseconds since program started
+edge$ = REPEAT$ "=", 40           ' Repeat a string N times
 ch$ = READSCREEN$ ROW 1, COLUMN 1 ' Read character from text grid position
 ```
 
@@ -471,6 +473,7 @@ Files are stored in `localStorage` and persist across sessions.
 **Check if a file exists:**
 ```
 exists? = FILEEXISTS? "data.txt"           ' YES if file exists, NO if not
+names@ = LISTFILES@                     ' All stored file names, sorted
 ```
 
 **Open a file:**

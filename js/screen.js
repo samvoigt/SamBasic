@@ -288,6 +288,25 @@ class Screen {
     if (c >= 0 && c < this.cols) this.cursorCol = c;
   }
 
+  // Fill an inclusive rectangle of the text grid. Corner order does not matter and
+  // the region is clipped to the screen, so callers need no bounds arithmetic.
+  fillText(row1, col1, row2, col2, ch, color, bg) {
+    const r1 = Math.max(0, Math.min(row1, row2) - 1);
+    const r2 = Math.min(this.rows - 1, Math.max(row1, row2) - 1);
+    const c1 = Math.max(0, Math.min(col1, col2) - 1);
+    const c2 = Math.min(this.cols - 1, Math.max(col1, col2) - 1);
+    if (r1 > r2 || c1 > c2) return;
+    const character = (ch === undefined || ch === null || ch === '') ? ' ' : String(ch)[0];
+    const clr = color || this.globalColor;
+    const bgc = bg === undefined ? this.globalBg : bg;
+    const buf = this._activeTextBuffer;
+    for (let r = r1; r <= r2; r++) {
+      for (let c = c1; c <= c2; c++) {
+        buf[r][c] = makeCell(character, clr, bgc);
+      }
+    }
+  }
+
   printAt(row, col, text, color, bg) {
     const r = row - 1;
     const c = col - 1;

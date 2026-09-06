@@ -446,6 +446,27 @@ function parse(tokens, existingFunctions) {
     if (t.type === 'KEYWORD' && t.value === 'SETSCREENBACKGROUND') {
       return parseSetscreenbackground();
     }
+    if (t.type === 'KEYWORD' && t.value === 'FILLTEXT') {
+      const ft = advance();
+      const args = parseKeywordArgs();
+      const resolved = resolveBuiltinArgs(args, [
+        { name: 'ROW1', required: true },
+        { name: 'COL1', required: true },
+        { name: 'ROW2', required: true },
+        { name: 'COL2', required: true },
+        { name: 'CHARACTER', required: false },
+        { name: 'COLOR', required: false },
+        { name: 'BACKGROUND', required: false },
+      ], ft.line);
+      return {
+        type: 'filltext',
+        row1: resolved.ROW1, col1: resolved.COL1, row2: resolved.ROW2, col2: resolved.COL2,
+        character: resolved.CHARACTER || null,
+        withColor: resolved.COLOR || null,
+        withBg: resolved.BACKGROUND || null,
+        line: ft.line,
+      };
+    }
     if (t.type === 'KEYWORD' && t.value === 'BEEP') {
       advance();
       return { type: 'beep', line: t.line };
@@ -848,7 +869,7 @@ function parse(tokens, existingFunctions) {
         'LABEL', 'GOTO', 'IF', 'THEN', 'ELSE', 'END',
         'FOR', 'FROM', 'TO', 'STEP',
         'WHILE', 'SETCOLOR', 'BEEP', 'PLAY',
-        'SETBACKGROUND', 'SETSCREENBACKGROUND',
+        'SETBACKGROUND', 'SETSCREENBACKGROUND', 'FILLTEXT',
         'AND', 'OR', 'NOT',
         'FUNCTION', 'RETURN', 'BREAK', 'CONTINUE', 'OPTIONAL', 'REFERENCE',
         'STRUCT',
@@ -1325,6 +1346,8 @@ function parse(tokens, existingFunctions) {
     GETALLKEYS: [],
     WAITKEY: [{ name: 'TIMEOUT', required: false }],
     GETKEYPRESS: [],
+    LISTFILES: [],
+    REPEAT: [{ name: 'TEXT', required: true }, { name: 'COUNT', required: true }],
     RANDOM: [{ name: 'MAX', required: true }],
     LENGTH: [{ name: 'VALUE', required: true }],
     SUBSTRING: [{ name: 'TEXT', required: true }, { name: 'START', required: true }, { name: 'LENGTH', required: true }],
