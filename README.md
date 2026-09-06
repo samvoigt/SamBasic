@@ -82,6 +82,14 @@ k$ = GETKEY$                           ' Read currently pressed key (non-blockin
 key& = WAITKEY&                        ' Wait for a keypress; .key$ .shift? .ctrl? .alt?
 key& = WAITKEY& TIMEOUT 0.5            ' ...but give up after 0.5s (.key$ = "")
 key& = GETKEYPRESS&                    ' Oldest queued keypress, non-blocking
+keys@ = GETALLKEYS@                    ' All currently pressed keys (array)
+```
+
+**Mouse input:**
+```
+x# = MOUSEX#                          ' Mouse X pixel coordinate (0–640)
+y# = MOUSEY#                          ' Mouse Y pixel coordinate (0–480)
+btn# = MOUSEBUTTON#                   ' Mouse button state (0 = none)
 ```
 
 ### String Functions
